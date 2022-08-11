@@ -1,0 +1,161 @@
+[
+    {
+        "url": "https://raw.githubusercontent.com/Faisal0786/TestPlugins-old/builds/Anime.cs3",
+        "status": 1,
+        "version": 1,
+        "name": "Anime",
+        "internalName": "Anime",
+        "authors": [
+            "Faisal"
+        ],
+        "description": "NexFlixia - Multilingual all-rounder provider",
+        "fileSize": 95760,
+        "repositoryUrl": "https://github.com/Faisal0786/TestPlugins-old",
+        "language": "hi",
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "Anime",
+            "AnimeMovie",
+            "AsianDrama"
+        ],
+        "iconUrl": "",
+        "apiVersion": 1,
+        "fileHash": "sha256-04acbe912a3e1d1a3ea75d4c4c3c03538ce9b0262dbae1cd67429bd17af7ce69"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/Faisal0786/TestPlugins-old/builds/AniStream.cs3",
+        "status": 1,
+        "version": 1,
+        "name": "AniStream",
+        "internalName": "AniStream",
+        "authors": [
+            "Faisal"
+        ],
+        "description": "Watch anime in HD with English Sub and Dub from AniStream",
+        "fileSize": 30431,
+        "repositoryUrl": "https://github.com/Faisal0786/TestPlugins-old",
+        "language": "en",
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie"
+        ],
+        "iconUrl": "https://anistream.one/og.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-e311fa5e59ab30a2d02b6cb0c30a5173ccf72d9e32a42edb4d2d1b5a75cce2b2"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/Faisal0786/TestPlugins-old/builds/Ctg Stream.cs3",
+        "status": 1,
+        "version": 2,
+        "name": "Ctg Stream",
+        "internalName": "Ctg Stream",
+        "authors": [
+            "Faisal"
+        ],
+        "description": "multi Language Provider",
+        "fileSize": 21713,
+        "repositoryUrl": "https://github.com/Faisal0786/TestPlugins-old",
+        "tvTypes": [
+            "TvSeries",
+            "Movie",
+            "AsianDrama",
+            "Anime",
+            "Torrent"
+        ],
+        "iconUrl": " ",
+        "apiVersion": 1,
+        "fileHash": "sha256-4f792078033a2a31eb30a61053a454f924455071162d6881efca64652bd7cbef"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/Faisal0786/TestPlugins-old/builds/OttSource.cs3",
+        "status": 1,
+        "version": 5,
+        "name": "OttSource",
+        "internalName": "OttSource",
+        "authors": [
+            "Faisal"
+        ],
+        "description": "Netflix, PrimeVideo, Disney+ Hotstar Contents in Multiple Languages",
+        "fileSize": 76666,
+        "repositoryUrl": "https://github.com/Faisal0786/TestPlugins-old",
+        "language": "hi",
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "iconUrl": "https://github.com/NivinCNC/CNCVerse-Cloud-Stream-Extension/raw/refs/heads/master/CNC%20Verse/icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-88b8481950720716672d08a28977677cfdfe4f932bdd9453ae1367e02d56b8f3"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/Faisal0786/TestPlugins-old/builds/SDmovies.cs3",
+        "status": 1,
+        "version": 4,
+        "name": "SDmovies",
+        "internalName": "SDmovies",
+        "authors": [
+            "Faisal"
+        ],
+        "description": "Multi language Movies and Tv shows provider",
+        "fileSize": 26412,
+        "repositoryUrl": "https://github.com/Faisal0786/TestPlugins-old",
+        "language": "hi",
+        "tvTypes": [
+            "TvSeries",
+            "Movie",
+            "AsianDrama",
+            "Anime",
+            "Torrent"
+        ],
+        "iconUrl": "https://sdmoviespoint.cyou/favicon.ico",
+        "apiVersion": 1,
+        "fileHash": "sha256-d98da58e6ba764a0b7aad7d66c5ebf1fee8c66e93b8117088a4e5ea77d24e478"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/Faisal0786/TestPlugins-old/builds/StreamHubOne.cs3",
+        "status": 1,
+        "version": 54,
+        "name": "StreamHubOne",
+        "internalName": "StreamHubOne",
+        "authors": [
+            "Faisal"
+        ],
+        "description": "StreamHub One - Multilingual provider",
+        "fileSize": 945984,
+        "repositoryUrl": "https://github.com/Faisal0786/TestPlugins-old",
+        "language": "hi",
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "Anime",
+            "AnimeMovie",
+            "AsianDrama"
+        ],
+        "iconUrl": "",
+        "apiVersion": 1,
+        "fileHash": "sha256-9f306db73586c7d6ad6ac0e613560d60f1879700bee0bb035f6df11dc9c37566"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/Faisal0786/TestPlugins-old/builds/The Movie Flix.cs3",
+        "status": 1,
+        "version": 2,
+        "name": "The Movie Flix",
+        "internalName": "The Movie Flix",
+        "authors": [
+            "Faisal"
+        ],
+        "description": "TheMoviesFlix provider for Dual Audio, Bollywood and Hollywood Movies and TV Shows",
+        "fileSize": 47816,
+        "repositoryUrl": "https://github.com/Faisal0786/TestPlugins-old",
+        "language": "hi",
+        "tvTypes": [
+            "TvSeries",
+            "Movie",
+            "Anime"
+        ],
+        "iconUrl": "https://moviesflixi.com/favicon.ico",
+        "apiVersion": 1,
+        "fileHash": "sha256-e7fb2f38dca1778b5cce4609b08bccd78f6cbabcfcd3e5cfc6610f2b198ddd72"
+    }
+]
