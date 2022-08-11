@@ -1,0 +1,116 @@
+[
+    {
+        "url": "https://raw.githubusercontent.com/Faisal0786/TestPlugins-old/builds/AniStream.cs3",
+        "status": 1,
+        "version": 1,
+        "name": "AniStream",
+        "internalName": "AniStream",
+        "authors": [
+            "Faisal"
+        ],
+        "description": "Watch anime in HD with English Sub and Dub from AniStream",
+        "fileSize": 30290,
+        "repositoryUrl": "https://github.com/Faisal0786/TestPlugins-old",
+        "language": "en",
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie"
+        ],
+        "iconUrl": "https://anistream.one/og.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-8a61e38b6b5a5221fa95472fe435eb370d8eee7cb6b3e954611eb5a1372dd26d"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/Faisal0786/TestPlugins-old/builds/Ctg Stream.cs3",
+        "status": 1,
+        "version": 2,
+        "name": "Ctg Stream",
+        "internalName": "Ctg Stream",
+        "authors": [
+            "Faisal"
+        ],
+        "description": "multi Language Provider",
+        "fileSize": 22061,
+        "repositoryUrl": "https://github.com/Faisal0786/TestPlugins-old",
+        "tvTypes": [
+            "TvSeries",
+            "Movie",
+            "AsianDrama",
+            "Anime",
+            "Torrent"
+        ],
+        "iconUrl": " ",
+        "apiVersion": 1,
+        "fileHash": "sha256-99ece8af51a4d02d080ec4b218992eb7627e6ad9fd7857d10b974834c90fcbb2"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/Faisal0786/TestPlugins-old/builds/SDmovies.cs3",
+        "status": 1,
+        "version": 4,
+        "name": "SDmovies",
+        "internalName": "SDmovies",
+        "authors": [
+            "Faisal"
+        ],
+        "description": "Multi language Movies and Tv shows provider",
+        "fileSize": 26387,
+        "repositoryUrl": "https://github.com/Faisal0786/TestPlugins-old",
+        "language": "hi",
+        "tvTypes": [
+            "TvSeries",
+            "Movie",
+            "AsianDrama",
+            "Anime",
+            "Torrent"
+        ],
+        "iconUrl": "https://sdmoviespoint.cyou/favicon.ico",
+        "apiVersion": 1,
+        "fileHash": "sha256-0fc04e6d81cf954b87dc6c0f46769de6d5e70a18f04232dce218eff7637d22cc"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/Faisal0786/TestPlugins-old/builds/StreamHubOne.cs3",
+        "status": 1,
+        "version": 54,
+        "name": "StreamHubOne",
+        "internalName": "StreamHubOne",
+        "authors": [
+            "Faisal"
+        ],
+        "description": "StreamHub One - Multilingual provider",
+        "fileSize": 932045,
+        "repositoryUrl": "https://github.com/Faisal0786/TestPlugins-old",
+        "language": "hi",
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "Anime",
+            "AnimeMovie",
+            "AsianDrama"
+        ],
+        "iconUrl": "",
+        "apiVersion": 1,
+        "fileHash": "sha256-78b1ddbad565a12d05369fc06165d636bc5e3e4769bad6ba5def214dd7076c08"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/Faisal0786/TestPlugins-old/builds/The Movie Flix.cs3",
+        "status": 1,
+        "version": 2,
+        "name": "The Movie Flix",
+        "internalName": "The Movie Flix",
+        "authors": [
+            "Faisal"
+        ],
+        "description": "TheMoviesFlix provider for Dual Audio, Bollywood and Hollywood Movies and TV Shows",
+        "fileSize": 47888,
+        "repositoryUrl": "https://github.com/Faisal0786/TestPlugins-old",
+        "language": "hi",
+        "tvTypes": [
+            "TvSeries",
+            "Movie",
+            "Anime"
+        ],
+        "iconUrl": "https://moviesflixi.com/favicon.ico",
+        "apiVersion": 1,
+        "fileHash": "sha256-cd82a337695770947209104c094f8fb740a8ec7c163479f9b08ae647bad0558b"
+    }
+]
