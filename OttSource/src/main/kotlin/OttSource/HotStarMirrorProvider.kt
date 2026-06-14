@@ -3,7 +3,7 @@ package OttSource
 import android.content.Context
 import OttSource.entities.EpisodesData
 import OttSource.entities.PostData
-import com.horis.cncverse.entities.SearchData
+import OttSource.entities.SearchData
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
