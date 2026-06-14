@@ -39,7 +39,7 @@ open class OttSourcePlugin: Plugin() {
 
         //val activity = context as AppCompatActivity
         openSettings = {
-            val frag = CNCVerseSettings(this, sharedPref, studioOptions)
+            //val frag = CNCVerseSettings(this, sharedPref, studioOptions)
             frag.show(activity.supportFragmentManager, "CNCVerseSettings")
         }
     }
