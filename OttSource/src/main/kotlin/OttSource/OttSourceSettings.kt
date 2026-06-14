@@ -1,4 +1,4 @@
-package com.horis.cncverse
+package OttSource
 
 import android.annotation.SuppressLint
 import android.content.Intent
