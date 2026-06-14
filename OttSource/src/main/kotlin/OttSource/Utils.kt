@@ -1,4 +1,4 @@
-package com.horis.cncverse
+package OttSource
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
