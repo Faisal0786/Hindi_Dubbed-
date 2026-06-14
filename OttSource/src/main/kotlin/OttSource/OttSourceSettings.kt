@@ -190,6 +190,7 @@ class CNCVerseSettings(
             }
         }
 
+
         textView.setOnClickListener {
             checkBox.isChecked = !checkBox.isChecked
         }
