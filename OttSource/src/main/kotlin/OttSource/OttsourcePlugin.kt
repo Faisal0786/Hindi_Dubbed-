@@ -1,4 +1,4 @@
-package com.horis.cncverse
+package OttSource
 
 import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 
 @CloudstreamPlugin
-open class CNCVersePlugin: Plugin() {
+open class OttSourcePlugin: Plugin() {
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         NetflixMirrorStorage.init(context.applicationContext)
