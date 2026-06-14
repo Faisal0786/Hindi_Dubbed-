@@ -1,3 +1,3 @@
-package com.horis.cncverse
+package OttSource
 
 class DisneyPlusProvider : DisneyStudioProvider("disney", "Disney")
