@@ -1,9 +1,9 @@
-package com.horis.cncverse
+package OttSource
 
 import android.content.Context
-import com.horis.cncverse.entities.EpisodesData
-import com.horis.cncverse.entities.PostData
-import com.horis.cncverse.entities.SearchData
+import OttSource.entities.EpisodesData
+import OttSource.entities.PostData
+import OttSource.entities.SearchData
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
