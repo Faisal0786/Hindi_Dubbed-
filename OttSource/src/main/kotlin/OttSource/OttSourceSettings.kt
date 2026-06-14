@@ -1,5 +1,4 @@
 package OttSource
-
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.SharedPreferences
