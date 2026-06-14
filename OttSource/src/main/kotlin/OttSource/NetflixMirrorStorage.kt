@@ -1,4 +1,4 @@
-package com.horis.cncverse
+package OttSource
 
 import android.content.Context
 import android.content.SharedPreferences
