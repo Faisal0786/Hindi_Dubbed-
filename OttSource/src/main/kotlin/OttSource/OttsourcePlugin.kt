@@ -37,11 +37,7 @@ open class OttSourcePlugin: Plugin() {
             registerMainAPI(DisneyStudioProvider(option.cookieValue, option.label))
         }
 
-        //val activity = context as AppCompatActivity
-        openSettings = {
-            //val frag = CNCVerseSettings(this, sharedPref, studioOptions)
-            frag.show(activity.supportFragmentManager, "CNCVerseSettings")
-        }
+        
     }
 
 }
