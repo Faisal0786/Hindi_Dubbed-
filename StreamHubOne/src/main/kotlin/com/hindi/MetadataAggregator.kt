@@ -1,11 +1,11 @@
-package com.hindi
+Package com.hindi
 
 import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.utils.AppUtils.parsedSafe
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import java.net.URLEncoder
 
 object MetadataAggregator {
 
@@ -175,7 +175,7 @@ private suspend fun fetchTmdb(
             "&append_to_response=credits,videos,images,external_ids"
 
         return runCatching {
-            app.get(url).parsedSafe<TmdbDetails>()
+            app.get(url).parsed<TmdbDetails>()
         }.getOrNull()
     }
 
@@ -195,7 +195,7 @@ private suspend fun fetchTmdb(
         return runCatching {
             app.get(
                 "${ApiConstants.CINEMETA_BASE}/meta/$type/$imdbId.json"
-            ).parsedSafe<CinemetaResponse>()?.meta
+            ).parsed<CinemetaResponse>()?.meta
         }.getOrNull()
     }
 
@@ -208,7 +208,7 @@ private suspend fun fetchTmdb(
         return runCatching {
             app.get(
                 "${ApiConstants.HAGLUND_BASE}/ids?source=imdb&id=$imdbId"
-            ).parsedSafe<ExternalIdsResponse>()
+            ).parsed<ExternalIdsResponse>()
         }.getOrNull()
     }
 
@@ -265,7 +265,7 @@ private suspend fun fetchTmdb(
             app.post(
                 url = ApiConstants.ANILIST_API,
                 json = body
-            ).parsedSafe<AniListResponse>()
+            ).parsed<AniListResponse>()
                 ?.data
                 ?.Media
         }.getOrNull()
