@@ -154,7 +154,8 @@ object MetadataAggregator {
             anidbId = ids?.anidb,
             tvdbId = ids?.thetvdb
         )
-    }private suspend fun fetchTmdb(
+    }
+private suspend fun fetchTmdb(
         tmdbId: Int?,
         mediaType: String
     ): TmdbDetails? {
@@ -287,7 +288,7 @@ object MetadataAggregator {
             ?.filterNotNull()
             ?: emptyList()
     }
-private fun selectLogo(
+    private fun selectLogo(
         tmdb: TmdbDetails?
     ): String? {
 
