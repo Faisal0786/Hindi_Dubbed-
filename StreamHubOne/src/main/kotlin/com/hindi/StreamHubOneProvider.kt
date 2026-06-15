@@ -293,3 +293,17 @@ private suspend fun loadTmdbEpisodes(
 
     return episodes
 }
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+
+    // Extraction engine baad me add hoga.
+    // Abhi provider metadata/search/load architecture complete kar rahe hain.
+
+    return false
+}
+
+}
