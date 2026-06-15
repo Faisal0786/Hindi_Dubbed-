@@ -1,6 +1,5 @@
 package com.hindi
 
-import com.hindi.BuildConfig
 
 object ApiConstants {
 
