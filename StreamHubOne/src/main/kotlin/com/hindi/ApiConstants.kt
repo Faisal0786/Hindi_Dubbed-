@@ -1,11 +1,13 @@
 package com.hindi
 
+import com.hindi.BuildConfig
+
 object ApiConstants {
 
-    const val CINEMETA_API =
+    const val CINEMETA_BASE =
         "https://v3-cinemeta.strem.io"
 
-    const val HAGLUND_API =
+    const val HAGLUND_BASE =
         "https://arm.haglund.dev/api/v2"
 
     const val ANILIST_API =
@@ -14,7 +16,7 @@ object ApiConstants {
     const val KITSU_API =
         "https://anime-kitsu.strem.fun"
 
-    const val TMDB_API =
+    const val TMDB_BASE =
         "https://api.themoviedb.org/3"
 
     const val TMDB_IMAGE =
@@ -31,4 +33,7 @@ object ApiConstants {
 
     const val YOUTUBE_BASE =
         "https://www.youtube.com/watch?v="
+
+    val TMDB_KEY: String
+        get() = BuildConfig.TMDB_KEY
 }
