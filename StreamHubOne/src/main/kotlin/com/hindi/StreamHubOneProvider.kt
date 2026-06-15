@@ -1,5 +1,7 @@
 package com.hindi
 
+import com.lagradost.cloudstream3.utils.AppUtils.parsedSafe
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
