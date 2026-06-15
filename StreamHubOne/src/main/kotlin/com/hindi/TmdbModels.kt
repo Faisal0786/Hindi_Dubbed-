@@ -11,6 +11,7 @@ data class TmdbDetails(
     val backdrop_path: String?,
     val release_date: String?,
     val first_air_date: String?,
+    val number_of_seasons: Int?,
     val vote_average: Double?,
     val vote_count: Int?,
     val runtime: Int?,
