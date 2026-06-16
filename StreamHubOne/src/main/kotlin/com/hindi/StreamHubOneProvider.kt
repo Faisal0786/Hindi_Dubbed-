@@ -1,12 +1,13 @@
 package com.hindi
 
-import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.HomePageList
 import java.net.URLEncoder
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
@@ -115,29 +116,22 @@ override val mainPage = mainPageOf(
                     ?: item.name
                     ?: return@mapNotNull null
 
-            val type =
-                if (mediaType == "movie")
-                    TvType.Movie
-                else
-                    TvType.TvSeries
+            val tmdbId = item.id ?: return@mapNotNull null
 
             newMovieSearchResponse(
                 title,
-                TmdbData(item.id, mediaType).toJson(),
-                type
+                AppUtils.toJson(TmdbData(tmdbId, mediaType)),
+                if (mediaType == "movie") TvType.Movie else TvType.TvSeries
             ) {
-                posterUrl =
-                    item.poster_path?.let {
-                        "${ApiConstants.TMDB_POSTER}$it"
-                    }
-
-                score =
-                    Score.from10(item.vote_average)
+                posterUrl = item.poster_path?.let {
+                    "${ApiConstants.TMDB_POSTER}$it"
+                }
+                score = Score.from10(item.vote_average)
             }
         }
     }
 override suspend fun load(url: String): LoadResponse? {
-    val data = parseJson<TmdbData>(url)
+    val data = AppUtils.parseJson<TmdbData>(url) ?: return null
 
     val mediaType = data.mediaType
     val tmdbId = data.id
@@ -158,7 +152,7 @@ override suspend fun load(url: String): LoadResponse? {
             metadata.title ?: "Unknown",
             url,
             if (metadata.anilistId != null) TvType.AnimeMovie else TvType.Movie,
-            TmdbData(tmdbId, mediaType).toJson()
+            AppUtils.toJson(TmdbData(tmdbId, mediaType))
         ) {
             posterUrl = metadata.poster
             backgroundPosterUrl = metadata.backdrop
@@ -338,13 +332,16 @@ override suspend fun getMainPage(
 
         val title = item.title ?: item.name ?: return@mapNotNull null
 
+        val tmdbId = item.id ?: return@mapNotNull null
+
         newMovieSearchResponse(
             title,
-            // Is string template ko load safely parse karega
-            "tmdb:$mediaType:${item.id}",
+            AppUtils.toJson(TmdbData(tmdbId, mediaType)),
             if (mediaType == "movie") TvType.Movie else TvType.TvSeries
         ) {
-            posterUrl = item.poster_path?.let { "${ApiConstants.TMDB_POSTER}$it" }
+            posterUrl = item.poster_path?.let {
+                "${ApiConstants.TMDB_POSTER}$it"
+            }
             score = Score.from10(item.vote_average)
         }
     }
