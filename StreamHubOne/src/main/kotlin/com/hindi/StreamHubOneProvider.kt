@@ -1,5 +1,6 @@
 package com.hindi
 
+import java.net.URLEncoder
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -37,7 +38,7 @@ class StreamHubOneProvider : MainAPI() {
         val url =
             "${ApiConstants.TMDB_BASE}/search/multi" +
             "?api_key=${ApiConstants.TMDB_KEY}" +
-            "&query=${query.urlEncode()}"
+            "&query=${URLEncoder.encode(query, "UTF-8")}"
 
         val response = app.get(url)
             .parsed<TmdbMultiSearchResponse>()
