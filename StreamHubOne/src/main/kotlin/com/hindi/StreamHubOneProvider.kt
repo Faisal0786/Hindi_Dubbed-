@@ -17,7 +17,7 @@ class StreamHubOneProvider : MainAPI() {
 
     override var lang = "en"
 
-    override val hasMainPage = false
+    override val hasMainPage = true
 
     override val hasQuickSearch = true
 
