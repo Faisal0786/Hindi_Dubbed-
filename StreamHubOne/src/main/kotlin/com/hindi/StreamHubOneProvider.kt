@@ -1,6 +1,5 @@
 package com.hindi
 
-import com.lagradost.cloudstream3.utils.AppUtils.parsedSafe
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -41,7 +40,7 @@ class StreamHubOneProvider : MainAPI() {
             "&query=${query.urlEncode()}"
 
         val response = app.get(url)
-            .parsedSafe<TmdbMultiSearchResponse>()
+            .parsed<TmdbMultiSearchResponse>()
             ?: return emptyList()
 
         return response.results.mapNotNull { item ->
@@ -98,7 +97,7 @@ override suspend fun load(
         "${ApiConstants.TMDB_BASE}/$mediaType/$tmdbId" +
         "?api_key=${ApiConstants.TMDB_KEY}" +
         "&append_to_response=external_ids"
-    ).parsedSafe<TmdbDetails>()
+    ).parsed<TmdbDetails>()
         ?: return null
 
     val metadata = MetadataAggregator.aggregate(
@@ -240,7 +239,7 @@ private suspend fun loadTmdbEpisodes(
     val series = app.get(
         "${ApiConstants.TMDB_BASE}/tv/$tmdbId" +
         "?api_key=${ApiConstants.TMDB_KEY}"
-    ).parsedSafe<TmdbDetails>()
+    ).parsed<TmdbDetails>()
         ?: return emptyList()
 
     val seasonCount =
@@ -253,7 +252,7 @@ private suspend fun loadTmdbEpisodes(
         val season = app.get(
             "${ApiConstants.TMDB_BASE}/tv/$tmdbId/season/$seasonNumber" +
             "?api_key=${ApiConstants.TMDB_KEY}"
-        ).parsedSafe<TmdbSeasonResponse>()
+        ).parsed<TmdbSeasonResponse>()
             ?: continue
 
         season.episodes.forEach { episode ->
