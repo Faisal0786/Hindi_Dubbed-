@@ -33,5 +33,5 @@ object ApiConstants {
     const val YOUTUBE_BASE =
         "https://www.youtube.com/watch?v="
 
-    const val TMDB_KEY: " "
+    const val TMDB_KEY = " "
 }
