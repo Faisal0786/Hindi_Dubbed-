@@ -154,8 +154,7 @@ override suspend fun load(url: String): LoadResponse? {
         newMovieLoadResponse(
             metadata.title ?: "Unknown",
             url,
-            if (metadata.anilistId != null) TvType.AnimeMovie else TvType.Movie,
-            url
+            if (metadata.anilistId != null) TvType.AnimeMovie else TvType.Movie
         ) {
             posterUrl = metadata.poster
             backgroundPosterUrl = metadata.backdrop
