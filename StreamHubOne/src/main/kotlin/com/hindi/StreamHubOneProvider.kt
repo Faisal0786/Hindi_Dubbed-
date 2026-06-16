@@ -13,8 +13,7 @@ class StreamHubOneProvider : MainAPI() {
 
     override var name = "StreamHub One"
 
-    override var mainUrl =
-        "https://api.themoviedb.org/3"
+    override var mainUrl = "https://streamhub.one"
 
     override var lang = "en"
 
