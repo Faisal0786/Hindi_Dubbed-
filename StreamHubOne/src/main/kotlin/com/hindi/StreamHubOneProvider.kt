@@ -1,4 +1,4 @@
-Package com.hindi
+package com.hindi
 
 import com.lagradost.cloudstream3.HomePageList
 import java.net.URLEncoder
