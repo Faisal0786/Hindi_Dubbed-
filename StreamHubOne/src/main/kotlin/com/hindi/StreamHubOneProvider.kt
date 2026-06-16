@@ -113,25 +113,19 @@ override val mainPage = mainPageOf(
             }
         }
     }
-override suspend fun load(
-    url: String
-): LoadResponse? {
-
+override suspend fun load(url: String): LoadResponse? {
+    // Safely handling custom tmdb string format
+    if (!url.startsWith("tmdb:")) return null
+    
     val parts = url.split(":")
-
     if (parts.size < 3) return null
 
-    val mediaType = parts[1]
-
-    val tmdbId = parts[2].toIntOrNull()
-        ?: return null
+    val mediaType = parts[1] // "movie" or "tv"
+    val tmdbId = parts[2].toIntOrNull() ?: return null
 
     val tmdb = app.get(
-        "${ApiConstants.TMDB_BASE}/$mediaType/$tmdbId" +
-        "?api_key=${ApiConstants.TMDB_KEY}" +
-        "&append_to_response=external_ids"
-    ).parsed<TmdbDetails>()
-        ?: return null
+        "${ApiConstants.TMDB_BASE}/$mediaType/$tmdbId?api_key=${ApiConstants.TMDB_KEY}&append_to_response=external_ids"
+    ).parsed<TmdbDetails>() ?: return null
 
     val metadata = MetadataAggregator.aggregate(
         imdbId = tmdb.external_ids?.imdbId,
@@ -141,59 +135,25 @@ override suspend fun load(
     )
 
     return if (mediaType == "movie") {
-
         newMovieLoadResponse(
             metadata.title ?: "Unknown",
             url,
-            if (metadata.anilistId != null)
-                TvType.AnimeMovie
-            else
-                TvType.Movie,
+            if (metadata.anilistId != null) TvType.AnimeMovie else TvType.Movie,
             url
         ) {
-
             posterUrl = metadata.poster
-
-            backgroundPosterUrl =
-                metadata.backdrop
-
-            logoUrl =
-                metadata.logo
-
-            plot =
-                metadata.description
-
-            tags =
-                metadata.genres
-
-            year =
-                metadata.year
-
-            score =
-                Score.from10(
-                    metadata.imdbRating
-                        ?: metadata.tmdbRating
-                )
-
-            addImdbId(
-                metadata.imdbId
-            )
-
-            addAniListId(
-                metadata.anilistId
-            )
-
-            addMalId(
-                metadata.malId
-            )
-
-            metadata.trailer?.let {
-                addTrailer(it)
-            }
+            backgroundPosterUrl = metadata.backdrop
+            logoUrl = metadata.logo
+            plot = metadata.description
+            tags = metadata.genres
+            year = metadata.year
+            score = Score.from10(metadata.imdbRating ?: metadata.tmdbRating)
+            addImdbId(metadata.imdbId)
+            addAniListId(metadata.anilistId)
+            addMalId(metadata.malId)
+            metadata.trailer?.let { addTrailer(it) }
         }
-
     } else {
-
         buildSeriesResponse(
             tmdbId = tmdbId,
             metadata = metadata,
@@ -201,6 +161,7 @@ override suspend fun load(
         )
     }
 }
+
 private suspend fun buildSeriesResponse(
     tmdbId: Int,
     metadata: MetadataAggregator.AggregatedMetadata,
@@ -333,7 +294,6 @@ override suspend fun getMainPage(
 ): HomePageResponse {
 
     val endpoint = when (request.data) {
-
         // Discovery
         "trending" -> "/trending/all/week"
         "movies" -> "/movie/popular"
@@ -349,104 +309,62 @@ override suspend fun getMainPage(
         "imdb" -> "/trending/all/day"
 
         // Regions
-        "bollywood" ->
-            "/discover/movie?with_origin_country=IN&sort_by=popularity.desc"
-
-        "asian" ->
-            "/discover/tv?with_origin_country=KR&sort_by=popularity.desc"
+        "bollywood" -> "/discover/movie?with_origin_country=IN&sort_by=popularity.desc"
+        "asian" -> "/discover/tv?with_origin_country=KR&sort_by=popularity.desc"
 
         // Anime
-        "anime" ->
-            "/discover/tv?with_genres=16&sort_by=popularity.desc"
-
-        "crunchyroll" ->
-            "/discover/tv?with_watch_providers=283&watch_region=US&sort_by=popularity.desc"
+        "anime" -> "/discover/tv?with_genres=16&sort_by=popularity.desc"
+        "crunchyroll" -> "/discover/tv?with_watch_providers=283&watch_region=US&sort_by=popularity.desc"
 
         // Major OTT
-        "netflix" ->
-            "/discover/tv?with_watch_providers=8&watch_region=US&sort_by=popularity.desc"
-
-        "prime" ->
-            "/discover/tv?with_watch_providers=119&watch_region=US&sort_by=popularity.desc"
-
-        "apple" ->
-            "/discover/tv?with_watch_providers=350&watch_region=US&sort_by=popularity.desc"
-
-        "max" ->
-            "/discover/tv?with_watch_providers=1899&watch_region=US&sort_by=popularity.desc"
-
-        "disney" ->
-            "/discover/tv?with_watch_providers=337&watch_region=US&sort_by=popularity.desc"
-
-        "hulu" ->
-            "/discover/tv?with_watch_providers=15&watch_region=US&sort_by=popularity.desc"
-
-        "paramount" ->
-            "/discover/tv?with_watch_providers=531&watch_region=US&sort_by=popularity.desc"
-
-        "peacock" ->
-            "/discover/tv?with_watch_providers=386&watch_region=US&sort_by=popularity.desc"
+        "netflix" -> "/discover/tv?with_watch_providers=8&watch_region=US&sort_by=popularity.desc"
+        "prime" -> "/discover/tv?with_watch_providers=119&watch_region=US&sort_by=popularity.desc"
+        "apple" -> "/discover/tv?with_watch_providers=350&watch_region=US&sort_by=popularity.desc"
+        "max" -> "/discover/tv?with_watch_providers=1899&watch_region=US&sort_by=popularity.desc"
+        "disney" -> "/discover/tv?with_watch_providers=337&watch_region=US&sort_by=popularity.desc"
+        "hulu" -> "/discover/tv?with_watch_providers=15&watch_region=US&sort_by=popularity.desc"
+        "paramount" -> "/discover/tv?with_watch_providers=531&watch_region=US&sort_by=popularity.desc"
+        "peacock" -> "/discover/tv?with_watch_providers=386&watch_region=US&sort_by=popularity.desc"
 
         // India OTT
-        "jiohotstar" ->
-            "/discover/tv?with_watch_providers=122&watch_region=IN&sort_by=popularity.desc"
-
-        "sonyliv" ->
-            "/discover/tv?with_watch_providers=237&watch_region=IN&sort_by=popularity.desc"
-
-        "zee5" ->
-            "/discover/tv?with_watch_providers=232&watch_region=IN&sort_by=popularity.desc"
+        "jiohotstar" -> "/discover/tv?with_watch_providers=122&watch_region=IN&sort_by=popularity.desc"
+        "sonyliv" -> "/discover/tv?with_watch_providers=237&watch_region=IN&sort_by=popularity.desc"
+        "zee5" -> "/discover/tv?with_watch_providers=232&watch_region=IN&sort_by=popularity.desc"
 
         else -> "/trending/all/week"
     }
 
-    val url =
-        if (endpoint.contains("?")) {
-            "${ApiConstants.TMDB_BASE}$endpoint&api_key=${ApiConstants.TMDB_KEY}&page=$page"
-        } else {
-            "${ApiConstants.TMDB_BASE}$endpoint?api_key=${ApiConstants.TMDB_KEY}&page=$page"
-        }
+    val url = if (endpoint.contains("?")) {
+        "${ApiConstants.TMDB_BASE}$endpoint&api_key=${ApiConstants.TMDB_KEY}&page=$page"
+    } else {
+        "${ApiConstants.TMDB_BASE}$endpoint?api_key=${ApiConstants.TMDB_KEY}&page=$page"
+    }
 
-    val response = app.get(url)
-        .parsed<TmdbMultiSearchResponse>()
+    val response = app.get(url).parsed<TmdbMultiSearchResponse>()
+
+    // Yahan fix kiya hai: Endpoint URL check karke default type decide hoga
+    val isMovieEndpoint = endpoint.contains("/movie") || request.data == "movies" || request.data == "top_rated" || request.data == "upcoming" || request.data == "bollywood"
 
     val items = response.results.mapNotNull { item ->
+        val mediaType = item.media_type 
+            ?: if (isMovieEndpoint) "movie" else "tv"
 
-        val mediaType =
-            item.media_type
-                ?: if (request.data == "movies")
-                    "movie"
-                else
-                    "tv"
-
-        val title =
-            item.title
-                ?: item.name
-                ?: return@mapNotNull null
+        val title = item.title ?: item.name ?: return@mapNotNull null
 
         newMovieSearchResponse(
             title,
+            // Is string template ko load safely parse karega
             "tmdb:$mediaType:${item.id}",
-            if (mediaType == "movie")
-                TvType.Movie
-            else
-                TvType.TvSeries
+            if (mediaType == "movie") TvType.Movie else TvType.TvSeries
         ) {
-            posterUrl =
-                item.poster_path?.let {
-                    "${ApiConstants.TMDB_POSTER}$it"
-                }
-
-            score =
-                Score.from10(item.vote_average)
+            posterUrl = item.poster_path?.let { "${ApiConstants.TMDB_POSTER}$it" }
+            score = Score.from10(item.vote_average)
         }
     }
 
-    return newHomePageResponse(
-    request.name,
-    items
-)
+    return newHomePageResponse(request.name, items)
 }
+
 override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
