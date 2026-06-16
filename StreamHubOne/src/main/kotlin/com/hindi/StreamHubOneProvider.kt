@@ -9,11 +9,16 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 
+data class TmdbData(
+    val id: Int,
+    val mediaType: String
+)
+
 class StreamHubOneProvider : MainAPI() {
 
     override var name = "StreamHub One"
 
-    override var mainUrl = "https://streamhub.one"
+    override var mainUrl = "https://www.themoviedb.org"
 
     override var lang = "en"
 
@@ -116,7 +121,7 @@ override val mainPage = mainPageOf(
 
             newMovieSearchResponse(
                 title,
-                "tmdb:$mediaType:${item.id}",
+                TmdbData(item.id, mediaType).toJson(),
                 type
             ) {
                 posterUrl =
@@ -130,14 +135,10 @@ override val mainPage = mainPageOf(
         }
     }
 override suspend fun load(url: String): LoadResponse? {
-    // Safely handling custom tmdb string format
-    if (!url.startsWith("tmdb:")) return null
+    val data = parseJson<TmdbData>(url)
 
-    val parts = url.split(":")
-    if (parts.size < 3) return null
-
-    val mediaType = parts[1] // "movie" or "tv"
-    val tmdbId = parts[2].toIntOrNull() ?: return null
+    val mediaType = data.mediaType
+    val tmdbId = data.id
 
     val tmdb = app.get(
         "${ApiConstants.TMDB_BASE}/$mediaType/$tmdbId?api_key=${ApiConstants.TMDB_KEY}&append_to_response=external_ids"
@@ -154,7 +155,8 @@ override suspend fun load(url: String): LoadResponse? {
         newMovieLoadResponse(
             metadata.title ?: "Unknown",
             url,
-            if (metadata.anilistId != null) TvType.AnimeMovie else TvType.Movie
+            if (metadata.anilistId != null) TvType.AnimeMovie else TvType.Movie,
+            TmdbData(tmdbId, mediaType).toJson()
         ) {
             posterUrl = metadata.poster
             backgroundPosterUrl = metadata.backdrop
