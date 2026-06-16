@@ -1,5 +1,7 @@
 package com.hindi
 
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.HomePageList
 import java.net.URLEncoder
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
