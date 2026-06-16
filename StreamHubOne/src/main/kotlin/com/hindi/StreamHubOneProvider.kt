@@ -120,7 +120,7 @@ override val mainPage = mainPageOf(
 
             newMovieSearchResponse(
                 title,
-                AppUtils.toJson(TmdbData(tmdbId, mediaType)),
+                TmdbData(tmdbId, mediaType).toJson(),
                 if (mediaType == "movie") TvType.Movie else TvType.TvSeries
             ) {
                 posterUrl = item.poster_path?.let {
@@ -131,7 +131,7 @@ override val mainPage = mainPageOf(
         }
     }
 override suspend fun load(url: String): LoadResponse? {
-    val data = AppUtils.parseJson<TmdbData>(url) ?: return null
+    val data = parseJson<TmdbData>(url) ?: return null
 
     val mediaType = data.mediaType
     val tmdbId = data.id
@@ -152,7 +152,7 @@ override suspend fun load(url: String): LoadResponse? {
             metadata.title ?: "Unknown",
             url,
             if (metadata.anilistId != null) TvType.AnimeMovie else TvType.Movie,
-            AppUtils.toJson(TmdbData(tmdbId, mediaType))
+            TmdbData(tmdbId, mediaType).toJson()
         ) {
             posterUrl = metadata.poster
             backgroundPosterUrl = metadata.backdrop
@@ -336,7 +336,7 @@ override suspend fun getMainPage(
 
         newMovieSearchResponse(
             title,
-            AppUtils.toJson(TmdbData(tmdbId, mediaType)),
+            TmdbData(tmdbId, mediaType).toJson(),
             if (mediaType == "movie") TvType.Movie else TvType.TvSeries
         ) {
             posterUrl = item.poster_path?.let {
