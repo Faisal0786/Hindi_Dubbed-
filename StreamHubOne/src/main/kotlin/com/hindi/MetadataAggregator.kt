@@ -1,4 +1,4 @@
-Package com.hindi
+package com.hindi
 
 import com.lagradost.cloudstream3.app
 import kotlinx.coroutines.async
