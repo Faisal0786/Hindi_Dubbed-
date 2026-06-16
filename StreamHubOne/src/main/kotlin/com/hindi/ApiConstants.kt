@@ -33,6 +33,5 @@ object ApiConstants {
     const val YOUTUBE_BASE =
         "https://www.youtube.com/watch?v="
 
-    val TMDB_KEY: String
-        get() = BuildConfig.TMDB_KEY
+    val TMDB_KEY: " "
 }
