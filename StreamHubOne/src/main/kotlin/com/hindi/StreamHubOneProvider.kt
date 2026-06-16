@@ -1,5 +1,7 @@
 package com.hindi
 
+import com.lagradost.cloudstream3.HomePageResponse
+import com.lagradost.cloudstream3.HomePageList
 import java.net.URLEncoder
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.*
@@ -30,6 +32,37 @@ class StreamHubOneProvider : MainAPI() {
         TvType.AnimeMovie,
         TvType.AsianDrama
     )
+override val mainPage = mainPageOf(
+    "Trending Worldwide" to "trending",
+    "Upcoming Episodes" to "upcoming",
+    "Airing Today" to "airing_today",
+    "Next 7 Days" to "next_7_days",
+
+    "Movies" to "movies",
+    "TV Shows" to "tv",
+    "Top Rated" to "top_rated",
+    "IMDb Trending" to "imdb",
+
+    "Netflix" to "netflix",
+    "Prime Video" to "prime",
+    "Apple TV+" to "apple",
+    "Max (HBO)" to "max",
+
+    "Bollywood" to "bollywood",
+    "Asian Drama" to "asian",
+
+    "Anime" to "anime",
+    "Crunchyroll" to "crunchyroll",
+
+    "Disney+" to "disney",
+    "Hulu" to "hulu",
+    "Paramount+" to "paramount",
+    "Peacock" to "peacock",
+
+    "JioHotstar" to "jiohotstar",
+    "SonyLIV" to "sonyliv",
+    "ZEE5" to "zee5"
+)
 
     override suspend fun search(
         query: String
@@ -294,6 +327,77 @@ private suspend fun loadTmdbEpisodes(
     }
 
     return episodes
+}
+override suspend fun getMainPage(
+    page: Int,
+    request: MainPageRequest
+): HomePageResponse {
+
+    val endpoint = when (request.data) {
+        "trending" ->
+            "/trending/all/week"
+
+        "movies" ->
+            "/movie/popular"
+
+        "tv" ->
+            "/tv/popular"
+
+        "top_rated" ->
+            "/movie/top_rated"
+
+        else ->
+            "/trending/all/week"
+    }
+
+    val url =
+        "${ApiConstants.TMDB_BASE}$endpoint" +
+        "?api_key=${ApiConstants.TMDB_KEY}&page=$page"
+
+    val response = app.get(url)
+        .parsed<TmdbMultiSearchResponse>()
+
+    val items = response.results.mapNotNull { item ->
+
+        val mediaType =
+            item.media_type
+                ?: if (request.data == "movies")
+                    "movie"
+                else
+                    "tv"
+
+        val title =
+            item.title
+                ?: item.name
+                ?: return@mapNotNull null
+
+        newMovieSearchResponse(
+            title,
+            "${item.id}|$mediaType",
+            if (mediaType == "movie")
+                TvType.Movie
+            else
+                TvType.TvSeries
+        ) {
+            posterUrl =
+                item.poster_path?.let {
+                    "${ApiConstants.TMDB_POSTER}$it"
+                }
+
+            score =
+                Score.from10(item.vote_average)
+        }
+    }
+
+    return HomePageResponse(
+        listOf(
+            HomePageList(
+                request.name,
+                items
+            )
+        ),
+        hasNext = true
+    )
 }
 override suspend fun loadLinks(
     data: String,
