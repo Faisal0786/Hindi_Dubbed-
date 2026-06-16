@@ -1,5 +1,6 @@
 package com.hindi
 
+import com.lagradost.cloudstream3.utils.newHomePageResponse
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.HomePageList
 import java.net.URLEncoder
@@ -389,14 +390,9 @@ override suspend fun getMainPage(
         }
     }
 
-    return HomePageResponse(
-        listOf(
-            HomePageList(
-                request.name,
-                items
-            )
-        ),
-        hasNext = true
+    return newHomePageResponse(
+    request.name,
+    items
     )
 }
 override suspend fun loadLinks(
