@@ -100,7 +100,7 @@ override val mainPage = mainPageOf(
 
             newMovieSearchResponse(
                 title,
-                "${item.id}|$mediaType",
+                "tmdb:$mediaType:${item.id}",
                 type
             ) {
                 posterUrl =
@@ -117,14 +117,14 @@ override suspend fun load(
     url: String
 ): LoadResponse? {
 
-    val parts = url.split("|")
+    val parts = url.split(":")
 
-    if (parts.size < 2) return null
-
-    val tmdbId = parts[0].toIntOrNull()
-        ?: return null
+    if (parts.size < 3) return null
 
     val mediaType = parts[1]
+
+    val tmdbId = parts[2].toIntOrNull()
+        ?: return null
 
     val tmdb = app.get(
         "${ApiConstants.TMDB_BASE}/$mediaType/$tmdbId" +
@@ -235,33 +235,33 @@ private suspend fun buildSeriesResponse(
         plot =
             metadata.description
 
-        tags =
-            metadata.genres
+            tags =
+                metadata.genres
 
-        year =
-            metadata.year
+            year =
+                metadata.year
 
-        score =
-            Score.from10(
-                metadata.imdbRating
-                    ?: metadata.tmdbRating
+            score =
+                Score.from10(
+                    metadata.imdbRating
+                        ?: metadata.tmdbRating
+                )
+
+            addImdbId(
+                metadata.imdbId
             )
 
-        addImdbId(
-            metadata.imdbId
-        )
+            addAniListId(
+                metadata.anilistId
+            )
 
-        addAniListId(
-            metadata.anilistId
-        )
+            addMalId(
+                metadata.malId
+            )
 
-        addMalId(
-            metadata.malId
-        )
-
-        metadata.trailer?.let {
-            addTrailer(it)
-        }
+            metadata.trailer?.let {
+                addTrailer(it)
+            }
     }
 }
 
@@ -333,25 +333,79 @@ override suspend fun getMainPage(
 ): HomePageResponse {
 
     val endpoint = when (request.data) {
-        "trending" ->
-            "/trending/all/week"
 
-        "movies" ->
-            "/movie/popular"
+        // Discovery
+        "trending" -> "/trending/all/week"
+        "movies" -> "/movie/popular"
+        "tv" -> "/tv/popular"
+        "top_rated" -> "/movie/top_rated"
 
-        "tv" ->
-            "/tv/popular"
+        // Upcoming
+        "upcoming" -> "/movie/upcoming"
+        "airing_today" -> "/tv/airing_today"
+        "next_7_days" -> "/tv/on_the_air"
 
-        "top_rated" ->
-            "/movie/top_rated"
+        // IMDb Style
+        "imdb" -> "/trending/all/day"
 
-        else ->
-            "/trending/all/week"
+        // Regions
+        "bollywood" ->
+            "/discover/movie?with_origin_country=IN&sort_by=popularity.desc"
+
+        "asian" ->
+            "/discover/tv?with_origin_country=KR&sort_by=popularity.desc"
+
+        // Anime
+        "anime" ->
+            "/discover/tv?with_genres=16&sort_by=popularity.desc"
+
+        "crunchyroll" ->
+            "/discover/tv?with_watch_providers=283&watch_region=US&sort_by=popularity.desc"
+
+        // Major OTT
+        "netflix" ->
+            "/discover/tv?with_watch_providers=8&watch_region=US&sort_by=popularity.desc"
+
+        "prime" ->
+            "/discover/tv?with_watch_providers=119&watch_region=US&sort_by=popularity.desc"
+
+        "apple" ->
+            "/discover/tv?with_watch_providers=350&watch_region=US&sort_by=popularity.desc"
+
+        "max" ->
+            "/discover/tv?with_watch_providers=1899&watch_region=US&sort_by=popularity.desc"
+
+        "disney" ->
+            "/discover/tv?with_watch_providers=337&watch_region=US&sort_by=popularity.desc"
+
+        "hulu" ->
+            "/discover/tv?with_watch_providers=15&watch_region=US&sort_by=popularity.desc"
+
+        "paramount" ->
+            "/discover/tv?with_watch_providers=531&watch_region=US&sort_by=popularity.desc"
+
+        "peacock" ->
+            "/discover/tv?with_watch_providers=386&watch_region=US&sort_by=popularity.desc"
+
+        // India OTT
+        "jiohotstar" ->
+            "/discover/tv?with_watch_providers=122&watch_region=IN&sort_by=popularity.desc"
+
+        "sonyliv" ->
+            "/discover/tv?with_watch_providers=237&watch_region=IN&sort_by=popularity.desc"
+
+        "zee5" ->
+            "/discover/tv?with_watch_providers=232&watch_region=IN&sort_by=popularity.desc"
+
+        else -> "/trending/all/week"
     }
 
     val url =
-        "${ApiConstants.TMDB_BASE}$endpoint" +
-        "?api_key=${ApiConstants.TMDB_KEY}&page=$page"
+        if (endpoint.contains("?")) {
+            "${ApiConstants.TMDB_BASE}$endpoint&api_key=${ApiConstants.TMDB_KEY}&page=$page"
+        } else {
+            "${ApiConstants.TMDB_BASE}$endpoint?api_key=${ApiConstants.TMDB_KEY}&page=$page"
+        }
 
     val response = app.get(url)
         .parsed<TmdbMultiSearchResponse>()
@@ -372,7 +426,7 @@ override suspend fun getMainPage(
 
         newMovieSearchResponse(
             title,
-            "${item.id}|$mediaType",
+            "tmdb:$mediaType:${item.id}",
             if (mediaType == "movie")
                 TvType.Movie
             else
