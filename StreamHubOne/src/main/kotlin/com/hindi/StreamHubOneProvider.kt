@@ -1,4 +1,4 @@
-package com.hindi
+Package com.hindi
 
 import com.lagradost.cloudstream3.HomePageList
 import java.net.URLEncoder
@@ -32,35 +32,52 @@ class StreamHubOneProvider : MainAPI() {
         TvType.AsianDrama
     )
 override val mainPage = mainPageOf(
-    "Trending Worldwide" to "trending",
-    "Upcoming Episodes" to "upcoming",
-    "Airing Today" to "airing_today",
-    "Next 7 Days" to "next_7_days",
 
-    "Movies" to "movies",
-    "TV Shows" to "tv",
-    "Top Rated" to "top_rated",
-    "IMDb Trending" to "imdb",
+    "trending/all/week" to "Trending Worldwide",
 
-    "Netflix" to "netflix",
-    "Prime Video" to "prime",
-    "Apple TV+" to "apple",
-    "Max (HBO)" to "max",
+    "movie/upcoming" to "Upcoming Episodes",
 
-    "Bollywood" to "bollywood",
-    "Asian Drama" to "asian",
+    "tv/airing_today" to "Airing Today",
 
-    "Anime" to "anime",
-    "Crunchyroll" to "crunchyroll",
+    "tv/on_the_air" to "Next 7 Days",
 
-    "Disney+" to "disney",
-    "Hulu" to "hulu",
-    "Paramount+" to "paramount",
-    "Peacock" to "peacock",
+    "movie/popular" to "Movies",
 
-    "JioHotstar" to "jiohotstar",
-    "SonyLIV" to "sonyliv",
-    "ZEE5" to "zee5"
+    "tv/popular" to "TV Shows",
+
+    "movie/top_rated" to "Top Rated",
+
+    "trending/all/day" to "IMDb Trending",
+
+    "discover/tv?with_watch_providers=8&watch_region=US" to "Netflix",
+
+    "discover/tv?with_watch_providers=119&watch_region=US" to "Prime Video",
+
+    "discover/tv?with_watch_providers=350&watch_region=US" to "Apple TV+",
+
+    "discover/tv?with_watch_providers=1899&watch_region=US" to "Max",
+
+    "discover/movie?with_origin_country=IN&sort_by=popularity.desc" to "Bollywood",
+
+    "discover/tv?with_origin_country=KR&sort_by=popularity.desc" to "Asian Drama",
+
+    "discover/tv?with_genres=16&sort_by=popularity.desc" to "Anime",
+
+    "discover/tv?with_watch_providers=283&watch_region=US&sort_by=popularity.desc" to "Crunchyroll",
+
+    "discover/tv?with_watch_providers=337&watch_region=US" to "Disney+",
+
+    "discover/tv?with_watch_providers=15&watch_region=US" to "Hulu",
+
+    "discover/tv?with_watch_providers=531&watch_region=US" to "Paramount+",
+
+    "discover/tv?with_watch_providers=386&watch_region=US" to "Peacock",
+
+    "discover/tv?with_watch_providers=122&watch_region=IN" to "JioHotstar",
+
+    "discover/tv?with_watch_providers=237&watch_region=IN" to "SonyLIV",
+
+    "discover/tv?with_watch_providers=232&watch_region=IN" to "ZEE5"
 )
 
     override suspend fun search(
@@ -116,7 +133,7 @@ override val mainPage = mainPageOf(
 override suspend fun load(url: String): LoadResponse? {
     // Safely handling custom tmdb string format
     if (!url.startsWith("tmdb:")) return null
-    
+
     val parts = url.split(":")
     if (parts.size < 3) return null
 
@@ -293,61 +310,29 @@ override suspend fun getMainPage(
     request: MainPageRequest
 ): HomePageResponse {
 
-    val endpoint = when (request.data) {
-        // Discovery
-        "trending" -> "/trending/all/week"
-        "movies" -> "/movie/popular"
-        "tv" -> "/tv/popular"
-        "top_rated" -> "/movie/top_rated"
-
-        // Upcoming
-        "upcoming" -> "/movie/upcoming"
-        "airing_today" -> "/tv/airing_today"
-        "next_7_days" -> "/tv/on_the_air"
-
-        // IMDb Style
-        "imdb" -> "/trending/all/day"
-
-        // Regions
-        "bollywood" -> "/discover/movie?with_origin_country=IN&sort_by=popularity.desc"
-        "asian" -> "/discover/tv?with_origin_country=KR&sort_by=popularity.desc"
-
-        // Anime
-        "anime" -> "/discover/tv?with_genres=16&sort_by=popularity.desc"
-        "crunchyroll" -> "/discover/tv?with_watch_providers=283&watch_region=US&sort_by=popularity.desc"
-
-        // Major OTT
-        "netflix" -> "/discover/tv?with_watch_providers=8&watch_region=US&sort_by=popularity.desc"
-        "prime" -> "/discover/tv?with_watch_providers=119&watch_region=US&sort_by=popularity.desc"
-        "apple" -> "/discover/tv?with_watch_providers=350&watch_region=US&sort_by=popularity.desc"
-        "max" -> "/discover/tv?with_watch_providers=1899&watch_region=US&sort_by=popularity.desc"
-        "disney" -> "/discover/tv?with_watch_providers=337&watch_region=US&sort_by=popularity.desc"
-        "hulu" -> "/discover/tv?with_watch_providers=15&watch_region=US&sort_by=popularity.desc"
-        "paramount" -> "/discover/tv?with_watch_providers=531&watch_region=US&sort_by=popularity.desc"
-        "peacock" -> "/discover/tv?with_watch_providers=386&watch_region=US&sort_by=popularity.desc"
-
-        // India OTT
-        "jiohotstar" -> "/discover/tv?with_watch_providers=122&watch_region=IN&sort_by=popularity.desc"
-        "sonyliv" -> "/discover/tv?with_watch_providers=237&watch_region=IN&sort_by=popularity.desc"
-        "zee5" -> "/discover/tv?with_watch_providers=232&watch_region=IN&sort_by=popularity.desc"
-
-        else -> "/trending/all/week"
-    }
-
-    val url = if (endpoint.contains("?")) {
-        "${ApiConstants.TMDB_BASE}$endpoint&api_key=${ApiConstants.TMDB_KEY}&page=$page"
-    } else {
-        "${ApiConstants.TMDB_BASE}$endpoint?api_key=${ApiConstants.TMDB_KEY}&page=$page"
-    }
+    val url =
+        if (request.data.contains("?")) {
+            "${ApiConstants.TMDB_BASE}/${request.data}" +
+            "&api_key=${ApiConstants.TMDB_KEY}&page=$page"
+        } else {
+            "${ApiConstants.TMDB_BASE}/${request.data}" +
+            "?api_key=${ApiConstants.TMDB_KEY}&page=$page"
+        }
 
     val response = app.get(url).parsed<TmdbMultiSearchResponse>()
 
-    // Yahan fix kiya hai: Endpoint URL check karke default type decide hoga
-    val isMovieEndpoint = endpoint.contains("/movie") || request.data == "movies" || request.data == "top_rated" || request.data == "upcoming" || request.data == "bollywood"
-
     val items = response.results.mapNotNull { item ->
-        val mediaType = item.media_type 
-            ?: if (isMovieEndpoint) "movie" else "tv"
+        val mediaType = when {
+
+            request.data.startsWith("movie") ->
+                "movie"
+
+            request.data.contains("discover/movie") ->
+                "movie"
+
+            else ->
+                item.media_type ?: "tv"
+        }
 
         val title = item.title ?: item.name ?: return@mapNotNull null
 
