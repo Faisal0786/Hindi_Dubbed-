@@ -217,8 +217,8 @@ private suspend fun fetchTmdb(
         if (title.isNullOrBlank()) return null
 
         val query = """
-            query (\$search: String) {
-              Media(search: \$search, type: ANIME) {
+            query (${'$'}search: String) {
+  Media(search: ${'$'}search, type: ANIME) {
                 id
                 idMal
                 description
