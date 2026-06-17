@@ -98,6 +98,21 @@ object MetadataAggregator {
                 cinemeta?.description
             ),
 
+            certification =
+    if (mediaType.equals("tv", true) ||
+        mediaType.equals("series", true)
+    ) {
+        tmdb?.content_ratings?.results
+            ?.firstOrNull { it.iso_3166_1 == "US" }
+            ?.rating
+    } else {
+        tmdb?.release_dates?.results
+            ?.firstOrNull { it.iso_3166_1 == "US" }
+            ?.release_dates
+            ?.firstOrNull()
+            ?.certification
+    },
+
             poster = selectPoster(
                 tmdb?.poster_path,
                 cinemeta?.poster
