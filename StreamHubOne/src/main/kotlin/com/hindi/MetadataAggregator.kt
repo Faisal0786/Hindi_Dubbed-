@@ -15,6 +15,8 @@ object MetadataAggregator {
         val originalTitle: String? = null,
 
         val description: String? = null,
+    
+        val certification: String? = null,
 
         val poster: String? = null,
         val backdrop: String? = null,
@@ -170,7 +172,7 @@ private suspend fun fetchTmdb(
         val url =
     "${ApiConstants.TMDB_BASE}/$endpoint/$tmdbId" +
     "?api_key=${ApiConstants.TMDB_KEY}" +
-    "&append_to_response=credits,videos,images,external_ids" +
+    "&append_to_response=credits,videos,images,external_ids,content_ratings,release_dates" +
     "&include_image_language=en,null"
 
         return runCatching {
