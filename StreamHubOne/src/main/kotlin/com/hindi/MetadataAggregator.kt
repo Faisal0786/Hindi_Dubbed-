@@ -28,6 +28,7 @@ object MetadataAggregator {
 
         val genres: List<String> = emptyList(),
         val countries: List<String> = emptyList(),
+        val ottProvider: String? = null,
 
         val imdbRating: Double? = null,
         val tmdbRating: Double? = null,
@@ -460,4 +461,32 @@ private suspend fun fetchTmdb(
 
         return score
     }
+private suspend fun fetchWatchProvider(
+    tmdbId: Int?,
+    mediaType: String
+): String? {
+
+    if (tmdbId == null) return null
+
+    val endpoint =
+        if (mediaType.equals("movie", true))
+            "movie"
+        else
+            "tv"
+
+    return runCatching {
+
+        val response = app.get(
+            "${ApiConstants.TMDB_BASE}/$endpoint/$tmdbId/watch/providers" +
+            "?api_key=${ApiConstants.TMDB_KEY}"
+        ).parsed<TmdbWatchProviders>()
+
+        response.results["US"]
+            ?.flatrate
+            ?.firstOrNull()
+            ?.provider_name
+
+    }.getOrNull()
+}
+
 }
