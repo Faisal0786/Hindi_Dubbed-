@@ -90,6 +90,7 @@ data class TmdbEpisode(
     val air_date: String?,
     val still_path: String?,
     val vote_average: Double?
+    val runtime: int?
 )
 
 data class TmdbRecommendationsResponse(
