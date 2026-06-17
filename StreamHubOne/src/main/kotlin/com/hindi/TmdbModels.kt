@@ -125,3 +125,15 @@ data class TmdbReleaseCountry(
 data class TmdbReleaseItem(
     val certification: String?
 )
+data class TmdbWatchProviders(
+    val results: Map<String, TmdbWatchRegion> = emptyMap()
+)
+
+data class TmdbWatchRegion(
+    val flatrate: List<TmdbWatchProvider> = emptyList()
+)
+
+data class TmdbWatchProvider(
+    val provider_id: Int?,
+    val provider_name: String?
+)
