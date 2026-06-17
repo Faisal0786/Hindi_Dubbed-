@@ -35,6 +35,8 @@ object MetadataAggregator {
 
         val voteCount: Int? = null,
         val popularityScore: Double? = null,
+        
+        val awards: String? = null,
 
         val cast: List<ActorData> = emptyList(),
 
@@ -161,7 +163,7 @@ object MetadataAggregator {
                 tmdb?.vote_count,
                 aniList?.averageScore
             ),
-
+            awards = cinemeta?.awards,
             cast = buildCast(tmdb),
 
             anilistId = ids?.anilist,
