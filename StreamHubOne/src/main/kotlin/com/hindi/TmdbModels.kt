@@ -21,7 +21,9 @@ data class TmdbDetails(
     val credits: TmdbCredits?,
     val videos: TmdbVideos?,
     val images: TmdbImages?,
-    val external_ids: TmdbExternalIds?
+    val external_ids: TmdbExternalIds?,
+    val content_ratings: TmdbContentRatings? = null,
+    val release_dates: TmdbReleaseDates? = null
 )
 
 data class TmdbGenre(
