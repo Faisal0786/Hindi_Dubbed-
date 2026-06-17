@@ -159,7 +159,10 @@ override suspend fun load(url: String): LoadResponse? {
             posterUrl = metadata.poster
             backgroundPosterUrl = metadata.backdrop
             logoUrl = metadata.logo
-            plot = metadata.description
+            plot =
+    metadata.awards?.let {
+        "[$it]\n\n${metadata.description ?: ""}"
+    } ?: metadata.description
             tags = metadata.genres
             year = metadata.year
             contentRating = metadata.certification
@@ -221,7 +224,9 @@ private suspend fun buildSeriesResponse(
             metadata.logo
 
         plot =
-            metadata.description
+    metadata.awards?.let {
+        "[$it]\n\n${metadata.description ?: ""}"
+    } ?: metadata.description
 
             tags =
                 metadata.genres
