@@ -1,5 +1,7 @@
 package com.hindi
 
+import com.lagradost.cloudstream3.Actor
+import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.HomePageList
 import java.net.URLEncoder
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
@@ -23,7 +25,7 @@ class StreamHubOneProvider : MainAPI() {
 
     override var mainUrl = "https://www.themoviedb.org"
 
-    override var lang = "en"
+    override var lang = "hi"
 
     override val hasMainPage = true
 
@@ -160,6 +162,17 @@ override suspend fun load(url: String): LoadResponse? {
             plot = metadata.description
             tags = metadata.genres
             year = metadata.year
+            duration = metadata.runtime
+
+actors = metadata.cast.map {
+    ActorData(
+        Actor(
+            it.name,
+            it.image
+        ),
+        roleString = it.role
+    )
+}
             score = Score.from10(metadata.imdbRating ?: metadata.tmdbRating)
             addImdbId(metadata.imdbId)
             addAniListId(metadata.anilistId)
@@ -214,6 +227,19 @@ private suspend fun buildSeriesResponse(
 
             year =
                 metadata.year
+            duration =
+    metadata.runtime
+
+actors =
+    metadata.cast.map {
+        ActorData(
+            Actor(
+                it.name,
+                it.image
+            ),
+            roleString = it.role
+        )
+    }
 
             score =
                 Score.from10(
