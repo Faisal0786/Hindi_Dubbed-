@@ -88,3 +88,14 @@ data class TmdbEpisode(
     val still_path: String?,
     val vote_average: Double?
 )
+
+data class TmdbRecommendationsResponse(
+    val results: List<TmdbRecommendation> = emptyList()
+)
+
+data class TmdbRecommendation(
+    val id: Int?,
+    val title: String?,
+    val name: String?,
+    val poster_path: String?
+)
