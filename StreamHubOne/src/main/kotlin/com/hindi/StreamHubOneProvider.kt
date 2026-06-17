@@ -248,7 +248,13 @@ actors =
             roleString = it.role
         )
     }
-
+            showStatus =
+    when(metadata.status) {
+        "Returning Series" -> ShowStatus.Ongoing
+        "In Production" -> ShowStatus.Ongoing
+        "Ended" -> ShowStatus.Completed
+        else -> null
+    }
             score =
                 Score.from10(
                     metadata.imdbRating
