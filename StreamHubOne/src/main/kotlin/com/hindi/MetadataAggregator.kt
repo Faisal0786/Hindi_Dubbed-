@@ -168,10 +168,10 @@ private suspend fun fetchTmdb(
         }
 
         val url =
-            "${ApiConstants.TMDB_BASE}/$endpoint/$tmdbId" +
-            "?api_key=${ApiConstants.TMDB_KEY}" +
-            "&append_to_response=credits,videos,images,external_ids
-&include_image_language=en,null"
+    "${ApiConstants.TMDB_BASE}/$endpoint/$tmdbId" +
+    "?api_key=${ApiConstants.TMDB_KEY}" +
+    "&append_to_response=credits,videos,images,external_ids" +
+    "&include_image_language=en,null"
 
         return runCatching {
             app.get(url).parsed<TmdbDetails>()
