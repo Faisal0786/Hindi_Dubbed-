@@ -518,4 +518,24 @@ private suspend fun fetchWatchProvider(
     }.getOrNull()
 }
 
+private fun buildAniListCast(
+    aniList: AniListMedia?
+): List<ActorData> {
+
+    return aniList?.characters?.edges
+        ?.take(20)
+        ?.mapNotNull { edge ->
+
+            val actor =
+                edge.voiceActors.firstOrNull()
+
+            ActorData(
+                name = actor?.name?.full ?: return@mapNotNull null,
+                role = edge.node?.name?.full,
+                image = actor.image?.large
+            )
+        }
+        ?: emptyList()
+}
+
 }
