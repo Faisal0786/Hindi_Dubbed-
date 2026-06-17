@@ -177,7 +177,10 @@ object MetadataAggregator {
             ),
             awards = cinemeta?.awards,
             status = tmdb?.status,
-            cast = buildCast(tmdb),
+            cast =
+    buildCast(tmdb).ifEmpty {
+        buildAniListCast(aniList)
+    },
 
             anilistId = ids?.anilist,
             malId = ids?.myanimelist,
