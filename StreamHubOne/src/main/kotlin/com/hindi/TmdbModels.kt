@@ -99,3 +99,25 @@ data class TmdbRecommendation(
     val name: String?,
     val poster_path: String?
 )
+
+data class TmdbContentRatings(
+    val results: List<TmdbContentRating> = emptyList()
+)
+
+data class TmdbContentRating(
+    val iso_3166_1: String?,
+    val rating: String?
+)
+
+data class TmdbReleaseDates(
+    val results: List<TmdbReleaseCountry> = emptyList()
+)
+
+data class TmdbReleaseCountry(
+    val iso_3166_1: String?,
+    val release_dates: List<TmdbReleaseItem> = emptyList()
+)
+
+data class TmdbReleaseItem(
+    val certification: String?
+)
