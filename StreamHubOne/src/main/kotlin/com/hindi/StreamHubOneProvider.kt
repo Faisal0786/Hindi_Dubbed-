@@ -321,13 +321,16 @@ private suspend fun loadTmdbEpisodes(
                         }
 
                     this.score =
-                        Score.from10(
-                            episode.vote_average
-                        )
+    Score.from10(
+        episode.vote_average
+    )
 
-                    addDate(
-                        episode.air_date
-                    )
+this.runTime =
+    episode.runtime
+
+addDate(
+    episode.air_date
+)
                 }
             )
         }
