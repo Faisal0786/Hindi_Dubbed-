@@ -170,7 +170,8 @@ private suspend fun fetchTmdb(
         val url =
             "${ApiConstants.TMDB_BASE}/$endpoint/$tmdbId" +
             "?api_key=${ApiConstants.TMDB_KEY}" +
-            "&append_to_response=credits,videos,images,external_ids"
+            "&append_to_response=credits,videos,images,external_ids
+&include_image_language=en,null"
 
         return runCatching {
             app.get(url).parsed<TmdbDetails>()
@@ -293,12 +294,10 @@ private suspend fun fetchTmdb(
 
         val logos = tmdb?.images?.logos ?: return null
 
-        val best = logos
-            .sortedWith(
-                compareByDescending<TmdbLogo> { it.vote_average ?: 0.0 }
-                    .thenByDescending { it.vote_count ?: 0 }
-            )
-            .firstOrNull()
+        val best =
+    logos.firstOrNull { it.iso_639_1 == "en" }
+        ?: logos.firstOrNull { it.iso_639_1 == null }
+        ?: logos.maxByOrNull { it.vote_average ?: 0.0 }
 
         return best?.file_path?.let {
             "https://image.tmdb.org/t/p/w500$it"
