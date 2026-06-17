@@ -21,7 +21,7 @@ data class AniListMedia(
     val seasonYear: Int?,
     val episodes: Int?,
     val genres: List<String> = emptyList(),
-    val studios: AniListStudios?
+    val studios: AniListStudios?,
     val characters: AniListCharacters?
 )
 
