@@ -159,10 +159,18 @@ override suspend fun load(url: String): LoadResponse? {
             posterUrl = metadata.poster
             backgroundPosterUrl = metadata.backdrop
             logoUrl = metadata.logo
-            plot =
+            plot = buildString {
+
+    metadata.countries.firstOrNull()?.let {
+        append("🌍 Country of Origin: $it\n\n")
+    }
+
     metadata.awards?.let {
-        "[$it]\n\n${metadata.description ?: ""}"
-    } ?: metadata.description
+        append("🏆 $it\n\n")
+    }
+
+    append(metadata.description ?: "")
+}
             tags = metadata.genres
             year = metadata.year
             contentRating = metadata.certification
@@ -223,10 +231,18 @@ private suspend fun buildSeriesResponse(
         logoUrl =
             metadata.logo
 
-        plot =
+        plot = buildString {
+
+    metadata.countries.firstOrNull()?.let {
+        append("🌍 Country of Origin: $it\n\n")
+    }
+
     metadata.awards?.let {
-        "[$it]\n\n${metadata.description ?: ""}"
-    } ?: metadata.description
+        append("🏆 $it\n\n")
+    }
+
+    append(metadata.description ?: "")
+}
 
             tags =
                 metadata.genres
