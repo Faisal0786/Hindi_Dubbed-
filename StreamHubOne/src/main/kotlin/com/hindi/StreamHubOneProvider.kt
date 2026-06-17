@@ -162,6 +162,7 @@ override suspend fun load(url: String): LoadResponse? {
             plot = metadata.description
             tags = metadata.genres
             year = metadata.year
+            contentRating = metadata.certification
             duration = metadata.runtime
 
 actors = metadata.cast.map {
@@ -227,6 +228,8 @@ private suspend fun buildSeriesResponse(
 
             year =
                 metadata.year
+            contentRating =
+    metadata.certification
             duration =
     metadata.runtime
 
