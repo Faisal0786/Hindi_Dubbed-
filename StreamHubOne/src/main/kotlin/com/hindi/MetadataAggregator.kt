@@ -37,6 +37,8 @@ object MetadataAggregator {
         val popularityScore: Double? = null,
         
         val awards: String? = null,
+       
+        val status: String? = null,
 
         val cast: List<ActorData> = emptyList(),
 
@@ -164,6 +166,7 @@ object MetadataAggregator {
                 aniList?.averageScore
             ),
             awards = cinemeta?.awards,
+            status = tmdb?.status,
             cast = buildCast(tmdb),
 
             anilistId = ids?.anilist,
@@ -189,7 +192,7 @@ private suspend fun fetchTmdb(
         val url =
     "${ApiConstants.TMDB_BASE}/$endpoint/$tmdbId" +
     "?api_key=${ApiConstants.TMDB_KEY}" +
-    "&append_to_response=credits,videos,images,external_ids,content_ratings,release_dates" +
+    "&append_to_response=credits,videos,images,external_ids,content_ratings,release_dates,recommendation" +
     "&include_image_language=en,null"
 
         return runCatching {
