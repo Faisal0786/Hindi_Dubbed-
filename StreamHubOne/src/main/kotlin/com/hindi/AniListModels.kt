@@ -43,3 +43,33 @@ data class AniListStudios(
 data class AniListStudio(
     val name: String?
 )
+data class AniListCharacters(
+    val edges: List<AniListCharacterEdge> = emptyList()
+)
+
+data class AniListCharacterEdge(
+    val role: String?,
+    val node: AniListCharacterNode?,
+    val voiceActors: List<AniListVoiceActor> = emptyList()
+)
+
+data class AniListCharacterNode(
+    val name: AniListCharacterName?
+)
+
+data class AniListCharacterName(
+    val full: String?
+)
+
+data class AniListVoiceActor(
+    val name: AniListVoiceActorName?,
+    val image: AniListVoiceActorImage?
+)
+
+data class AniListVoiceActorName(
+    val full: String?
+)
+
+data class AniListVoiceActorImage(
+    val large: String?
+)
