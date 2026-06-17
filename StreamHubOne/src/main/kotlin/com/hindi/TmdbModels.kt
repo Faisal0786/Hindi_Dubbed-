@@ -15,6 +15,7 @@ data class TmdbDetails(
     val vote_average: Double?,
     val vote_count: Int?,
     val runtime: Int?,
+    val status: String?,
     val episode_run_time: List<Int>?,
     val genres: List<TmdbGenre>?,
     val production_countries: List<TmdbCountry>?,
