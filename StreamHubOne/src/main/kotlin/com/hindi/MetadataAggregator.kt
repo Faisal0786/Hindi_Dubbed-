@@ -281,6 +281,26 @@ private suspend fun fetchTmdb(
                     name
                   }
                 }
+               characters {
+  edges {
+
+    role
+
+    node {
+      name {
+        full
+      }
+    }
+
+    voiceActors(language: JAPANESE) {
+      name {
+        full
+      }
+
+      image {
+        large
+      }
+    }
               }
             }
         """.trimIndent()
