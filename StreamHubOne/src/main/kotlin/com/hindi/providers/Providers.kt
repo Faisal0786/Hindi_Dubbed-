@@ -30,12 +30,12 @@ import java.net.URI
 import java.net.URL
 import java.net.URLEncoder
 
-import com.megix.settings.Settings
+import com.hindi.providers.Settings
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-object Providers {
+object SourceProviders {
 
     private val cfKiller by lazy { CloudflareKiller() }
     private val cfMutex = Mutex()
@@ -48,7 +48,7 @@ object Providers {
         val stremioMap = getDynamicStremioMap(res.imdbId, res.season, res.episode, subtitleCallback, callback)
 
         val executionList = Settings.activeProviderOrder.mapNotNull { key ->
-            ProviderRegistry.builtInProviders.find { it.key == key }?.executeStandard?.let { action ->
+            SourceRegistry.builtInProviders.find { it.key == key }?.executeStandard?.let { action ->
                 suspend { this.action(res, subtitleCallback, callback) }
             } ?: stremioMap[key]
         }
@@ -64,7 +64,7 @@ object Providers {
         val stremioMap = getDynamicStremioMap(res.imdbId, res.imdbSeason, res.imdbEpisode, subtitleCallback, callback)
 
         val executionList = Settings.activeProviderOrder.mapNotNull { key ->
-            ProviderRegistry.builtInProviders.find { it.key == key }?.executeAnime?.let { action ->
+            SourceRegistry.builtInProviders.find { it.key == key }?.executeAnime?.let { action ->
                 suspend { this.action(res, subtitleCallback, callback) }
             } ?: stremioMap[key]
         }
@@ -102,7 +102,7 @@ object Providers {
         Log.d("Malsync", "malData: $malData")
 
         val executionList = Settings.activeProviderOrder.mapNotNull { key ->
-            ProviderRegistry.builtInProviders.find { it.key == key }?.executeMalSync?.let { action ->
+            SourceRegistry.builtInProviders.find { it.key == key }?.executeMalSync?.let { action ->
                 suspend { this.action(malData, subtitleCallback, callback) }
             }
         }
