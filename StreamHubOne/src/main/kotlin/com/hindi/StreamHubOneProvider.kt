@@ -586,7 +586,7 @@ override suspend fun loadLinks(
     )
 
     suspend fun getExternalIds(id: String, type: String) : ExtenalIds? {
-        val url = "$haglund_url/ids?source=$type&id=$id"
+        val url = "${ApiConstants.HAGLUND_BASE}/ids?source=$type&id=$id"
         val json = app.get(url).text
         return tryParseJson<ExtenalIds>(json) ?: return null
     }
