@@ -86,7 +86,7 @@ object SourceRegistry {
             executeAnime = { res, subCb, cb -> invokeMoviebox(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
         //SourceProviderDef(
-            key = "p_mkvbase", displayName = "MkvBase",
+            //key = "p_mkvbase", displayName = "MkvBase",
             //executeStandard = { res, subCb, cb -> invokeMkvbase(res.title, res.year, res.season, res.episode, subCb, cb) },
             //executeAnime = { res, subCb, cb -> invokeMkvbase(res.imdbTitle, res.imdbYear ,res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
