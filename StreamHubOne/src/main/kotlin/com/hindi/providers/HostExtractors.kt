@@ -35,7 +35,7 @@ import javax.crypto.spec.SecretKeySpec
 import java.security.SecureRandom
 import javax.crypto.Cipher
 
-import com.megix.settings.Settings
+import com.hindi.providers.Settings
 
 class Streameeeeee : Videostr() {
     override var name = "Streameeeeee"
