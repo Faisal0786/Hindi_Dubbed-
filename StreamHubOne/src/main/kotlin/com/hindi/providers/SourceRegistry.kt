@@ -27,7 +27,7 @@ data class ProviderDef(
     val executeMalSync: (suspend CineStreamExtractors.(data: MalSyncData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null
 )
 
-object ProviderRegistry {
+object SourceRegistry {
 
     val builtInProviders = listOf(
         // ── Torrents ──────────────────────────────────────────────
