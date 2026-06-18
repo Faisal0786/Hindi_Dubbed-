@@ -3,7 +3,7 @@ package com.hindi.providers
 import android.content.Context
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
-import com.hindi.SourceRegistry
+import com.hindi.providers.SourceRegistry
 
 object Settings {
 
