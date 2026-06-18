@@ -1,4 +1,4 @@
-package com.hindi.providers
+Package com.hindi.providers
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -16,15 +16,15 @@ data class MalSyncData(
 )
 
 /** * Defines a provider and its execution logic for Standard, Anime, and MALSync data.
- * The `CineStreamExtractors.` receiver allows direct access to internal scraping functions.
+ * The `Providers.` receiver allows direct access to internal scraping functions.
  */
 data class ProviderDef(
     val key: String,
     val displayName: String,
     val isTorrent: Boolean = false,
-    val executeStandard: (suspend CineStreamExtractors.(res: AllLoadLinksData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null,
-    val executeAnime: (suspend CineStreamExtractors.(res: AllLoadLinksData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null,
-    val executeMalSync: (suspend CineStreamExtractors.(data: MalSyncData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null
+    val executeStandard: (suspend Providers.(res: AllLoadLinksData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null,
+    val executeAnime: (suspend Providers.(res: AllLoadLinksData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null,
+    val executeMalSync: (suspend Providers.(data: MalSyncData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null
 )
 
 object SourceRegistry {
