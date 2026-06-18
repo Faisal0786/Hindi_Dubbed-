@@ -169,11 +169,11 @@ override suspend fun load(url: String): LoadResponse? {
             plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("🌍 Country of Origin: $it\n\n")
+        append("[🌍 Country of Origin: * $it\n\n *]")
     }
 
     metadata.awards?.let {
-        append("🏆 $it\n\n")
+        append("[🏆 $it\n\n]")
     }
 
     append(metadata.description ?: "")
@@ -241,11 +241,11 @@ private suspend fun buildSeriesResponse(
         plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("🌍 Country of Origin: $it\n\n")
+        append("[🌍 Country of Origin]: [* $it\n\n *]")
     }
 
     metadata.awards?.let {
-        append("🏆 $it\n\n")
+        append("[🏆 $it\n\n]")
     }
 
     append(metadata.description ?: "")
@@ -613,7 +613,9 @@ override suspend fun loadLinks(
         var tmdbId: Int? = null
 
         try {
-            val json = app.get("$cinemeta_url/meta/${res.tvtype}/${res.imdb_id}.json").text
+            val json = app.get(
+    "${ApiConstants.CINEMETA_BASE}/meta/${res.tvtype}/${res.imdb_id}.json"
+).text
             val movieData = tryParseJson<ResponseData>(json)
 
             movieData?.meta?.let { meta ->
