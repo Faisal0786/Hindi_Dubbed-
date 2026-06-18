@@ -35,7 +35,7 @@ import com.megix.settings.Settings
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-object SourceProviders {
+object Providers {
 
     private val cfKiller by lazy { CloudflareKiller() }
     private val cfMutex = Mutex()
