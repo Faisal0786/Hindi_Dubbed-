@@ -10,6 +10,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
@@ -18,7 +19,8 @@ import com.hindi.providers.SourceProviders.invokeAllSources
 import com.hindi.providers.SourceProviders.invokeAllAnimeSources
 import com.hindi.providers.SourceProviders.invokeAnimes
 import com.hindi.providers.AllLoadLinksData
-
+import com.hindi.providers.convertImdbToAnimeId
+import com.hindi.providers.convertTmdbToAnimeId
 data class TmdbData(
     val id: Int,
     val mediaType: String
