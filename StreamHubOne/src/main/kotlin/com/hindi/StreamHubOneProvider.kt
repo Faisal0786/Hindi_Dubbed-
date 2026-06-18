@@ -14,6 +14,10 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 
+import com.hindi.providers.Providers.invokeAllSources
+import com.hindi.providers.Providers.invokeAllAnimeSources
+import com.hindi.providers.Providers.invokeAnimes
+
 data class TmdbData(
     val id: Int,
     val mediaType: String
