@@ -22,9 +22,9 @@ data class SourceProviderDef(
     val key: String,
     val displayName: String,
     val isTorrent: Boolean = false,
-    val executeStandard: (suspend SourceProvider.(res: AllLoadLinksData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null,
-    val executeAnime: (suspend SourceProvider.(res: AllLoadLinksData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null,
-    val executeMalSync: (suspend SourceProvider.(data: MalSyncData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null
+    val executeStandard: (suspend SourceProviders.(res: AllLoadLinksData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null,
+    val executeAnime: (suspend SourceProviders.(res: AllLoadLinksData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null,
+    val executeMalSync: (suspend SourceProviders.(data: MalSyncData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null
 )
 
 object SourceRegistry {
