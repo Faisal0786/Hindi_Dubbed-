@@ -32,10 +32,10 @@ object Settings {
         get() = getOrder().filter { enabled(it) }
 
     // ── Dynamic Provider Maps ────────────────────────────────
-    // We dynamically pull these from our single source of truth (ProviderRegistry)!
-    val TORRENT_KEYS: Set<String> get() = ProviderRegistry.torrentKeys
-    val PROVIDER_NAMES: Map<String, String> get() = ProviderRegistry.namesMap
-    val DEFAULT_ORDER: List<String> get() = ProviderRegistry.keys
+    // We dynamically pull these from our single source of truth (SourceRegistry)!
+    val TORRENT_KEYS: Set<String> get() = SourceRegistry.torrentKeys
+    val PROVIDER_NAMES: Map<String, String> get() = SourceRegistry.namesMap
+    val DEFAULT_ORDER: List<String> get() = SourceRegistry.keys
 
     // ── Provider ordering ────────────────────────────────────
 
@@ -183,6 +183,6 @@ object Settings {
     fun clearGramCinemaToken()              = setKey(GRAMCINEMA_TOKEN_KEY, null)
 
     // ── Entry point ──────────────────────────────────────────
-    fun showSettingsDialog(context: Context, onSave: () -> Unit) =
+    //fun showSettingsDialog(context: Context, onSave: () -> Unit) =
         SettingsDialog.show(context, onSave)
 }
