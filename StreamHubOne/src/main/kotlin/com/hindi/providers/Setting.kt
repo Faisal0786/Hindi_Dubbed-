@@ -184,5 +184,5 @@ object Settings {
 
     // ── Entry point ──────────────────────────────────────────
     //fun showSettingsDialog(context: Context, onSave: () -> Unit) =
-        SettingsDialog.show(context, onSave)
+        //SettingsDialog.show(context, onSave)
 }
