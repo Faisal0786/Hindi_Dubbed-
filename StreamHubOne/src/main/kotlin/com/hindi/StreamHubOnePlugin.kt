@@ -7,6 +7,6 @@ import com.lagradost.cloudstream3.plugins.Plugin
 class StreamHubOnePlugin : Plugin() {
     override fun load() {
         registerMainAPI(StreamHubOneProvider())
-        registerMainAPI(Cruwnchyroll())
+        registerMainAPI(Cwunchyroll())
     }
 }
