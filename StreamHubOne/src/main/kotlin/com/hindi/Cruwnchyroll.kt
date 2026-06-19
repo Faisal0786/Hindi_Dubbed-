@@ -43,8 +43,11 @@ class Cwunchyroll : MainAPI() {
     override val hasDownloadSupport = true
 
     override val supportedTypes = setOf(
+        TvType.Movie,
+        TvType.TvSeries,
         TvType.Anime,
-        TvType.AnimeMovie
+        TvType.AnimeMovie,
+        TvType.AsianDrama
     )
 override val mainPage = mainPageOf(
     "TRENDING" to "Trending Anime",
