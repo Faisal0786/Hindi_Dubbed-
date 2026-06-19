@@ -202,19 +202,20 @@ override val mainPage = mainPageOf(
 override suspend fun load(url: String): LoadResponse? {
 
     val aniData =
-        parseJson<AniData>(url)
+    parseJson<AniData>(url)
+        ?: throw Exception("AniData parse failed"))
             ?: return null
 
     val ani =
-        getAniListMedia(
-            aniData.id
-        ) ?: return null
+    getAniListMedia(
+        aniData.id
+    ) ?: throw Exception("AniList returned null")
 
     val title =
-        ani.title?.english
-            ?: ani.title?.romaji
-            ?: ani.title?.native
-            ?: return null
+    ani.title?.english
+        ?: ani.title?.romaji
+        ?: ani.title?.native
+        ?: throw Exception("AniList title null")
 
     val tmdbSearch = app.get(
         "${ApiConstants.TMDB_BASE}/search/multi" +
@@ -223,10 +224,10 @@ override suspend fun load(url: String): LoadResponse? {
     ).parsed<TmdbMultiSearchResponse>()
 
     val tmdbResult =
-        tmdbSearch?.results?.firstOrNull {
-            it.media_type == "tv" ||
-            it.media_type == "movie"
-        }
+    tmdbSearch?.results?.firstOrNull {
+        it.media_type == "tv" ||
+        it.media_type == "movie"
+    } ?: throw Exception("TMDB search failed: $title")
 
     val mediaType =
         if (aniData.format == "MOVIE")
@@ -317,7 +318,7 @@ actors = metadata.cast.map {
         }
     } else {
         buildSeriesResponse(
-    tmdbId = tmdbId ?: return null,
+    tmdbId = tmdbId ?: throw Exception("TMDB ID null"),
     metadata = metadata,
     sourceUrl = url
 )
