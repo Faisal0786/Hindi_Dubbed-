@@ -156,24 +156,40 @@ override suspend fun load(url: String): LoadResponse? {
         title = tmdb.title ?: tmdb.name
     )
 
-    return if (mediaType == "movie") {
-        newMovieLoadResponse(
-            metadata.title ?: "Unknown",
-            url,
-            if (metadata.anilistId != null) TvType.AnimeMovie else TvType.Movie,
-            TmdbData(tmdbId, mediaType).toJson()
-        ) {
+    val linkData = LoadLinksData(
+    title = metadata.title ?: "Unknown",
+    id = metadata.imdbId ?: tmdbId.toString(),
+    tmdbId = tmdbId,
+    tvtype = mediaType,
+    year = metadata.year?.toString(),
+    isAnime = metadata.anilistId != null,
+    isBollywood = false,
+    isAsian = false,
+    isCartoon = metadata.genres.any { it.contains("Animation", true) },
+    imdb_id = metadata.imdbId,
+    anilistId = metadata.anilistId,
+    malId = metadata.malId,
+    orgTitle = metadata.originalTitle,
+    airedYear = metadata.year
+)
+
+newMovieLoadResponse(
+    metadata.title ?: "Unknown",
+    url,
+    if (metadata.anilistId != null) TvType.AnimeMovie else TvType.Movie,
+    linkData.toJson()
+){
             posterUrl = metadata.poster
             backgroundPosterUrl = metadata.backdrop
             logoUrl = metadata.logo
             plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("[🌍 Country of Origin: * $it\n\n *]")
+        append("🌍 Country of Origin: [* $it\n\n *]\nAwards:  ")
     }
 
     metadata.awards?.let {
-        append("[🏆 $it\n\n]")
+        append("[🏆 $it\n\n]\nDescription:  ")
     }
 
     append(metadata.description ?: "")
@@ -213,7 +229,10 @@ private suspend fun buildSeriesResponse(
     sourceUrl: String
 ): LoadResponse {
 
-    val episodes = loadTmdbEpisodes(tmdbId)
+    val episodes = loadTmdbEpisodes(
+    tmdbId,
+    metadata
+)
 
     return newAnimeLoadResponse(
         metadata.title ?: "Unknown",
@@ -241,11 +260,11 @@ private suspend fun buildSeriesResponse(
         plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("[🌍 Country of Origin]: [* $it\n\n *]")
+        append("🌍 Country of Origin: [* $it\n\n *]\nAwards: ")
     }
 
     metadata.awards?.let {
-        append("[🏆 $it\n\n]")
+        append("[🏆 $it\n\n]\nDescription:  ")
     }
 
     append(metadata.description ?: "")
@@ -303,7 +322,8 @@ actors =
 }
 
 private suspend fun loadTmdbEpisodes(
-    tmdbId: Int
+    tmdbId: Int,
+    metadata: MetadataAggregator.AggregatedMetadata
 ): List<Episode> {
 
     val series = app.get(
@@ -329,8 +349,28 @@ private suspend fun loadTmdbEpisodes(
 
             episodes.add(
                 newEpisode(
-                    "$tmdbId|$seasonNumber|${episode.episode_number}"
-                ) {
+    LoadLinksData(
+        title = metadata.title ?: "Unknown",
+        id = metadata.imdbId ?: tmdbId.toString(),
+        tmdbId = tmdbId,
+        tvtype = "tv",
+        year = metadata.year?.toString(),
+        season = episode.season_number,
+        episode = episode.episode_number,
+        firstAired = episode.air_date,
+        isAnime = metadata.anilistId != null,
+        isBollywood = false,
+        isAsian = false,
+        isCartoon = metadata.genres.any {
+            it.contains("Animation", true)
+        },
+        imdb_id = metadata.imdbId,
+        anilistId = metadata.anilistId,
+        malId = metadata.malId,
+        orgTitle = metadata.originalTitle,
+        airedYear = metadata.year
+    ).toJson()
+) {
 
                     this.season =
                         episode.season_number
