@@ -173,6 +173,8 @@ override suspend fun load(url: String): LoadResponse? {
     airedYear = metadata.year
 )
 
+return if (mediaType == "movie") {
+
 newMovieLoadResponse(
     metadata.title ?: "Unknown",
     url,
