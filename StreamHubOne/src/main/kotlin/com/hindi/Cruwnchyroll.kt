@@ -21,13 +21,13 @@ import com.hindi.providers.SourceProviders.invokeAnimes
 import com.hindi.providers.AllLoadLinksData
 import com.hindi.providers.convertImdbToAnimeId
 import com.hindi.providers.convertTmdbToAnimeId
-import com.fasterxml.jackson.annotation.JsonProperty
+
 
 
 
 data class AniData(
-    @JsonProperty("id") val id: Int,
-    @JsonProperty("format") val format: String = "TV"
+    val id: Int,
+    val format: String = "TV"
 )
 
 
