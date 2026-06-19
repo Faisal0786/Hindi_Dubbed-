@@ -416,7 +416,7 @@ override suspend fun getMainPage(
 }
 
 
-override suspend fun loadLinks(
+    override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -539,7 +539,7 @@ malId = imdbResult.idMal
         val anilistId : Int? = null,
         val malId : Int? = null,
         val kitsuId : String? = null,
-      
+
         val orgTitle: String? = null,
         val airedYear: Int? = null,
         val airedDate: String? = null,
@@ -719,4 +719,3 @@ malId = imdbResult.idMal
         )
     }
 }
-
