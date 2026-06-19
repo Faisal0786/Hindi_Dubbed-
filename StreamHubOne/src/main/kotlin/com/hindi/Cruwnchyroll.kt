@@ -201,21 +201,18 @@ override suspend fun load(url: String): LoadResponse? {
 
     val aniData =
     parseJson<AniData>(url)
-        ?: throw Exception("AniData parse failed")
-            ?: return null
+        ?: return null
 
     val ani =
     getAniListMedia(
         aniData.id
-    ) ?: throw Exception("AniList returned null")
-
-throw Exception(ani.toString())
+    ) ?: return null
 
     val title =
     ani.title?.english
         ?: ani.title?.romaji
         ?: ani.title?.native
-        ?: throw Exception("AniList title null")
+        ?: return null
 
     val tmdbSearch = app.get(
         "${ApiConstants.TMDB_BASE}/search/multi" +
@@ -227,7 +224,7 @@ throw Exception(ani.toString())
     tmdbSearch?.results?.firstOrNull {
         it.media_type == "tv" ||
         it.media_type == "movie"
-    } ?: throw Exception("TMDB search failed: $title")
+    }
 
     val mediaType =
         if (aniData.format == "MOVIE")
