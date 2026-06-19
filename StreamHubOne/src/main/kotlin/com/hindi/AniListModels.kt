@@ -1,27 +1,58 @@
 package com.hindi
 
+import com.fasterxml.jackson.annotation.JsonProperty
+
 data class AniListResponse(
+    @JsonProperty("data")
     val data: AniListData?
 )
 
 data class AniListData(
+    @JsonProperty("Media")
     val Media: AniListMedia?
 )
 
 data class AniListMedia(
+    @JsonProperty("id")
     val id: Int?,
+
+    @JsonProperty("idMal")
     val idMal: Int?,
+
+    @JsonProperty("title")
     val title: AniListTitle?,
+
+    @JsonProperty("coverImage")
     val coverImage: AniListCoverImage?,
+
+    @JsonProperty("bannerImage")
     val bannerImage: String?,
+
+    @JsonProperty("description")
     val description: String?,
+
+    @JsonProperty("averageScore")
     val averageScore: Int?,
+
+    @JsonProperty("popularity")
     val popularity: Int?,
+
+    @JsonProperty("season")
     val season: String?,
+
+    @JsonProperty("seasonYear")
     val seasonYear: Int?,
+
+    @JsonProperty("episodes")
     val episodes: Int?,
+
+    @JsonProperty("genres")
     val genres: List<String> = emptyList(),
+
+    @JsonProperty("studios")
     val studios: AniListStudios?,
+
+    @JsonProperty("characters")
     val characters: AniListCharacters?
 )
 
