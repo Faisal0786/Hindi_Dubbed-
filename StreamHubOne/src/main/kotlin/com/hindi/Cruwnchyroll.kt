@@ -211,6 +211,8 @@ override suspend fun load(url: String): LoadResponse? {
         aniData.id
     ) ?: throw Exception("AniList returned null")
 
+throw Exception(ani.toString())
+
     val title =
     ani.title?.english
         ?: ani.title?.romaji
