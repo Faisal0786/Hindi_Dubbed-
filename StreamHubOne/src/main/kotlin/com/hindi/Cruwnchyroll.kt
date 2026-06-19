@@ -21,10 +21,7 @@ import com.hindi.providers.SourceProviders.invokeAnimes
 import com.hindi.providers.AllLoadLinksData
 import com.hindi.providers.convertImdbToAnimeId
 import com.hindi.providers.convertTmdbToAnimeId
-data class TmdbData(
-    val id: Int,
-    val mediaType: String
-)
+
 
 data class AniData(
     val id: Int,
@@ -314,10 +311,10 @@ actors = metadata.cast.map {
         }
     } else {
         buildSeriesResponse(
-            tmdbId = tmdbId,
-            metadata = metadata,
-            sourceUrl = url
-        )
+    tmdbId = tmdbId ?: return null,
+    metadata = metadata,
+    sourceUrl = url
+)
     }
 }
 
