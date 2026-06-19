@@ -158,10 +158,24 @@ override val mainPage = mainPageOf(
           Media(id: ${'$'}id, type: ANIME) {
             id
             idMal
+
             title {
               romaji
               english
               native
+            }
+
+            description
+            averageScore
+            seasonYear
+            episodes
+            bannerImage
+            genres
+
+            coverImage {
+              extraLarge
+              large
+              medium
             }
           }
         }
@@ -174,12 +188,14 @@ override val mainPage = mainPageOf(
         )
     )
 
-    val raw = app.post(
+    val json = app.post(
         url = ApiConstants.ANILIST_API,
         json = body
     ).text
 
-    throw Exception(raw)
+    return tryParseJson<AniListResponse>(json)
+        ?.data
+        ?.Media
 }    
 override suspend fun load(url: String): LoadResponse? {
 
