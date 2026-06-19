@@ -117,7 +117,7 @@ override val mainPage = mainPageOf(
         val id = (item["id"] as? Number)?.toInt()
             ?: return@mapNotNull null
 
-        val format = item["format"]?.toString()
+        val format = item["format"]?.toString() ?: "TV"
 
         val titleObj =
             item["title"] as? Map<*, *>
@@ -613,7 +613,7 @@ override suspend fun getMainPage(
                 ?: return@mapNotNull null
 
         val format =
-            item["format"]?.toString()
+    item["format"]?.toString() ?: "TV"
 
         val titleObj =
             item["title"] as? Map<*, *>
