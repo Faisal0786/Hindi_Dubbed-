@@ -253,60 +253,62 @@ private suspend fun fetchTmdb(
         if (title.isNullOrBlank()) return null
 
         val query = """
-            query (${'$'}search: String) {
+query (${'$'}search: String) {
   Media(search: ${'$'}search, type: ANIME) {
-                id
-                idMal
-                description
-                averageScore
-                popularity
-                season
-                seasonYear
-                episodes
-                bannerImage
+    id
+    idMal
+    description
+    averageScore
+    popularity
+    season
+    seasonYear
+    episodes
+    bannerImage
 
-                title {
-                  romaji
-                  english
-                  native
-                }
+    title {
+      romaji
+      english
+      native
+    }
 
-                coverImage {
-                  extraLarge
-                  large
-                  medium
-                }
+    coverImage {
+      extraLarge
+      large
+      medium
+    }
 
-                genres
+    genres
 
-                studios {
-                  nodes {
-                    name
-                  }
-                }
-               characters {
-  edges {
-
-    role
-
-    node {
-      name {
-        full
+    studios {
+      nodes {
+        name
       }
     }
 
-    voiceActors(language: JAPANESE) {
-      name {
-        full
-      }
+    characters {
+      edges {
+        role
 
-      image {
-        large
+        node {
+          name {
+            full
+          }
+        }
+
+        voiceActors(language: JAPANESE) {
+          name {
+            full
+          }
+
+          image {
+            large
+          }
+        }
       }
     }
-              }
-            }
-        """.trimIndent()
+  }
+}
+""".trimIndent()
 
         val body = mapOf(
             "query" to query,
