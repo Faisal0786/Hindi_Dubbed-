@@ -189,9 +189,13 @@ override val mainPage = mainPageOf(
     )
 
     val json = app.post(
-        url = ApiConstants.ANILIST_API,
-        json = body
-    ).text
+    url = ApiConstants.ANILIST_API,
+    json = body
+).text
+
+throw Exception(
+    AniListResponse::class.java.name
+)
 
     return tryParseJson<AniListResponse>(json)
         ?.data
