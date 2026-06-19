@@ -423,8 +423,8 @@ override suspend fun loadLinks(
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val res = parseJson<LoadLinksData>(data)
-        val year = getYear(res)
-        val seasonYear = getSeasonYear(res)
+        val year = res.airedYear ?: getYear(res)
+val seasonYear = getSeasonYear(res)
 
         return when {
             res.isKitsu -> {
@@ -436,35 +436,82 @@ override suspend fun loadLinks(
                     {
                         invokeAllSources(
                             AllLoadLinksData(
-                                res.title,
-                                res.id,
-                                res.tmdbId,
-                                res.anilistId,
-                                res.malId,
-                                res.kitsuId,
-                                year,
-                                seasonYear,
-                                res.season,
-                                res.episode,
-                                res.isAnime,
-                                res.isBollywood,
-                                res.isAsian,
-                                res.isCartoon,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                            ),
+    res.title,
+    res.id,
+    res.tmdbId,
+    res.anilistId,
+    res.malId,
+    res.kitsuId,
+    year,
+    seasonYear,
+    res.season,
+    res.episode,
+    res.isAnime,
+    res.isBollywood,
+    res.isAsian,
+    res.isCartoon,
+    res.orgTitle,
+    null,
+    res.imdbSeason,
+    res.imdbEpisode,
+    res.airedYear,
+),
                             subtitleCallback,
                             callback
                         )
                     },
                     {
                         if (res.isAnime) {
-                            val (aniId, malId) = convertImdbToAnimeId(res.title, year, res.firstAired, if (res.tvtype == "movie") TvType.AnimeMovie else TvType.Anime)
-                            invokeAnimes(malId, aniId, res.episode, seasonYear, "imdb", subtitleCallback, callback)
-                        }
+
+    var aniId = res.anilistId
+    var malId = res.malId
+
+    var animeSource = "imdb"
+
+    if (aniId == null && malId == null) {
+
+        val imdbResult = convertImdbToAnimeId(
+            res.title,
+            year,
+            res.firstAired,
+            if (res.tvtype == "movie")
+                TvType.AnimeMovie
+            else
+                TvType.Anime
+        )
+
+        aniId = imdbResult.first
+        malId = imdbResult.second
+
+        if (aniId == null && malId == null) {
+
+            val tmdbResult = convertTmdbToAnimeId(
+                res.title,
+                year?.toString(),
+                res.airedDate ?: res.firstAired,
+                if (res.tvtype == "movie")
+                    TvType.AnimeMovie
+                else
+                    TvType.Anime
+            )
+
+            aniId = tmdbResult.first
+            malId = tmdbResult.second
+
+            animeSource = "tmdb"
+        }
+    }
+
+    invokeAnimes(
+        malId,
+        aniId,
+        res.episode,
+        seasonYear,
+        animeSource,
+        subtitleCallback,
+        callback
+    )
+}
                     }
                 )
                 true
@@ -492,6 +539,21 @@ override suspend fun loadLinks(
         val anilistId : Int? = null,
         val malId : Int? = null,
         val kitsuId : String? = null,
+      
+        val orgTitle: String? = null,
+        val airedYear: Int? = null,
+        val airedDate: String? = null,
+
+        val animeId: String? = null,
+        val tvdbId: Int? = null,
+
+        val epid: Int? = null,
+        val lastSeason: Int? = null,
+        val epsTitle: String? = null,
+        val jpTitle: String? = null,
+
+        val alttitle: String? = null,
+        val nametitle: String? = null,
     )
 
     data class PassData(
@@ -630,29 +692,30 @@ override suspend fun loadLinks(
         }
 
         invokeAllAnimeSources(
-            AllLoadLinksData(
-                res.title,
-                res.imdb_id,
-                tmdbId,
-                res.anilistId,
-                res.malId,
-                res.kitsuId,
-                year,
-                seasonYear,
-                res.season,
-                res.episode,
-                res.isAnime,
-                res.isBollywood,
-                res.isAsian,
-                res.isCartoon,
-                null,
-                imdbTitle,
-                res.imdbSeason,
-                res.imdbEpisode,
-                imdbYear,
-            ),
-            subtitleCallback,
-            callback
+    AllLoadLinksData(
+        res.title,
+        res.imdb_id,
+        tmdbId,
+        res.anilistId,
+        res.malId,
+        res.kitsuId,
+        year,
+        seasonYear,
+        res.season,
+        res.episode,
+        res.isAnime,
+        res.isBollywood,
+        res.isAsian,
+        res.isCartoon,
+        res.orgTitle,
+        imdbTitle,
+        res.imdbSeason,
+        res.imdbEpisode,
+        imdbYear,
+    ),
+    subtitleCallback,
+    callback
+
         )
     }
 }
