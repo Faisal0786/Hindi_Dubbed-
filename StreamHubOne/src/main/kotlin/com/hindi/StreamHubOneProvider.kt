@@ -471,17 +471,17 @@ val seasonYear = getSeasonYear(res)
     if (aniId == null && malId == null) {
 
         val imdbResult = convertImdbToAnimeId(
-            res.title,
-            year,
-            res.firstAired,
-            if (res.tvtype == "movie")
-                TvType.AnimeMovie
-            else
-                TvType.Anime
-        )
+    res.title,
+    year,
+    res.firstAired,
+    if (res.tvtype == "movie")
+        TvType.AnimeMovie
+    else
+        TvType.Anime
+)
 
-        aniId = imdbResult.first
-        malId = imdbResult.second
+aniId = imdbResult.id
+malId = imdbResult.idMal
 
         if (aniId == null && malId == null) {
 
@@ -495,8 +495,8 @@ val seasonYear = getSeasonYear(res)
                     TvType.Anime
             )
 
-            aniId = tmdbResult.first
-            malId = tmdbResult.second
+            aniId = tmdbResult.id
+            malId = tmdbResult.idMal
 
             animeSource = "tmdb"
         }
