@@ -203,7 +203,7 @@ override suspend fun load(url: String): LoadResponse? {
 
     val aniData =
     parseJson<AniData>(url)
-        ?: throw Exception("AniData parse failed"))
+        ?: throw Exception("AniData parse failed")
             ?: return null
 
     val ani =
