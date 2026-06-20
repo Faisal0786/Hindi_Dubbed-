@@ -567,19 +567,21 @@ override suspend fun getMainPage(
 ): HomePageResponse {
 
     val sort =
-        when (request.data) {
-            "TRENDING" -> "TRENDING_DESC"
-            "POPULAR" -> "POPULARITY_DESC"
-            "TOP" -> "SCORE_DESC"
-            else -> null
-        }
+    when (request.data) {
+        "TRENDING" -> "TRENDING_DESC"
+        "SEASON" -> "POPULARITY_DESC"
+        "POPULAR" -> "POPULARITY_DESC"
+        "TOP100" -> "SCORE_DESC"
+        else -> null
+    }
 
-    val status =
-        when (request.data) {
-            "AIRING" -> "RELEASING"
-            "UPCOMING" -> "NOT_YET_RELEASED"
-            else -> null
-        }
+val status =
+    when (request.data) {
+        "UPCOMING" -> "NOT_YET_RELEASED"
+        else -> null
+    }
+
+val format = null
 
     val format =
         when (request.data) {
@@ -594,7 +596,7 @@ override suspend fun getMainPage(
             ${'$'}status: MediaStatus,
             ${'$'}format: MediaFormat
         ) {
-          Page(page: ${'$'}page, perPage: 30) {
+          Page(page: ${'$'}page, perPage: 100) {
             media(
               type: ANIME
               sort: ${'$'}sort
