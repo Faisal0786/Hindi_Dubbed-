@@ -583,10 +583,7 @@ val status =
 
 val format = null
 
-    val format =
-        when (request.data) {
-            "MOVIES" -> "MOVIE"
-            else -> null
+    
         }
 
     val gql = """
