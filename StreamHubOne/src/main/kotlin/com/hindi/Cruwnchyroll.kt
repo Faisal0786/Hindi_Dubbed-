@@ -221,13 +221,7 @@ override suspend fun load(url: String): LoadResponse? {
     "&query=${URLEncoder.encode(title, "UTF-8")}"
 ).parsed<TmdbMultiSearchResponse>()
 
-throw Exception(
-"""
-title = $title
 
-tmdbSearch = $tmdbSearch
-""".trimIndent()
-)
 
     val tmdbResult =
     tmdbSearch?.results?.firstOrNull {
