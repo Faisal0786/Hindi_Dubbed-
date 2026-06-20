@@ -7,16 +7,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 @CloudstreamPlugin
 open class OttSourcePlugin : Plugin() {
 
-    override fun load(context: Context) {
-
-        // Initialize storage
-        NetflixMirrorStorage.init(context.applicationContext)
-
-        // Pass context to providers
-        DisneyStudioProvider.context = context
-        NetflixMirrorProvider.context = context
-        PrimeVideoMirrorProvider.context = context
-        HotStarMirrorProvider.context = context
+    
 
         // Main providers
         registerMainAPI(NetflixMirrorProvider())
