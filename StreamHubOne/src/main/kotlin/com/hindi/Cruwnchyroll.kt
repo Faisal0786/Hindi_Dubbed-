@@ -324,22 +324,20 @@ actors = metadata.cast.map {
         }
    } else {
 
-    if (tmdbId == null) {
-        throw Exception(
-            """
+    val safeTmdbId = tmdbId ?: throw Exception(
+    """
 title = $title
 
 TMDB NOT FOUND
 format = ${aniData.format}
 """.trimIndent()
-        )
-    }
+)
 
-    buildSeriesResponse(
-        tmdbId = tmdbId,
-        metadata = metadata,
-        sourceUrl = url
-    )
+buildSeriesResponse(
+    tmdbId = safeTmdbId,
+    metadata = metadata,
+    sourceUrl = url
+)
 }
 }
 
