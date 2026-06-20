@@ -53,12 +53,11 @@ class Cwunchyroll : MainAPI() {
         TvType.AsianDrama
     )
 override val mainPage = mainPageOf(
-    "TRENDING" to "Trending Anime",
-    "POPULAR" to "Popular Anime",
-    "TOP" to "Top Rated Anime",
-    "AIRING" to "Currently Airing",
-    "UPCOMING" to "Upcoming Anime",
-    "MOVIES" to "Anime Movies"
+    "TRENDING" to "Trending Now",
+    "SEASON" to "Popular This Season",
+    "UPCOMING" to "Upcoming Next Season",
+    "POPULAR" to "All Time Popular",
+    "TOP100" to "Top 100 Anime"
 )
 
     override suspend fun search(query: String): List<SearchResponse> {
