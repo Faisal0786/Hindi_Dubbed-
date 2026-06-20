@@ -249,28 +249,66 @@ override suspend fun load(url: String): LoadResponse? {
         else
             "tv"
 
-    val tmdbId =
-        tmdbResult?.id
+    val tmdbId = tmdbResult?.id
 
-    val tmdb =
-        if (tmdbId != null) {
-            app.get(
-                "${ApiConstants.TMDB_BASE}/$mediaType/$tmdbId" +
-                "?api_key=${ApiConstants.TMDB_KEY}" +
-                "&append_to_response=external_ids"
-            ).parsed<TmdbDetails>()
-        } else {
-            null
-        }
+val metadata =
+    if (tmdbId != null) {
+        val tmdb = app.get(
+            "${ApiConstants.TMDB_BASE}/$mediaType/$tmdbId" +
+            "?api_key=${ApiConstants.TMDB_KEY}" +
+            "&append_to_response=external_ids"
+        ).parsed<TmdbDetails>()
 
-    val metadata = MetadataAggregator.aggregate(
-    imdbId = tmdb?.external_ids?.imdbId,
-    tmdbId = tmdbId,
-    mediaType = mediaType,
-    title = title
-)
+        MetadataAggregator.aggregate(
+            imdbId = tmdb?.external_ids?.imdbId,
+            tmdbId = tmdbId,
+            mediaType = mediaType,
+            title = title
+        )
+    } else {
+        null
+    }
 
-    val linkData = LoadLinksData(
+   
+if (metadata == null) {
+
+    return newAnimeLoadResponse(
+        title,
+        url,
+        if (aniData.format == "MOVIE")
+            TvType.AnimeMovie
+        else
+            TvType.Anime
+    ) {
+
+        posterUrl =
+            ani.coverImage?.extraLarge
+                ?: ani.coverImage?.large
+                ?: ani.coverImage?.medium
+
+        backgroundPosterUrl =
+            ani.bannerImage
+
+        plot =
+            ani.description
+
+        tags =
+            ani.genres
+
+        year =
+            ani.seasonYear
+
+        score =
+            ani.averageScore?.let {
+                Score.from10(it / 10.0)
+            }
+
+        addAniListId(ani.id)
+
+        addMalId(ani.idMal)
+    }
+}
+val linkData = LoadLinksData(
     title = metadata.title ?: "Unknown",
     id = metadata.imdbId ?: tmdbId.toString(),
     tmdbId = tmdbId,
@@ -301,11 +339,11 @@ newMovieLoadResponse(
             plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("🌍 Country of Origin: [* $it\n\n *]\nAwards:  ")
+        append("🌍 Country of Origin: [* $it\n\n *]\n:  ")
     }
 
     metadata.awards?.let {
-        append("[🏆 $it\n\n]\nDescription:  ")
+        append("[🏆 $it\n\n]\n Description:  ")
     }
 
     append(metadata.description ?: "")
@@ -332,10 +370,8 @@ actors = metadata.cast.map {
         }
    } else {
 
-    val safeTmdbId = tmdbId ?: return null
-
-buildSeriesResponse(
-    tmdbId = safeTmdbId,
+    buildSeriesResponse(
+    tmdbId = tmdbId ?: return null,
     metadata = metadata,
     sourceUrl = url
 )
