@@ -193,16 +193,11 @@ override val mainPage = mainPageOf(
     json = body
 ).text
 
-val parsed = tryParseJson<AniListResponse>(json)
-
-throw Exception(
-    """
-parsed = $parsed
-
-json = $json
-""".trimIndent()
-)
+return tryParseJson<AniListResponse>(json)
+    ?.data
+    ?.Media
 }
+
 override suspend fun load(url: String): LoadResponse? {
 
     val aniData =
