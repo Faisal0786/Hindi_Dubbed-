@@ -598,10 +598,10 @@ val seasonYear =
 
 val sort =
     when (request.data) {
-        "TRENDING" -> "TRENDING_DESC"
-        "SEASON" -> "POPULARITY_DESC"
-        "POPULAR" -> "POPULARITY_DESC"
-        "TOP100" -> "SCORE_DESC"
+        "TRENDING" -> listOf("TRENDING_DESC")
+        "SEASON" -> listOf("POPULARITY_DESC")
+        "POPULAR" -> listOf("POPULARITY_DESC")
+        "TOP100" -> listOf("SCORE_DESC")
         else -> null
     }
 
@@ -653,7 +653,7 @@ val format = null
         "query" to gql,
         "variables" to mapOf(
             "page" to page,
-            "sort" to sort?.let { listOf(it) },
+            "sort" to sort,
             "status" to status,
             "format" to format,
             "season" to season,
