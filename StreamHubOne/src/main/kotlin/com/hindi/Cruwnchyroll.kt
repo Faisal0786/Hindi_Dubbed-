@@ -221,10 +221,18 @@ override suspend fun load(url: String): LoadResponse? {
         ?: return null
 
     val tmdbSearch = app.get(
-        "${ApiConstants.TMDB_BASE}/search/multi" +
-        "?api_key=${ApiConstants.TMDB_KEY}" +
-        "&query=${URLEncoder.encode(title, "UTF-8")}"
-    ).parsed<TmdbMultiSearchResponse>()
+    "${ApiConstants.TMDB_BASE}/search/multi" +
+    "?api_key=${ApiConstants.TMDB_KEY}" +
+    "&query=${URLEncoder.encode(title, "UTF-8")}"
+).parsed<TmdbMultiSearchResponse>()
+
+throw Exception(
+"""
+title = $title
+
+tmdbSearch = $tmdbSearch
+""".trimIndent()
+)
 
     val tmdbResult =
     tmdbSearch?.results?.firstOrNull {
