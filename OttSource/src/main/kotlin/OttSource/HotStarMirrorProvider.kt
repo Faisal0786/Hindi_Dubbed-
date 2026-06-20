@@ -1,5 +1,6 @@
 package OttSource
 
+import android.content.Context
 import OttSource.entities.EpisodesData
 import OttSource.entities.PostData
 import OttSource.entities.SearchData
@@ -14,6 +15,9 @@ import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.APIHolder.unixTime
 
 class HotStarMirrorProvider : MainAPI() {
+     companion object {
+        var context: Context? = null
+}
 
     override val supportedTypes = setOf(
         TvType.Movie,
