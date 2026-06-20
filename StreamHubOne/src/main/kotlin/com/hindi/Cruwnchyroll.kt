@@ -607,7 +607,7 @@ val sort =
 
 val status =
     when (request.data) {
-        "UPCOMING" -> "NOT_YET_RELEASED"
+        "UPCOMING" -> "RELEASING"
         else -> null
     }
 
