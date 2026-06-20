@@ -235,6 +235,14 @@ tmdbSearch = $tmdbSearch
         it.media_type == "movie"
     }
 
+throw Exception(
+"""
+title = $title
+
+tmdbResult = $tmdbResult
+""".trimIndent()
+)
+
     val mediaType =
         if (aniData.format == "MOVIE")
             "movie"
