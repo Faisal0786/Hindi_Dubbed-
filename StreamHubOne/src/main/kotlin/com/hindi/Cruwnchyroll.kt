@@ -730,9 +730,9 @@ val format = null
     }
 
     return newHomePageResponse(
-        request.name,
-        items
-    )
+    "${request.name} (${items.size})",
+    items
+)
 }
 
 
