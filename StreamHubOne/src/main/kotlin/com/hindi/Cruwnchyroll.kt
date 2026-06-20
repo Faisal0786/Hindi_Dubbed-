@@ -225,20 +225,26 @@ override suspend fun load(url: String): LoadResponse? {
 
     val tmdbResult =
     tmdbSearch?.results?.firstOrNull {
-        it.media_type == "tv" ||
+
+        val tmdbTitle =
+            (it.title ?: it.name ?: "")
+                .trim()
+
+        tmdbTitle.equals(
+            title,
+            ignoreCase = true
+        )
+    }
+    ?: tmdbSearch?.results?.firstOrNull {
+        it.media_type == "tv"
+    }
+    ?: tmdbSearch?.results?.firstOrNull {
         it.media_type == "movie"
     }
 
-throw Exception(
-"""
-title = $title
-
-tmdbResult = $tmdbResult
-""".trimIndent()
-)
-
     val mediaType =
-        if (aniData.format == "MOVIE")
+    tmdbResult?.media_type
+        ?: if (aniData.format == "MOVIE")
             "movie"
         else
             "tv"
@@ -326,14 +332,7 @@ actors = metadata.cast.map {
         }
    } else {
 
-    val safeTmdbId = tmdbId ?: throw Exception(
-    """
-title = $title
-
-TMDB NOT FOUND
-format = ${aniData.format}
-""".trimIndent()
-)
+    val safeTmdbId = tmdbId ?: return null
 
 buildSeriesResponse(
     tmdbId = safeTmdbId,
