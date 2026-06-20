@@ -21,6 +21,23 @@ import com.hindi.providers.SourceProviders.invokeAnimes
 import com.hindi.providers.AllLoadLinksData
 import com.hindi.providers.convertImdbToAnimeId
 import com.hindi.providers.convertTmdbToAnimeId
+import java.util.Calendar
+
+fun getCurrentAniListSeason(): String {
+    val month = Calendar.getInstance().get(Calendar.MONTH)
+
+    return when (month) {
+        Calendar.DECEMBER, Calendar.JANUARY, Calendar.FEBRUARY -> "WINTER"
+        Calendar.MARCH, Calendar.APRIL, Calendar.MAY -> "SPRING"
+        Calendar.JUNE, Calendar.JULY, Calendar.AUGUST -> "SUMMER"
+        Calendar.SEPTEMBER, Calendar.OCTOBER, Calendar.NOVEMBER -> "FALL"
+        else -> "WINTER"
+    }
+}
+
+fun getCurrentYear(): Int {
+    return Calendar.getInstance().get(Calendar.YEAR)
+}
 
 
 
@@ -566,7 +583,20 @@ override suspend fun getMainPage(
     request: MainPageRequest
 ): HomePageResponse {
 
-    val sort =
+
+    val season =
+    if (request.data == "SEASON")
+        getCurrentAniListSeason()
+    else
+        null
+
+val seasonYear =
+    if (request.data == "SEASON")
+        getCurrentYear()
+    else
+        null
+
+val sort =
     when (request.data) {
         "TRENDING" -> "TRENDING_DESC"
         "SEASON" -> "POPULARITY_DESC"
@@ -583,23 +613,24 @@ val status =
 
 val format = null
 
-    
-        }
-
     val gql = """
         query (
-            ${'$'}page: Int,
-            ${'$'}sort: [MediaSort],
-            ${'$'}status: MediaStatus,
-            ${'$'}format: MediaFormat
-        ) {
+    ${'$'}page: Int,
+    ${'$'}sort: [MediaSort],
+    ${'$'}status: MediaStatus,
+    ${'$'}format: MediaFormat,
+    ${'$'}season: MediaSeason,
+    ${'$'}seasonYear: Int
+) {
           Page(page: ${'$'}page, perPage: 100) {
             media(
-              type: ANIME
-              sort: ${'$'}sort
-              status: ${'$'}status
-              format: ${'$'}format
-            ) {
+    type: ANIME
+    sort: ${'$'}sort
+    status: ${'$'}status
+    format: ${'$'}format
+    season: ${'$'}season
+    seasonYear: ${'$'}seasonYear
+) {
 
               id
               format
@@ -624,7 +655,9 @@ val format = null
             "page" to page,
             "sort" to sort?.let { listOf(it) },
             "status" to status,
-            "format" to format
+            "format" to format,
+            "season" to season,
+            "seasonYear" to seasonYear
         )
     )
 
