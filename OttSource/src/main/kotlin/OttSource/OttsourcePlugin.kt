@@ -13,7 +13,7 @@ open class OttSourcePlugin : Plugin() {
         NetflixMirrorStorage.init(context.applicationContext)
 
         // Pass context to providers
-        DisneyStudioProvider.context = context
+       
         NetflixMirrorProvider.context = context
         PrimeVideoMirrorProvider.context = context
         HotStarMirrorProvider.context = context
