@@ -322,13 +322,25 @@ actors = metadata.cast.map {
             addMalId(metadata.malId)
             metadata.trailer?.let { addTrailer(it) }
         }
-    } else {
-        buildSeriesResponse(
-    tmdbId = tmdbId ?: throw Exception("TMDB ID null"),
-    metadata = metadata,
-    sourceUrl = url
-)
+   } else {
+
+    if (tmdbId == null) {
+        throw Exception(
+            """
+title = $title
+
+TMDB NOT FOUND
+format = ${aniData.format}
+""".trimIndent()
+        )
     }
+
+    buildSeriesResponse(
+        tmdbId = tmdbId,
+        metadata = metadata,
+        sourceUrl = url
+    )
+}
 }
 
 private suspend fun buildSeriesResponse(
