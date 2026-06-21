@@ -14,6 +14,8 @@ open class DisneyStudioProvider(
     private val studio: String,
     displayName: String
 ) : MainAPI() {
+companion object {
+}
 
     override val supportedTypes = setOf(
         TvType.Movie,
