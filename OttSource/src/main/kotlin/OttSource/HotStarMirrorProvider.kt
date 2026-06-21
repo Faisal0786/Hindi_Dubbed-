@@ -25,10 +25,10 @@ class HotStarMirrorProvider : MainAPI() {
         TvType.Anime,
         TvType.AsianDrama
     )
-    override var lang = "ta"
+    override var lang = "hi"
 
     override var mainUrl = "https://net52.cc"
-    override var name = "Hotstar"
+    override var name = "Jio Hotstar"
 
     override val hasMainPage = true
     private var cookie_value = ""
