@@ -77,7 +77,7 @@ override val mainPage = mainPageOf(
 
     "discover/tv?with_origin_country=KR&sort_by=popularity.desc" to "Asian Drama",
 
-    "discover/tv?with_genres=16&sort_by=popularity.desc" to "Anime",
+    "discover/tv?with_genres=16&with_origin_country=JP&sort_by=popularity.desc" to "Anime",
 
     "discover/tv?with_watch_providers=283&watch_region=US&sort_by=popularity.desc" to "Crunchyroll",
 
@@ -409,10 +409,44 @@ addDate(
 
     return episodes
 }
+    
+    private fun hasProvider(
+    tmdb: TmdbDetails,
+    region: String,
+    providerId: Int
+): Boolean {
+
+    val providers =
+        tmdb.watchProviders
+            ?.results
+            ?.get(region)
+            ?.flatrate
+            ?: return false
+
+    return providers.any {
+        it.provider_id == providerId
+    }
+}
+    
 override suspend fun getMainPage(
     page: Int,
     request: MainPageRequest
 ): HomePageResponse {
+    val expectedProvider = when (request.name) {
+    "Netflix" -> 8
+    "Prime Video" -> 119
+    "Apple TV+" -> 350
+    "Max" -> 1899
+    "Disney+" -> 337
+    "Hulu" -> 15
+    "Paramount+" -> 531
+    "Peacock" -> 386
+    "JioHotstar" -> 122
+    "SonyLIV" -> 237
+    "ZEE5" -> 232
+    "Crunchyroll" -> 283
+    else -> null
+}
 
     val url =
         if (request.data.contains("?")) {
@@ -441,6 +475,30 @@ override suspend fun getMainPage(
         val title = item.title ?: item.name ?: return@mapNotNull null
 
         val tmdbId = item.id ?: return@mapNotNull null
+
+if (item.poster_path.isNullOrBlank())
+    return@mapNotNull null
+
+if (expectedProvider != null) {
+
+    val details = app.get(
+        "${ApiConstants.TMDB_BASE}/$mediaType/$tmdbId" +
+        "?api_key=${ApiConstants.TMDB_KEY}" +
+        "&append_to_response=watch/providers"
+    ).parsed<TmdbDetails>()
+
+  val region = when (request.name) {
+    "JioHotstar", "SonyLIV", "ZEE5" -> "IN"
+    else -> "US"
+}
+
+if (
+    details == null ||
+    !hasProvider(details, region, expectedProvider)
+) {
+    return@mapNotNull null
+}
+}
 
         newMovieSearchResponse(
             title,
