@@ -26,7 +26,7 @@ class PrimeVideoMirrorProvider : MainAPI() {
         TvType.Anime,
         TvType.AsianDrama
     )
-    override var lang = "ta"
+    override var lang = "hi"
 
     override var mainUrl = "https://net52.cc"
     override var name = "Prime Video"
