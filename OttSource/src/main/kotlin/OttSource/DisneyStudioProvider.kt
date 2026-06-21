@@ -16,6 +16,7 @@ open class DisneyStudioProvider(
     displayName: String
 ) : MainAPI() {
 companion object {
+    var context: Context? = null
 }
 
     override val supportedTypes = setOf(
