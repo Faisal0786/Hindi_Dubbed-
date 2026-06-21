@@ -21,12 +21,23 @@ import com.hindi.providers.SourceProviders.invokeAnimes
 import com.hindi.providers.AllLoadLinksData
 import com.hindi.providers.convertImdbToAnimeId
 import com.hindi.providers.convertTmdbToAnimeId
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+
 data class TmdbData(
     val id: Int,
     val mediaType: String
 )
 
 class StreamHubOneProvider : MainAPI() {
+private fun getCurrentDate(): String {
+    return SimpleDateFormat(
+        "yyyy-MM-dd",
+        Locale.US
+    ).format(Date())
+}
 
     override var name = "StreamHub One"
 
@@ -49,53 +60,42 @@ class StreamHubOneProvider : MainAPI() {
     )
 override val mainPage = mainPageOf(
 
-    "trending/all/week" to "Trending Worldwide",
+   "trending/all/day" to "Trending",
 
-    "movie/upcoming" to "Upcoming Episodes",
+"trending/movie/week" to "Popular Movies",
 
-    "tv/airing_today" to "Airing Today",
+"trending/tv/week" to "Popular TV Shows",
 
-    "tv/on_the_air" to "Next 7 Days",
+"discover/tv?with_genres=16&with_origin_country=JP&air_date.lte=${getCurrentDate()}&air_date.gte=${getCurrentDate()}" to "Airing Today Anime",
 
-    "movie/popular" to "Movies",
+"discover/tv?with_genres=16&with_origin_country=JP" to "On The Air Anime",
 
-    "tv/popular" to "TV Shows",
+"discover/tv?with_original_language=ko" to "Korean Shows",
 
-    "movie/top_rated" to "Top Rated",
+"discover/tv?with_networks=213" to "Netflix",
 
-    "trending/all/day" to "IMDb Trending",
+"discover/tv?with_networks=1024" to "Prime Video",
 
-    "discover/tv?with_watch_providers=8&watch_region=US" to "Netflix",
+"discover/tv?with_networks=2739" to "Disney+",
 
-    "discover/tv?with_watch_providers=119&watch_region=US" to "Prime Video",
+"discover/tv?with_networks=453" to "Hulu",
 
-    "discover/tv?with_watch_providers=350&watch_region=US" to "Apple TV+",
+"discover/tv?with_networks=2552" to "Apple TV+",
 
-    "discover/tv?with_watch_providers=1899&watch_region=US" to "Max",
+"discover/tv?with_networks=49" to "HBO",
 
-    "discover/movie?with_origin_country=IN&sort_by=popularity.desc" to "Bollywood",
+"discover/tv?with_networks=4330" to "Paramount+",
 
-    "discover/tv?with_origin_country=KR&sort_by=popularity.desc" to "Asian Drama",
+"discover/tv?with_networks=3353" to "Peacock",
 
-    "discover/tv?with_genres=16&with_origin_country=JP&sort_by=popularity.desc" to "Anime",
+"discover/movie?with_origin_country=IN&sort_by=popularity.desc" to "Trending Indian Movies",
 
-    "discover/tv?with_watch_providers=283&watch_region=US&sort_by=popularity.desc" to "Crunchyroll",
+"discover/movie?with_keywords=210024|222243" to "Anime Movies",
 
-    "discover/tv?with_watch_providers=337&watch_region=US" to "Disney+",
+"tv/top_rated" to "Top Rated TV Shows",
 
-    "discover/tv?with_watch_providers=15&watch_region=US" to "Hulu",
-
-    "discover/tv?with_watch_providers=531&watch_region=US" to "Paramount+",
-
-    "discover/tv?with_watch_providers=386&watch_region=US" to "Peacock",
-
-    "discover/tv?with_watch_providers=122&watch_region=IN" to "JioHotstar",
-
-    "discover/tv?with_watch_providers=237&watch_region=IN" to "SonyLIV",
-
-    "discover/tv?with_watch_providers=232&watch_region=IN" to "ZEE5"
+"discover/tv?with_genres=16&with_origin_country=JP&sort_by=vote_average.desc&vote_count.gte=100" to "Top Rated Anime"
 )
-
     override suspend fun search(
         query: String
     ): List<SearchResponse> {
