@@ -24,7 +24,9 @@ data class TmdbDetails(
     val images: TmdbImages?,
     val external_ids: TmdbExternalIds?,
     val content_ratings: TmdbContentRatings? = null,
-    val release_dates: TmdbReleaseDates? = null
+    val release_dates: TmdbReleaseDates? = null,
+    @JsonProperty("watch/providers")
+    val watchProviders: WatchProviderResults? = null
 )
 
 data class TmdbGenre(
@@ -125,9 +127,7 @@ data class TmdbReleaseCountry(
 data class TmdbReleaseItem(
     val certification: String?
 )
-data class TmdbWatchProviders(
-    val results: Map<String, TmdbWatchRegion> = emptyMap()
-)
+
 
 data class TmdbWatchRegion(
     val flatrate: List<TmdbWatchProvider> = emptyList()
@@ -136,4 +136,18 @@ data class TmdbWatchRegion(
 data class TmdbWatchProvider(
     val provider_id: Int?,
     val provider_name: String?
+)
+data class WatchProviderResults(
+    val results: Map<String, CountryWatchProviders>? = null
+)
+
+data class CountryWatchProviders(
+    val flatrate: List<ProviderItem>? = null,
+    val rent: List<ProviderItem>? = null,
+    val buy: List<ProviderItem>? = null
+)
+
+data class ProviderItem(
+    val provider_id: Int,
+    val provider_name: String
 )
