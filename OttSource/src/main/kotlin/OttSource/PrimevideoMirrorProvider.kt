@@ -16,6 +16,7 @@ import com.lagradost.cloudstream3.APIHolder.unixTime
 
 class PrimeVideoMirrorProvider : MainAPI() {
     companion object {
+        var context: Context? = null
      
     }
 
