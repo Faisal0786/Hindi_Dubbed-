@@ -76,17 +76,29 @@ override val mainPage = mainPageOf(
 
 "discover/tv?with_networks=1024" to "Prime Video",
 
+"discover/tv?with_networks=1112" to "Crunchyroll",
+
 "discover/tv?with_networks=2739" to "Disney+",
 
 "discover/tv?with_networks=453" to "Hulu",
 
 "discover/tv?with_networks=2552" to "Apple TV+",
 
+"discover/tv?with_networks=621" to "MGM+",
+
 "discover/tv?with_networks=49" to "HBO",
+
+"discover/tv?with_networks=435" to "Discovery+",
 
 "discover/tv?with_networks=4330" to "Paramount+",
 
 "discover/tv?with_networks=3353" to "Peacock",
+
+"discover/tv" to "ZEE5",
+
+"discover/tv" to "SonyLIV",
+
+"discover/tv?with_networks=4" to "BBC",
 
 "discover/movie?with_origin_country=IN&sort_by=popularity.desc" to "Trending Indian Movies",
 
@@ -187,7 +199,7 @@ newMovieLoadResponse(
             plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("🌍 Country of Origin: [* $it\n\n *]\nAwards:  ")
+        append("🌍 Country of Origin: [* $it\n\n *]\n:  ")
     }
 
     metadata.awards?.let {
@@ -262,7 +274,7 @@ private suspend fun buildSeriesResponse(
         plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("🌍 Country of Origin: [* $it\n\n *]\nAwards: ")
+        append("🌍 Country of Origin: [* $it\n\n *]\n: ")
     }
 
     metadata.awards?.let {
@@ -434,17 +446,20 @@ override suspend fun getMainPage(
 ): HomePageResponse {
     val expectedProvider = when (request.name) {
     "Netflix" -> 8
-    "Prime Video" -> 119
-    "Apple TV+" -> 350
-    "Max" -> 1899
-    "Disney+" -> 337
-    "Hulu" -> 15
-    "Paramount+" -> 531
-    "Peacock" -> 386
-    "JioHotstar" -> 122
-    "SonyLIV" -> 237
-    "ZEE5" -> 232
-    "Crunchyroll" -> 283
+"Prime Video" -> 119
+"Apple TV+" -> 350
+"Max" -> 1899
+"Disney+" -> 337
+"Hulu" -> 15
+"Paramount+" -> 531
+"Peacock" -> 386
+"JioHotstar" -> 122
+"SonyLIV" -> 237
+"ZEE5" -> 232
+"Crunchyroll" -> 283
+"MGM+" -> 636
+"Discovery+" -> 435
+"BBC" -> null
     else -> null
 }
 
@@ -488,7 +503,7 @@ if (expectedProvider != null) {
     ).parsed<TmdbDetails>()
 
   val region = when (request.name) {
-    "JioHotstar", "SonyLIV", "ZEE5" -> "IN"
+    "JioHotstar", "SonyLIV", "ZEE5", "Crunchyroll",  "Netflix", "Prime Video" -> "IN"
     else -> "US"
 }
 
