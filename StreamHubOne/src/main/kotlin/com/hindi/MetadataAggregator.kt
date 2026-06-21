@@ -511,14 +511,15 @@ private suspend fun fetchWatchProvider(
     return runCatching {
 
         val response = app.get(
-            "${ApiConstants.TMDB_BASE}/$endpoint/$tmdbId/watch/providers" +
-            "?api_key=${ApiConstants.TMDB_KEY}"
-        ).parsed<TmdbWatchProviders>()
+    "${ApiConstants.TMDB_BASE}/$endpoint/$tmdbId/watch/providers" +
+    "?api_key=${ApiConstants.TMDB_KEY}"
+).parsed<WatchProviderResults>()
 
-        response.results["US"]
-            ?.flatrate
-            ?.firstOrNull()
-            ?.provider_name
+response.results
+    ?.get("US")
+    ?.flatrate
+    ?.firstOrNull()
+    ?.provider_name
 
     }.getOrNull()
 }
