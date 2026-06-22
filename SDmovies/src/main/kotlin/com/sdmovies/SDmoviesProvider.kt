@@ -1,4 +1,4 @@
-package com.yourpackage
+package com.sdmovies
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
