@@ -1,113 +1,101 @@
-package com.sdmovies
+package com.yourpackage
 
-import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.lagradost.cloudstream3.MainAPI
-import com.lagradost.cloudstream3.SearchResponse
-import com.lagradost.cloudstream3.LoadResponse
-import com.lagradost.cloudstream3.newMovieSearchResponse
-import com.lagradost.cloudstream3.newMovieLoadResponse
-import com.lagradost.cloudstream3.HomePageResponse
-import com.lagradost.cloudstream3.HomePageList
-import com.lagradost.cloudstream3.MainPageRequest
-import com.lagradost.cloudstream3.TvType
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.newExtractorLink
-import org.jsoup.Jsoup
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
 
-@CloudstreamPlugin
-class SDmoviesProvider : MainAPI() {
-    override val mainUrl = "https://sdmoviespoint.cyou"
-    override val name = "SDmovies"
+class SDMoviesProvider : MainAPI() {
+
+    override var mainUrl = "https://sd2.sdmoviespoint.trade"
+    override var name = "SDMovies"
     override val hasMainPage = true
+    override var lang = "hi"
 
-    override val mainPageUrlList = listOf(
-        Pair("Latest", "$mainUrl/"),
-        Pair("Movies", "$mainUrl/latest-movies"),
-        Pair("Web Series", "$mainUrl/web-series")
+    override val supportedTypes = setOf(
+        TvType.Movie,
+        TvType.TvSeries
     )
+
+    data class Rendered(
+        @JsonProperty("rendered")
+        val rendered: String
+    )
+
+    data class WpPost(
+        @JsonProperty("id")
+        val id: Int,
+
+        @JsonProperty("link")
+        val link: String,
+
+        @JsonProperty("title")
+        val title: Rendered,
+
+        @JsonProperty("content")
+        val content: Rendered
+    )
+
+    private fun extractPoster(html: String): String? {
+        return Regex("""https://image\.tmdb\.org[^\s"'<>]+""")
+            .find(html)
+            ?.value
+    }
+
+    private fun isSeries(title: String): Boolean {
+        return title.contains("season", true)
+    }
+
+    override val mainPage = mainPageOf(
+        "$mainUrl" to "Latest Uploads"
+    )
+
+    override suspend fun search(query: String): List<SearchResponse> {
+        val posts = app.get(
+            "$mainUrl/wp-json/wp/v2/posts?search=${query.urlEncode()}"
+        ).parsedSafe<List<WpPost>>() ?: return emptyList()
+
+        return posts.map {
+            val title = it.title.rendered
+
+            newMovieSearchResponse(
+                title,
+                it.link,
+                if (isSeries(title)) TvType.TvSeries else TvType.Movie
+            ) {
+                posterUrl = extractPoster(it.content.rendered)
+            }
+        }
+    }
 
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val list = mutableListOf<HomePageList>()
 
-        mainPageUrlList.forEach { (name, url) ->
-            try {
-                val doc = Jsoup.connect(url).get()
-                val items = doc.select("div.post-box").mapNotNull { element ->
-                    val title = element.select("h2.post-title").text()
-                    val link = element.select("a").attr("href")
-                    val poster = element.select("img").attr("src")
+        val posts = app.get(
+            "$mainUrl/wp-json/wp/v2/posts?per_page=30&page=$page"
+        ).parsedSafe<List<WpPost>>() ?: emptyList()
 
-                    if (title.isNotEmpty() && link.isNotEmpty()) {
-                        newMovieSearchResponse(
-                            name = title,
-                            url = link,
-                            apiName = this.name,
-                            type = TvType.Movie,
-                            posterUrl = poster
-                        )
-                    } else null
-                }
+        val items = posts.map {
+            val title = it.title.rendered
 
-                if (items.isNotEmpty()) {
-                    list.add(HomePageList(name, items))
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
-        return HomePageResponse(list)
-    }
-
-    override suspend fun search(query: String): List<SearchResponse> {
-        return try {
-            val doc = Jsoup.connect("$mainUrl/?s=$query").get()
-
-            doc.select("div.post-box").mapNotNull { element ->
-                val title = element.select("h2.post-title").text()
-                val link = element.select("a").attr("href")
-                val poster = element.select("img").attr("src")
-
-                if (title.isNotEmpty() && link.isNotEmpty()) {
-                    newMovieSearchResponse(
-                        name = title,
-                        url = link,
-                        apiName = this.name,
-                        type = TvType.Movie,
-                        posterUrl = poster
-                    )
-                } else null
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    override suspend fun load(url: String): LoadResponse? {
-        return try {
-            val doc = Jsoup.connect(url).get()
-
-            val title = doc.select("h1.post-title").text()
-            val poster = doc.select("img.post-image").attr("src")
-            val description = doc.select("div.post-content p").text()
-
-            newMovieLoadResponse(
-                name = title,
-                url = url,
-                type = TvType.Movie,
-                dataUrl = url
+            newMovieSearchResponse(
+                title,
+                it.link,
+                if (isSeries(title)) TvType.TvSeries else TvType.Movie
             ) {
-                this.posterUrl = poster
-                this.plot = description
+                posterUrl = extractPoster(it.content.rendered)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
         }
+
+        return newHomePageResponse(
+            listOf(HomePageList(request.name, items)),
+            hasNext = posts.isNotEmpty()
+        )
+    }
+
+    override suspend fun load(url: String): LoadResponse {
+        TODO("Add later")
     }
 
     override suspend fun loadLinks(
@@ -116,31 +104,6 @@ class SDmoviesProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        return try {
-            val doc = Jsoup.connect(data).get()
-
-            doc.select("a.download-link").forEach { element ->
-                val linkUrl = element.attr("href")
-                val quality = element.text()
-
-                if (linkUrl.isNotEmpty()) {
-                    callback(
-                        newExtractorLink(
-                            source = this.name,
-                            name = quality,
-                            url = linkUrl,
-                            referer = mainUrl,
-                            quality = Qualities.Unknown.value,
-                            isM3u8 = false
-                        )
-                    )
-                }
-            }
-
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
+        return false
     }
 }
