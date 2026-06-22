@@ -51,7 +51,7 @@ class SDMoviesProvider : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val posts = app.get(
-            "$mainUrl/wp-json/wp/v2/posts?search=${query.urlEncode()}"
+            "$mainUrl/wp-json/wp/v2/posts?search=$query"
         ).parsedSafe<List<WpPost>>() ?: return emptyList()
 
         return posts.map {
