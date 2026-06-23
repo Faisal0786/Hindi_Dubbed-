@@ -148,70 +148,12 @@ tvSeriesEpisodes.add(
 }
     }
 
-    // 🎯 2. LOADLINKS FUNCTION: Asli heavy requests yahan chalengi click hone par
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        try {
-            // Load function se bheja gaya single click payload data parse karna
-            val payload = AppUtils.tryParseJson<Map<String, String>>(data) ?: return false
-            val pkpicsUrl = "https://host.pkpics.live/take-me/"
-            
-            // Step A: PkPics par POST request bypass chalana browser identity spoofing ke sath
-            val responseHtml = app.post(
-                pkpicsUrl,
-                data = payload,
-                headers = mapOf(
-                    "Referer" to mainUrl,
-                    "Origin" to mainUrl,
-                    "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36"
-                )
-            ).text
-
-            // Step B: DotFlix dynamic endpoint catch karna regex se
-            val dotflixRegex = Regex("""https://dotflix\.lol/share/[A-Za-z0-9\?&=_-]+""")
-            val dotflixUrl = dotflixRegex.find(responseHtml)?.value
-
-            if (dotflixUrl != null) {
-                // Step C: Netlog file se extract kiye gaye custom client tokens pass karna
-                val finalHtml = app.get(
-                    dotflixUrl,
-                    headers = mapOf(
-                        "Referer" to "https://pkpics.com/",
-                        "X-YouTube-Client-Name" to "56",
-                        "X-YouTube-Client-Version" to "2.20260622.00.00"
-                    )
-                ).text
-
-                // Step D: Stream paths read karna
-                val cdnLink = Regex("""https://[^\s"]+?\.r2\.dev/[^\s"]+?\.mkv""").find(finalHtml)?.value
-                val pixeldrainLink = Regex("""https://pixeldrain\.[^\s"]+?/u/[A-Za-z0-9]+""").find(finalHtml)?.value
-
-                // High speed direct link callback return karna
-                cdnLink?.let { link ->
-                    val quality = if (link.contains("720p")) "Direct CDN (720p)" else "Direct CDN (1080p)"
-                    callback.invoke(
-                        ExtractorLink(
-                            source = "DotFlix CDN",
-                            name = quality,
-                            url = link,
-                            referer = "",
-                            quality = if (quality.contains("720p")) Qualities.P720.value else Qualities.P1080.value
-                        )
-                    )
-                }
-
-                // Backup mirror handle karna core extractor integration se
-                pixeldrainLink?.let { mirror ->
-                    loadExtractor(mirror, dotflixUrl, subtitleCallback, callback)
-                }
-            }
-            return true
-        } catch (e: Exception) {
-            return false
-        }
-    }
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    return false
+}
 }
