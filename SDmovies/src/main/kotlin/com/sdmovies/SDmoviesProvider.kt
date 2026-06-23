@@ -4,10 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 
-data class Rendered(
-    @JsonProperty("rendered")
-    val rendered: String
-)
 
 data class WpPost(
     @JsonProperty("id")
@@ -17,10 +13,10 @@ data class WpPost(
     val link: String,
 
     @JsonProperty("title")
-    val title: Rendered,
+    val title: Map<String, Any>?,
 
     @JsonProperty("content")
-    val content: Rendered
+    val content: Map<String, Any>?
 )
 
 class SDMoviesProvider : MainAPI() {
@@ -50,22 +46,25 @@ class SDMoviesProvider : MainAPI() {
     )
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val posts = app.get(
-    "$mainUrl/wp-json/wp/v2/posts?search=$query"
-).parsed<List<WpPost>>()
-        return posts.map {
-            val title = it.title.rendered
+    val posts = app.get(
+        "$mainUrl/wp-json/wp/v2/posts?search=$query"
+    ).parsedSafe<List<WpPost>>() ?: return emptyList()
 
-            newMovieSearchResponse(
-                title,
-                it.link,
-                if (isSeries(title)) TvType.TvSeries else TvType.Movie
-            ) {
-                posterUrl = extractPoster(it.content.rendered)
-            }
+    return posts.map {
+        val title = it.title?.get("rendered")?.toString() ?: ""
+
+        newMovieSearchResponse(
+            title,
+            it.link,
+            if (isSeries(title)) TvType.TvSeries else TvType.Movie
+        ) {
+            posterUrl = extractPoster(
+                it.content?.get("rendered")?.toString() ?: ""
+            )
         }
     }
-
+}
+ 
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
