@@ -40,7 +40,7 @@ class SDMoviesProvider : MainAPI() {
         return title.contains("season", true) || title.contains("series", true)
     }
 
-    // 🎯 FIX 1: MainPageData ka sahi updated format
+    // 🎯 CloudStream MainPage Structure Fix
     override val mainPage = listOf(
         MainPageData(
             name = "Latest Uploads",
@@ -60,7 +60,7 @@ class SDMoviesProvider : MainAPI() {
                 title,
                 it.link,
                 if (isSeries(title)) TvType.TvSeries else TvType.Movie
-            ) {
+                ) {
                 posterUrl = extractPoster(
                     it.content?.get("rendered")?.toString() ?: ""
                 )
@@ -68,15 +68,13 @@ class SDMoviesProvider : MainAPI() {
         }
     }
 
-    // 🎯 FIX 2: Correct Parameter Usage for MainPage
+    // 🎯 Sahi aur Corrected MainPage Logic
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
 
-        // Endpoint pe page query string attach karna
         val url = "${request.data}&page=$page"
-
         val posts = app.get(url).parsedSafe<List<WpPost>>() ?: emptyList()
 
         val items = posts.map {
@@ -93,9 +91,10 @@ class SDMoviesProvider : MainAPI() {
             }
         }
 
-        // 🎯 FIX 3: Strict New Type Format Response
+        // Core Signature Match Fix: Direct function call without wrong wrapper classes
         return newHomePageResponse(
-            list = ListHomePageList(request.name, items, isHorizontal = false),
+            request.name,
+            items,
             hasNextPage = posts.isNotEmpty()
         )
     }
