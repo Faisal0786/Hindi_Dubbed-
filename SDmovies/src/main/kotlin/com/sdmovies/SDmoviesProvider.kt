@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 
 data class WpPost(
     @JsonProperty("id")
@@ -116,12 +117,11 @@ class SDMoviesProvider : MainAPI() {
                 val stringifiedData = payloadMap.toJson()
 
 tvSeriesEpisodes.add(
-    Episode(
-        data = stringifiedData,
-        name = "Episode ${index + 1}",
-        season = 1,
+    newEpisode(stringifiedData) {
+        name = "Episode ${index + 1}"
+        season = 1
         episode = index + 1
-    )
+    }
 )
             }
             
@@ -129,24 +129,23 @@ tvSeriesEpisodes.add(
                 this.posterUrl = posterUrl
             }
         } else {
-            // Standalone movie ke liye pehle single button data package banana
-            val firstForm = forms.firstOrNull()
-            val payloadMap = firstForm?.select("input")?.associate { 
-                it.attr("name") to it.attr("value") 
-            } ?: emptyMap()
-            
-            val movieData = payloadMap.toJson()
+    val firstForm = forms.firstOrNull()
 
-            val response = newTvSeriesLoadResponse(
-    rawTitle,
-    url,
-    TvType.TvSeries,
-    tvSeriesEpisodes
-)
+    val payloadMap = firstForm?.select("input")?.associate {
+        it.attr("name") to it.attr("value")
+    } ?: emptyMap()
 
-response.posterUrl = posterUrl
-return response
-        }
+    val movieData = payloadMap.toJson()
+
+    return newMovieLoadResponse(
+        rawTitle,
+        url,
+        TvType.Movie,
+        movieData
+    ) {
+        posterUrl = posterUrl
+    }
+}
     }
 
     // 🎯 2. LOADLINKS FUNCTION: Asli heavy requests yahan chalengi click hone par
