@@ -3,6 +3,7 @@ package com.sdmovies
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
 
 data class WpPost(
     @JsonProperty("id")
@@ -112,15 +113,16 @@ class SDMoviesProvider : MainAPI() {
                 }
                 
                 // Pure form data ko string data text mein convert karke pass karna
-                val stringifiedData = AppUtils.toJson(payloadMap)
-                
-                tvSeriesEpisodes.add(
-                    newEpisode(stringifiedData) {
-                        this.name = "Episode ${index + 1}"
-                        this.season = 1
-                        this.episode = index + 1
-                    }
-                )
+                val stringifiedData = payloadMap.toJson()
+
+tvSeriesEpisodes.add(
+    Episode(
+        data = stringifiedData,
+        name = "Episode ${index + 1}",
+        season = 1,
+        episode = index + 1
+    )
+)
             }
             
             return newTvSeriesLoadResponse(rawTitle, url, TvType.TvSeries, tvSeriesEpisodes) {
@@ -133,11 +135,17 @@ class SDMoviesProvider : MainAPI() {
                 it.attr("name") to it.attr("value") 
             } ?: emptyMap()
             
-            val movieData = AppUtils.toJson(payloadMap)
+            val movieData = payloadMap.toJson()
 
-            return newMovieLoadResponse(rawTitle, url, TvType.Movie, movieData) {
-                this.posterUrl = posterUrl
-            }
+            val response = newTvSeriesLoadResponse(
+    rawTitle,
+    url,
+    TvType.TvSeries,
+    tvSeriesEpisodes
+)
+
+response.posterUrl = posterUrl
+return response
         }
     }
 
