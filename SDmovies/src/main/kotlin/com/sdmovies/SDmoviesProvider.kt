@@ -75,16 +75,19 @@ class SDMoviesProvider : MainAPI() {
         ).parsedSafe<List<WpPost>>() ?: emptyList()
 
         val items = posts.map {
-            val title = it.title.rendered
+    val title = it.title?.get("rendered")?.toString() ?: ""
 
-            newMovieSearchResponse(
-                title,
-                it.link,
-                if (isSeries(title)) TvType.TvSeries else TvType.Movie
-            ) {
-                posterUrl = extractPoster(it.content.rendered)
-            }
-        }
+    newMovieSearchResponse(
+        title,
+        it.link,
+        if (isSeries(title)) TvType.TvSeries else TvType.Movie
+    ) {
+        posterUrl = extractPoster(
+            it.content?.get("rendered")?.toString() ?: ""
+        )
+    }
+}
+        
 
         return newHomePageResponse(
             listOf(HomePageList(request.name, items)),
