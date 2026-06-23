@@ -4,6 +4,25 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 
+data class Rendered(
+    @JsonProperty("rendered")
+    val rendered: String
+)
+
+data class WpPost(
+    @JsonProperty("id")
+    val id: Int,
+
+    @JsonProperty("link")
+    val link: String,
+
+    @JsonProperty("title")
+    val title: Rendered,
+
+    @JsonProperty("content")
+    val content: Rendered
+)
+
 class SDMoviesProvider : MainAPI() {
 
     override var mainUrl = "https://sd2.sdmoviespoint.trade"
@@ -14,25 +33,6 @@ class SDMoviesProvider : MainAPI() {
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries
-    )
-
-    data class Rendered(
-        @JsonProperty("rendered")
-        val rendered: String
-    )
-
-    data class WpPost(
-        @JsonProperty("id")
-        val id: Int,
-
-        @JsonProperty("link")
-        val link: String,
-
-        @JsonProperty("title")
-        val title: Rendered,
-
-        @JsonProperty("content")
-        val content: Rendered
     )
 
     private fun extractPoster(html: String): String? {
@@ -51,9 +51,8 @@ class SDMoviesProvider : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val posts = app.get(
-            "$mainUrl/wp-json/wp/v2/posts?search=$query"
-        ).parsedSafe<List<WpPost>>() ?: return emptyList()
-
+    "$mainUrl/wp-json/wp/v2/posts?search=$query"
+).parsed<List<WpPost>>()
         return posts.map {
             val title = it.title.rendered
 
