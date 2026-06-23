@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 
 data class WpPost(
     @JsonProperty("id")
@@ -48,23 +49,34 @@ class SDMoviesProvider : MainAPI() {
     )
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val posts = app.get(
-            "$mainUrl/wp-json/wp/v2/posts?search=$query"
-        ).parsedSafe<List<WpPost>>() ?: return emptyList()
+    val json = app.get(
+        "$mainUrl/wp-json/wp/v2/posts?search=$query"
+    ).text
 
-        return posts.map {
-            val title = it.title?.get("rendered")?.toString() ?: ""
+    val mapper = jacksonObjectMapper()
 
-            newMovieSearchResponse(
-                title,
-                it.link,
-                if (isSeries(title)) TvType.TvSeries else TvType.Movie
-            ) {
-                posterUrl = extractPoster(
+    val posts: List<WpPost> = mapper.readValue(
+        json,
+        mapper.typeFactory.constructCollectionType(
+            List::class.java,
+            WpPost::class.java
+        )
+    )
+
+    return posts.map {
+        val title = it.title?.get("rendered")?.toString() ?: ""
+
+        newMovieSearchResponse(
+            title,
+            it.link,
+            if (isSeries(title)) TvType.TvSeries else TvType.Movie
+        ) {
+            posterUrl =
+                extractPoster(
                     it.content?.get("rendered")?.toString() ?: ""
                 )
-            }
         }
+    }
     }
 
     override suspend fun getMainPage(
@@ -72,7 +84,17 @@ class SDMoviesProvider : MainAPI() {
         request: MainPageRequest
     ): HomePageResponse {
         val url = "$mainUrl${request.data}&page=$page"
-        val posts = app.get(url).parsedSafe<List<WpPost>>() ?: emptyList()
+        val json = app.get(url).text
+
+val mapper = jacksonObjectMapper()
+
+val posts: List<WpPost> = mapper.readValue(
+    json,
+    mapper.typeFactory.constructCollectionType(
+        List::class.java,
+        WpPost::class.java
+    )
+)
 
         val home = posts.map {
             val title = it.title?.get("rendered")?.toString() ?: ""
