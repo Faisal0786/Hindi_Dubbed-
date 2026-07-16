@@ -54,7 +54,7 @@ class Cwunchyroll : MainAPI() {
 
     override var mainUrl = "https://graphql.anilist.co"
 
-    override var lang = "hi"
+    override var lang = "en"
 
     override val hasMainPage = true
 
@@ -607,18 +607,17 @@ val sort =
 
 val status =
     when (request.data) {
-        "UPCOMING" -> "RELEASING"
+        "UPCOMING" -> "NOT_YET_RELEASED"
         else -> null
     }
 
-val format = null
+
 
     val gql = """
         query (
     ${'$'}page: Int,
     ${'$'}sort: [MediaSort],
     ${'$'}status: MediaStatus,
-    ${'$'}format: MediaFormat,
     ${'$'}season: MediaSeason,
     ${'$'}seasonYear: Int
 ) {
@@ -627,7 +626,6 @@ val format = null
     type: ANIME
     sort: ${'$'}sort
     status: ${'$'}status
-    format: ${'$'}format
     season: ${'$'}season
     seasonYear: ${'$'}seasonYear
 ) {
@@ -655,7 +653,6 @@ val format = null
             "page" to page,
             "sort" to sort,
             "status" to status,
-            "format" to format,
             "season" to season,
             "seasonYear" to seasonYear
         )
