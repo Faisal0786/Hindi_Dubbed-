@@ -160,7 +160,7 @@ object MetadataAggregator {
                 ?.mapNotNull { it.name }
                 ?: emptyList(),
 
-            ottProvider = provider,
+            ottProvider = null,
             imdbRating = cinemeta?.imdbRating?.toDoubleOrNull(),
 
             tmdbRating = tmdb?.vote_average,
