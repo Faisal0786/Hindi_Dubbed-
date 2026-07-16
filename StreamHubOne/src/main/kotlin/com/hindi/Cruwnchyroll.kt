@@ -583,80 +583,79 @@ override suspend fun getMainPage(
     request: MainPageRequest
 ): HomePageResponse {
 
+    val season = getCurrentAniListSeason()
+    val seasonYear = getCurrentYear()
 
-    val season =
-    if (request.data == "SEASON")
-        getCurrentAniListSeason()
-    else
-        null
+    val mediaArgs = when (request.data) {
 
-val seasonYear =
-    if (request.data == "SEASON")
-        getCurrentYear()
-    else
-        null
+        "TRENDING" ->
+            """
+            type: ANIME
+            sort: TRENDING_DESC
+            """
 
-val sort =
-    when (request.data) {
-        "TRENDING" -> listOf("POPULARITY_DESC")
-        "SEASON" -> listOf("POPULARITY_DESC")
-        "POPULAR" -> listOf("POPULARITY_DESC","SCORE_DESC")
-        "TOP100" -> listOf("SCORE_DESC","POPULARITY_DESC")
-        else -> null
+        "POPULAR" ->
+            """
+            type: ANIME
+            sort: POPULARITY_DESC
+            """
+
+        "TOP100" ->
+            """
+            type: ANIME
+            sort: SCORE_DESC
+            """
+
+        "SEASON" ->
+            """
+            type: ANIME
+            season: $season
+            seasonYear: $seasonYear
+            sort: POPULARITY_DESC
+            """
+
+        "UPCOMING" ->
+            """
+            type: ANIME
+            status: NOT_YET_RELEASED
+            sort: POPULARITY_DESC
+            """
+
+        else ->
+            """
+            type: ANIME
+            sort: TRENDING_DESC
+            """
     }
 
-val status =
-    when (request.data) {
-        "UPCOMING" -> "NOT_YET_RELEASED"
-        else -> null
+
+        val gql = """
+query {
+  Page(page: $page, perPage: 50) {
+    media(
+      $mediaArgs
+    ) {
+
+      id
+      format
+
+      title {
+        romaji
+        english
+        native
+      }
+
+      coverImage {
+        extraLarge
+      }
     }
-
-
-
-    val gql = """
-        query (
-    ${'$'}page: Int,
-    ${'$'}sort: [MediaSort],
-    ${'$'}status: MediaStatus,
-    ${'$'}season: MediaSeason,
-    ${'$'}seasonYear: Int
-) {
-          Page(page: ${'$'}page, perPage: 100) {
-            media(
-    type: ANIME
-    sort: ${'$'}sort
-    status: ${'$'}status
-    season: ${'$'}season
-    seasonYear: ${'$'}seasonYear
-) {
-
-              id
-              format
-
-              title {
-                romaji
-                english
-                native
-              }
-
-              coverImage {
-                extraLarge
-              }
-            }
-          }
-        }
-    """.trimIndent()
+  }
+}
+""".trimIndent()
 
     val body = mapOf(
-        "query" to gql,
-        "variables" to mapOf(
-            "page" to page,
-            "sort" to sort,
-            "status" to status,
-            "season" to season,
-            "seasonYear" to seasonYear
-        )
-    )
+    "query" to gql
+)
 
     val json = app.post(
         url = ApiConstants.ANILIST_API,
