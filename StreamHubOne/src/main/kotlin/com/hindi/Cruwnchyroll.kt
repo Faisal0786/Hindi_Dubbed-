@@ -598,10 +598,10 @@ val seasonYear =
 
 val sort =
     when (request.data) {
-        "TRENDING" -> listOf("TRENDING_DESC")
+        "TRENDING" -> listOf("POPULARITY_DESC")
         "SEASON" -> listOf("POPULARITY_DESC")
-        "POPULAR" -> listOf("POPULARITY_DESC")
-        "TOP100" -> listOf("SCORE_DESC")
+        "POPULAR" -> listOf("POPULARITY_DESC","SCORE_DESC")
+        "TOP100" -> listOf("SCORE_DESC","POPULARITY_DESC")
         else -> null
     }
 
