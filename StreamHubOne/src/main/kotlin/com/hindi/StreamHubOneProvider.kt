@@ -199,13 +199,16 @@ newMovieLoadResponse(
             plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("🌍 Country of Origin: [* $it\n\n *]\n:  ")
+        append("[Country]\n")
+        append("*$it*\n\n")
     }
 
     metadata.awards?.let {
-        append("[🏆 $it\n\n]\nDescription:  ")
+        append("[🏆 Awards]\n")
+        append("*$it*\n\n")
     }
 
+    append("[📖 Description]\n")
     append(metadata.description ?: "")
 }
             tags = metadata.genres
@@ -274,16 +277,18 @@ private suspend fun buildSeriesResponse(
         plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("🌍 Country of Origin: [* $it\n\n *]\n: ")
+        append("[ Country]\n")
+        append("*$it*\n\n")
     }
 
     metadata.awards?.let {
-        append("[🏆 $it\n\n]\nDescription:  ")
+        append("[🏆 Awards]\n")
+        append("*$it*\n\n")
     }
 
+    append("[📖 Description]\n")
     append(metadata.description ?: "")
 }
-
             tags =
                 metadata.genres
 
