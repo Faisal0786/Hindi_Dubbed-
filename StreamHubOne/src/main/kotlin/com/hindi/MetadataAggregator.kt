@@ -75,17 +75,17 @@ object MetadataAggregator {
             fetchExternalIds(imdbId)
         }
       
-        val providerDeferred = async {
-    fetchWatchProvider(
-        tmdbId,
-        mediaType
-    )
-}
+       // val providerDeferred = async {
+    //fetchWatchProvider(
+     //   tmdbId,
+    //    mediaType
+  //  )
+//}
 
         val tmdb = tmdbDeferred.await()
         val cinemeta = cinemetaDeferred.await()
         val ids = idsDeferred.await()
-        val provider = providerDeferred.await()
+       // val provider = providerDeferred.await()
 
         val aniList = async {
             fetchAniList(
