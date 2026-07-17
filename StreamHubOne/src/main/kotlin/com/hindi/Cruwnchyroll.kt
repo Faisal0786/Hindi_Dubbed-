@@ -70,11 +70,53 @@ class Cwunchyroll : MainAPI() {
         TvType.AsianDrama
     )
 override val mainPage = mainPageOf(
+
     "TRENDING" to "Trending Now",
     "SEASON" to "Popular This Season",
     "UPCOMING" to "Upcoming Next Season",
     "POPULAR" to "All Time Popular",
-    "TOP100" to "Top 100 Anime"
+    "TOP100" to "Top Rated Anime",
+
+    "AIRING" to "Airing Now",
+    "FINISHED" to "Finished Anime",
+    "NEW" to "Newly Added",
+    "UPDATED" to "Recently Updated",
+    "FAVOURITES" to "Most Favourited",
+
+    "TV" to "TV Anime",
+    "MOVIE" to "Anime Movies",
+    "OVA" to "OVA",
+    "ONA" to "ONA",
+    "TVSHORT" to "TV Shorts",
+    "MUSIC" to "Music Anime",
+
+    "ACTION" to "Action",
+    "ADVENTURE" to "Adventure",
+    "COMEDY" to "Comedy",
+    "DRAMA" to "Drama",
+    "FANTASY" to "Fantasy",
+    "ROMANCE" to "Romance",
+    "SLICE" to "Slice of Life",
+    "SCIFI" to "Sci-Fi",
+    "MYSTERY" to "Mystery",
+    "HORROR" to "Horror",
+    "SUPERNATURAL" to "Supernatural",
+    "SPORTS" to "Sports",
+    "MECHA" to "Mecha",
+    "PSYCHOLOGICAL" to "Psychological",
+    "THRILLER" to "Thriller",
+
+    "ISEKAI" to "Isekai",
+    "SHOUNEN" to "Shounen",
+    "SEINEN" to "Seinen",
+    "SHOUJO" to "Shoujo",
+    "JOSEI" to "Josei",
+
+    "SCHOOL" to "School",
+    "HISTORICAL" to "Historical",
+    "MILITARY" to "Military",
+    "MAGIC" to "Magic",
+    "MUSIC_TAG" to "Music Stories"
 )
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -589,46 +631,294 @@ override suspend fun getMainPage(
 
     val mediaArgs = when (request.data) {
 
-        "TRENDING" ->
-            """
-            type: ANIME
-            sort: TRENDING_DESC
-            """
+    "TRENDING" ->
+        """
+        type: ANIME
+        sort: TRENDING_DESC
+        """
 
-        "POPULAR" ->
-            """
-            type: ANIME
-            sort: POPULARITY_DESC
-            """
+    "POPULAR" ->
+        """
+        type: ANIME
+        sort: POPULARITY_DESC
+        """
 
-        "TOP100" ->
-            """
-            type: ANIME
-            sort: SCORE_DESC
-            """
+    "TOP100" ->
+        """
+        type: ANIME
+        sort: SCORE_DESC
+        """
 
-        "SEASON" ->
-            """
-            type: ANIME
-            season: $season
-            seasonYear: $seasonYear
-            sort: POPULARITY_DESC
-            """
+    "SEASON" ->
+        """
+        type: ANIME
+        season: $season
+        seasonYear: $seasonYear
+        sort: POPULARITY_DESC
+        """
 
-        "UPCOMING" ->
-            """
-            type: ANIME
-            status: NOT_YET_RELEASED
-            sort: POPULARITY_DESC
-            """
+    "UPCOMING" ->
+        """
+        type: ANIME
+        status: NOT_YET_RELEASED
+        sort: POPULARITY_DESC
+        """
 
-        else ->
-            """
-            type: ANIME
-            sort: TRENDING_DESC
-            """
-    }
+    "AIRING" ->
+        """
+        type: ANIME
+        status: RELEASING
+        sort: POPULARITY_DESC
+        """
 
+    "FINISHED" ->
+        """
+        type: ANIME
+        status: FINISHED
+        sort: POPULARITY_DESC
+        """
+
+    "NEW" ->
+        """
+        type: ANIME
+        sort: START_DATE_DESC
+        """
+
+    "UPDATED" ->
+        """
+        type: ANIME
+        sort: UPDATED_AT_DESC
+        """
+
+    "FAVOURITES" ->
+        """
+        type: ANIME
+        sort: FAVOURITES_DESC
+        """
+
+    "TV" ->
+        """
+        type: ANIME
+        format: TV
+        sort: POPULARITY_DESC
+        """
+
+    "MOVIE" ->
+        """
+        type: ANIME
+        format: MOVIE
+        sort: POPULARITY_DESC
+        """
+
+    "OVA" ->
+        """
+        type: ANIME
+        format: OVA
+        sort: POPULARITY_DESC
+        """
+
+    "ONA" ->
+        """
+        type: ANIME
+        format: ONA
+        sort: POPULARITY_DESC
+        """
+
+    "TVSHORT" ->
+        """
+        type: ANIME
+        format: TV_SHORT
+        sort: POPULARITY_DESC
+        """
+
+    "MUSIC" ->
+        """
+        type: ANIME
+        format: MUSIC
+        sort: POPULARITY_DESC
+        """
+
+    "ACTION" ->
+        """
+        type: ANIME
+        genre: "Action"
+        sort: POPULARITY_DESC
+        """
+
+    "ADVENTURE" ->
+        """
+        type: ANIME
+        genre: "Adventure"
+        sort: POPULARITY_DESC
+        """
+
+    "COMEDY" ->
+        """
+        type: ANIME
+        genre: "Comedy"
+        sort: POPULARITY_DESC
+        """
+
+    "DRAMA" ->
+        """
+        type: ANIME
+        genre: "Drama"
+        sort: POPULARITY_DESC
+        """
+
+    "FANTASY" ->
+        """
+        type: ANIME
+        genre: "Fantasy"
+        sort: POPULARITY_DESC
+        """
+
+    "ROMANCE" ->
+        """
+        type: ANIME
+        genre: "Romance"
+        sort: POPULARITY_DESC
+        """
+
+    "SLICE" ->
+        """
+        type: ANIME
+        genre: "Slice of Life"
+        sort: POPULARITY_DESC
+        """
+
+    "SCIFI" ->
+        """
+        type: ANIME
+        genre: "Sci-Fi"
+        sort: POPULARITY_DESC
+        """
+
+    "MYSTERY" ->
+        """
+        type: ANIME
+        genre: "Mystery"
+        sort: POPULARITY_DESC
+        """
+
+    "HORROR" ->
+        """
+        type: ANIME
+        genre: "Horror"
+        sort: POPULARITY_DESC
+        """
+
+    "SUPERNATURAL" ->
+        """
+        type: ANIME
+        genre: "Supernatural"
+        sort: POPULARITY_DESC
+        """
+
+    "SPORTS" ->
+        """
+        type: ANIME
+        genre: "Sports"
+        sort: POPULARITY_DESC
+        """
+
+    "MECHA" ->
+        """
+        type: ANIME
+        genre: "Mecha"
+        sort: POPULARITY_DESC
+        """
+
+    "PSYCHOLOGICAL" ->
+        """
+        type: ANIME
+        genre: "Psychological"
+        sort: POPULARITY_DESC
+        """
+
+    "THRILLER" ->
+        """
+        type: ANIME
+        genre: "Thriller"
+        sort: POPULARITY_DESC
+        """
+
+    "ISEKAI" ->
+        """
+        type: ANIME
+        tag: "Isekai"
+        sort: POPULARITY_DESC
+        """
+
+    "SHOUNEN" ->
+        """
+        type: ANIME
+        tag: "Shounen"
+        sort: POPULARITY_DESC
+        """
+
+    "SEINEN" ->
+        """
+        type: ANIME
+        tag: "Seinen"
+        sort: POPULARITY_DESC
+        """
+
+    "SHOUJO" ->
+        """
+        type: ANIME
+        tag: "Shoujo"
+        sort: POPULARITY_DESC
+        """
+
+    "JOSEI" ->
+        """
+        type: ANIME
+        tag: "Josei"
+        sort: POPULARITY_DESC
+        """
+
+    "SCHOOL" ->
+        """
+        type: ANIME
+        tag: "School"
+        sort: POPULARITY_DESC
+        """
+
+    "HISTORICAL" ->
+        """
+        type: ANIME
+        genre: "Historical"
+        sort: POPULARITY_DESC
+        """
+
+    "MILITARY" ->
+        """
+        type: ANIME
+        genre: "Military"
+        sort: POPULARITY_DESC
+        """
+
+    "MAGIC" ->
+        """
+        type: ANIME
+        tag: "Magic"
+        sort: POPULARITY_DESC
+        """
+
+    "MUSIC_TAG" ->
+        """
+        type: ANIME
+        genre: "Music"
+        sort: POPULARITY_DESC
+        """
+
+    else ->
+        """
+        type: ANIME
+        sort: TRENDING_DESC
+        """
+}
 
         val gql = """
 query {
