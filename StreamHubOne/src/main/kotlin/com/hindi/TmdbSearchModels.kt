@@ -28,5 +28,15 @@ data class TmdbSearchResult(
     val vote_count: Int?,
 
     @JsonProperty("genre_ids")
-    val genreIds: List<Int> = emptyList()
+    val genreIds: List<Int> = emptyList(),
+    
+    @JsonProperty("original_language")
+val originalLanguage: String?,
+
+@JsonProperty("original_title")
+val originalTitle: String?,
+
+@JsonProperty("original_name")
+val originalName: String?
+
 )
