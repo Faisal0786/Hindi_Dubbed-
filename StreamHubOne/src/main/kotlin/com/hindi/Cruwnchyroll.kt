@@ -427,7 +427,7 @@ actors = metadata.cast.map {
 
 private fun selectBestTmdbResult(
     results: List<TmdbSearchResult>,
-    ani: Media,
+    ani: AniListMedia,
     title: String,
     format: String
 ): TmdbSearchResult? {
