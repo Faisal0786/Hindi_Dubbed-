@@ -89,6 +89,7 @@ override val mainPage = mainPageOf(
               id
               format
               seasonYear
+              averageScore
 
               title {
                 romaji
@@ -638,6 +639,7 @@ query {
 
       id
       format
+      averageScore
 
       title {
         romaji
@@ -710,6 +712,9 @@ query {
                 ?.get("extraLarge"))
                 ?.toString()
 
+        val averageScore =
+    (item["averageScore"] as? Number)?.toDouble()
+
         newAnimeSearchResponse(
             title,
             AniData(
@@ -722,6 +727,9 @@ query {
                 TvType.Anime
         ) {
             posterUrl = poster
+ 
+            averageScore?.let {
+        score = Score.from10(it / 10.0)
         }
     }
 
