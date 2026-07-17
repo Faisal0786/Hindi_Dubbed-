@@ -282,24 +282,12 @@ override suspend fun load(url: String): LoadResponse? {
 
 
 
-    val tmdbResult =
-    tmdbSearch?.results?.firstOrNull {
-
-        val tmdbTitle =
-            (it.title ?: it.name ?: "")
-                .trim()
-
-        tmdbTitle.equals(
-            title,
-            ignoreCase = true
-        )
-    }
-    ?: tmdbSearch?.results?.firstOrNull {
-        it.media_type == "tv"
-    }
-    ?: tmdbSearch?.results?.firstOrNull {
-        it.media_type == "movie"
-    }
+   val tmdbResult = selectBestTmdbResult(
+    tmdbSearch?.results ?: emptyList(),
+    ani,
+    title,
+    aniData.format
+)
 
     val mediaType =
     tmdbResult?.media_type
@@ -435,6 +423,52 @@ actors = metadata.cast.map {
     sourceUrl = url
 )
 }
+}
+
+private fun selectBestTmdbResult(
+    results: List<TmdbSearchResult>,
+    ani: Media,
+    title: String,
+    format: String
+): TmdbSearchResult? {
+
+    return results.maxByOrNull { item ->
+
+        var score = 0
+
+        val tmdbTitle = (
+            item.name
+                ?: item.title
+                ?: item.originalName
+                ?: item.originalTitle
+                ?: ""
+        ).trim()
+
+        if (tmdbTitle.equals(title, true))
+            score += 100
+
+        if (item.originalLanguage == "ja")
+            score += 50
+
+        if (item.genreIds.contains(16))
+            score += 80
+
+        if (format == "MOVIE" && item.media_type == "movie")
+            score += 40
+
+        if (format != "MOVIE" && item.media_type == "tv")
+            score += 40
+
+        val year =
+            (item.first_air_date ?: item.release_date)
+                ?.take(4)
+                ?.toIntOrNull()
+
+        if (year != null && year == ani.seasonYear)
+            score += 30
+
+        score
+    }
 }
 
 private suspend fun buildSeriesResponse(
