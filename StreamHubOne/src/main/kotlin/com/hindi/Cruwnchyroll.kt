@@ -221,6 +221,14 @@ private val HOME_CACHE_TIME = 12 * 60 * 60 * 1000L
     id: Int
 ): AniListMedia? {
 
+    val key = "anilist_$id"
+
+AnimeCacheStorage.load(key)?.let { cached ->
+    tryParseJson<AniListMedia>(cached)?.let {
+        return it
+    }
+}
+
     val query = """
         query (${'$'}id: Int) {
           Media(id: ${'$'}id, type: ANIME) {
@@ -261,9 +269,20 @@ private val HOME_CACHE_TIME = 12 * 60 * 60 * 1000L
     json = body
 ).text
 
-return tryParseJson<AniListResponse>(json)
+   val media = tryParseJson<AniListResponse>(json)
     ?.data
     ?.Media
+
+media?.let {
+    AnimeCacheStorage.save(
+        key,
+        it.toJson()
+    )
+}
+
+return media
+
+
 }
 
 override suspend fun load(url: String): LoadResponse? {
