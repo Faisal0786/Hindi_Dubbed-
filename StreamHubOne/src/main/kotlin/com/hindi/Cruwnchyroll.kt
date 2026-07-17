@@ -1022,7 +1022,7 @@ query {
         score = Score.from10(it / 10.0)
         }
     }
-
+}
     return newHomePageResponse(
     "${request.name} (${items.size})",
     items
