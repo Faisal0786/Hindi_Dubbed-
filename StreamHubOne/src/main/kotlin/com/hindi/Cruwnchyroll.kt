@@ -119,6 +119,15 @@ override val mainPage = mainPageOf(
     "MUSIC_TAG" to "Music Stories"
 )
 
+private data class CachedHomePage(
+    val time: Long,
+    val items: List<SearchResponse>
+)
+
+private val homeCache = HashMap<String, CachedHomePage>()
+
+private const val HOME_CACHE_TIME = 12 * 60 * 60 * 1000L
+
     override suspend fun search(query: String): List<SearchResponse> {
 
     val gql = """
@@ -660,6 +669,17 @@ override suspend fun getMainPage(
     request: MainPageRequest
 ): HomePageResponse {
 
+val cacheKey = "${request.data}_$page"
+
+    homeCache[cacheKey]?.let { cache ->
+        if (System.currentTimeMillis() - cache.time < HOME_CACHE_TIME) {
+            return newHomePageResponse(
+                request.name,
+                cache.items
+            )
+        }
+    }
+
     val season = getCurrentAniListSeason()
     val seasonYear = getCurrentYear()
 
@@ -956,7 +976,7 @@ override suspend fun getMainPage(
 
         val gql = """
 query {
-  Page(page: $page, perPage: 50) {
+  Page(page: $page, perPage: 10) {
     media(
       $mediaArgs
     ) {
@@ -1057,8 +1077,13 @@ query {
         }
     }
 }
-    return newHomePageResponse(
-    "${request.name} (${items.size})",
+    homeCache[cacheKey] = CachedHomePage(
+    System.currentTimeMillis(),
+    items
+)
+
+return newHomePageResponse(
+    "${request.name}",
     items
 )
 }
