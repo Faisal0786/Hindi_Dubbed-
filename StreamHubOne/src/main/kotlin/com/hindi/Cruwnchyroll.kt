@@ -126,7 +126,7 @@ private data class CachedHomePage(
 
 private val homeCache = HashMap<String, CachedHomePage>()
 
-private const val HOME_CACHE_TIME = 12 * 60 * 60 * 1000L
+private val HOME_CACHE_TIME = 12 * 60 * 60 * 1000L
 
     override suspend fun search(query: String): List<SearchResponse> {
 
