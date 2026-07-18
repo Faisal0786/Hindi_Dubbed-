@@ -23,6 +23,8 @@ import com.hindi.providers.AllLoadLinksData
 import com.hindi.providers.convertImdbToAnimeId
 import com.hindi.providers.convertTmdbToAnimeId
 import java.util.Calendar
+import com.hindi.providers.toSansSerifBold
+import com.hindi.providers.toSansSerifItalic
 
 fun getCurrentAniListSeason(): String {
     val month = Calendar.getInstance().get(Calendar.MONTH)
