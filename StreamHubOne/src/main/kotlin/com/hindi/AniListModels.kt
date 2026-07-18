@@ -53,7 +53,38 @@ data class AniListMedia(
     val studios: AniListStudios?,
 
     @JsonProperty("characters")
-    val characters: AniListCharacters?
+    val characters: AniListCharacters?,
+
+    @JsonProperty("status")
+val status: String?,
+
+@JsonProperty("format")
+val format: String?,
+
+@JsonProperty("duration")
+val duration: Int?,
+
+@JsonProperty("countryOfOrigin")
+val countryOfOrigin: String?,
+
+@JsonProperty("source")
+val source: String?,
+
+@JsonProperty("synonyms")
+val synonyms: List<String> = emptyList(),
+
+@JsonProperty("startDate")
+val startDate: AniListFuzzyDate?,
+
+@JsonProperty("endDate")
+val endDate: AniListFuzzyDate?,
+
+@JsonProperty("trailer")
+val trailer: AniListTrailer?,
+
+@JsonProperty("nextAiringEpisode")
+val nextAiringEpisode: AniListNextEpisode?
+
 )
 
 data class AniListTitle(
@@ -104,4 +135,20 @@ data class AniListVoiceActorName(
 
 data class AniListVoiceActorImage(
     val large: String?
+)
+
+data class AniListFuzzyDate(
+    val year: Int?,
+    val month: Int?,
+    val day: Int?
+)
+
+data class AniListTrailer(
+    val id: String?,
+    val site: String?
+)
+
+data class AniListNextEpisode(
+    val airingAt: Long?,
+    val episode: Int?
 )
