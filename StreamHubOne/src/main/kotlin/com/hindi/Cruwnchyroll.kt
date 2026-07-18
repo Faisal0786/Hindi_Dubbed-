@@ -73,50 +73,27 @@ override val mainPage = mainPageOf(
 
     "TRENDING" to "Trending Now",
     "SEASON" to "Popular This Season",
-    "UPCOMING" to "Upcoming Next Season",
-    "POPULAR" to "All Time Popular",
-    "TOP100" to "Top Rated Anime",
+    "TOP100" to "Top Rated",
+    "AIRING" to "Currently Airing",
+    "UPCOMING" to "Upcoming",
 
-    "AIRING" to "Airing Now",
-    "FINISHED" to "Finished Anime",
-    "NEW" to "Newly Added",
     "UPDATED" to "Recently Updated",
-    "FAVOURITES" to "Most Favourited",
+    "NEW" to "New Releases",
+    "POPULAR" to "Most Popular",
+    "FAVOURITES" to "Fan Favorites",
 
-    "TV" to "TV Anime",
-    "MOVIE" to "Anime Movies",
-    "OVA" to "OVA",
-    "ONA" to "ONA",
-    "TVSHORT" to "TV Shorts",
-    "MUSIC" to "Music Anime",
+    "MOVIE" to "Movies",
+    "TV" to "TV Series",
+    "OVA_ONA" to "OVA & ONA",
 
-    "ACTION" to "Action",
-    "ADVENTURE" to "Adventure",
-    "COMEDY" to "Comedy",
-    "DRAMA" to "Drama",
-    "FANTASY" to "Fantasy",
     "ROMANCE" to "Romance",
-    "SLICE" to "Slice of Life",
-    "SCIFI" to "Sci-Fi",
-    "MYSTERY" to "Mystery",
-    "HORROR" to "Horror",
-    "SUPERNATURAL" to "Supernatural",
-    "SPORTS" to "Sports",
-    "MECHA" to "Mecha",
-    "PSYCHOLOGICAL" to "Psychological",
-    "THRILLER" to "Thriller",
-
+    "ACTION_ADVENTURE" to "Action & Adventure",
+    "FANTASY" to "Fantasy Worlds",
     "ISEKAI" to "Isekai",
-    "SHOUNEN" to "Shounen",
-    "SEINEN" to "Seinen",
-    "SHOUJO" to "Shoujo",
-    "JOSEI" to "Josei",
-
-    "SCHOOL" to "School",
-    "HISTORICAL" to "Historical",
-    "MILITARY" to "Military",
-    "MAGIC" to "Magic",
-    "MUSIC_TAG" to "Music Stories"
+    "SHOUNEN" to "Shounen Hits",
+    "SLICE" to "Slice of Life",
+    "SPORTS" to "Sports Anime",
+    "HIDDEN_GEMS" to "Hidden Gems"
 )
 
 private data class CachedHomePage(
@@ -702,7 +679,7 @@ val cacheKey = "${request.data}_$page"
     val season = getCurrentAniListSeason()
     val seasonYear = getCurrentYear()
 
-    val mediaArgs = when (request.data) {
+   val mediaArgs = when (request.data) {
 
     "TRENDING" ->
         """
@@ -744,11 +721,11 @@ val cacheKey = "${request.data}_$page"
         sort: POPULARITY_DESC
         """
 
-    "FINISHED" ->
+    "UPDATED" ->
         """
         type: ANIME
-        status: FINISHED
-        sort: POPULARITY_DESC
+        status: RELEASING
+        sort: UPDATED_AT_DESC
         """
 
     "NEW" ->
@@ -757,23 +734,10 @@ val cacheKey = "${request.data}_$page"
         sort: START_DATE_DESC
         """
 
-    "UPDATED" ->
-        """
-        type: ANIME
-        sort: UPDATED_AT_DESC
-        """
-
     "FAVOURITES" ->
         """
         type: ANIME
         sort: FAVOURITES_DESC
-        """
-
-    "TV" ->
-        """
-        type: ANIME
-        format: TV
-        sort: POPULARITY_DESC
         """
 
     "MOVIE" ->
@@ -783,66 +747,17 @@ val cacheKey = "${request.data}_$page"
         sort: POPULARITY_DESC
         """
 
-    "OVA" ->
+    "TV" ->
         """
         type: ANIME
-        format: OVA
+        format: TV
         sort: POPULARITY_DESC
         """
 
-    "ONA" ->
+    "OVA_ONA" ->
         """
         type: ANIME
-        format: ONA
-        sort: POPULARITY_DESC
-        """
-
-    "TVSHORT" ->
-        """
-        type: ANIME
-        format: TV_SHORT
-        sort: POPULARITY_DESC
-        """
-
-    "MUSIC" ->
-        """
-        type: ANIME
-        format: MUSIC
-        sort: POPULARITY_DESC
-        """
-
-    "ACTION" ->
-        """
-        type: ANIME
-        genre: "Action"
-        sort: POPULARITY_DESC
-        """
-
-    "ADVENTURE" ->
-        """
-        type: ANIME
-        genre: "Adventure"
-        sort: POPULARITY_DESC
-        """
-
-    "COMEDY" ->
-        """
-        type: ANIME
-        genre: "Comedy"
-        sort: POPULARITY_DESC
-        """
-
-    "DRAMA" ->
-        """
-        type: ANIME
-        genre: "Drama"
-        sort: POPULARITY_DESC
-        """
-
-    "FANTASY" ->
-        """
-        type: ANIME
-        genre: "Fantasy"
+        format_in: [OVA, ONA]
         sort: POPULARITY_DESC
         """
 
@@ -853,66 +768,17 @@ val cacheKey = "${request.data}_$page"
         sort: POPULARITY_DESC
         """
 
-    "SLICE" ->
+    "ACTION_ADVENTURE" ->
         """
         type: ANIME
-        genre: "Slice of Life"
+        genre_in: ["Action", "Adventure"]
         sort: POPULARITY_DESC
         """
 
-    "SCIFI" ->
+    "FANTASY" ->
         """
         type: ANIME
-        genre: "Sci-Fi"
-        sort: POPULARITY_DESC
-        """
-
-    "MYSTERY" ->
-        """
-        type: ANIME
-        genre: "Mystery"
-        sort: POPULARITY_DESC
-        """
-
-    "HORROR" ->
-        """
-        type: ANIME
-        genre: "Horror"
-        sort: POPULARITY_DESC
-        """
-
-    "SUPERNATURAL" ->
-        """
-        type: ANIME
-        genre: "Supernatural"
-        sort: POPULARITY_DESC
-        """
-
-    "SPORTS" ->
-        """
-        type: ANIME
-        genre: "Sports"
-        sort: POPULARITY_DESC
-        """
-
-    "MECHA" ->
-        """
-        type: ANIME
-        genre: "Mecha"
-        sort: POPULARITY_DESC
-        """
-
-    "PSYCHOLOGICAL" ->
-        """
-        type: ANIME
-        genre: "Psychological"
-        sort: POPULARITY_DESC
-        """
-
-    "THRILLER" ->
-        """
-        type: ANIME
-        genre: "Thriller"
+        genre: "Fantasy"
         sort: POPULARITY_DESC
         """
 
@@ -930,60 +796,26 @@ val cacheKey = "${request.data}_$page"
         sort: POPULARITY_DESC
         """
 
-    "SEINEN" ->
+    "SLICE" ->
         """
         type: ANIME
-        tag: "Seinen"
+        genre: "Slice of Life"
         sort: POPULARITY_DESC
         """
 
-    "SHOUJO" ->
+    "SPORTS" ->
         """
         type: ANIME
-        tag: "Shoujo"
+        genre: "Sports"
         sort: POPULARITY_DESC
         """
 
-    "JOSEI" ->
+    "HIDDEN_GEMS" ->
         """
         type: ANIME
-        tag: "Josei"
-        sort: POPULARITY_DESC
-        """
-
-    "SCHOOL" ->
-        """
-        type: ANIME
-        tag: "School"
-        sort: POPULARITY_DESC
-        """
-
-    "HISTORICAL" ->
-        """
-        type: ANIME
-        genre: "Historical"
-        sort: POPULARITY_DESC
-        """
-
-    "MILITARY" ->
-        """
-        type: ANIME
-        genre: "Military"
-        sort: POPULARITY_DESC
-        """
-
-    "MAGIC" ->
-        """
-        type: ANIME
-        tag: "Magic"
-        sort: POPULARITY_DESC
-        """
-
-    "MUSIC_TAG" ->
-        """
-        type: ANIME
-        genre: "Music"
-        sort: POPULARITY_DESC
+        averageScore_greater: 80
+        popularity_lesser: 50000
+        sort: SCORE_DESC
         """
 
     else ->
@@ -992,7 +824,6 @@ val cacheKey = "${request.data}_$page"
         sort: TRENDING_DESC
         """
 }
-
         val gql = """
 query {
   Page(page: $page, perPage: 10) {
