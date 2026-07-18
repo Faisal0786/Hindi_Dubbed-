@@ -76,19 +76,16 @@ class Cwunchyroll : MainAPI() {
 override val mainPage = mainPageOf(
 
     "TRENDING" to "Trending Now",
-    "SEASON" to "Popular This Season",
+    
     "TOP100" to "Top Rated",
-    "AIRING" to "Currently Airing",
-    "UPCOMING" to "Upcoming",
-
-    "UPDATED" to "Recently Updated",
-    "NEW" to "New Releases",
+   
     "POPULAR" to "Most Popular",
     "FAVOURITES" to "Fan Favorites",
-
-    "MOVIE" to "Movies",
-    "TV" to "TV Series",
+    "HIDDEN_GEMS" to "Hidden Gems"
+    "MOVIE" to " Popular Movies",
+    
     "OVA_ONA" to "OVA & ONA",
+    "SEASON" to "Popular This Season",
 
     "ROMANCE" to "Romance",
     "ACTION_ADVENTURE" to "Action & Adventure",
@@ -97,7 +94,7 @@ override val mainPage = mainPageOf(
     "SHOUNEN" to "Shounen Hits",
     "SLICE" to "Slice of Life",
     "SPORTS" to "Sports Anime",
-    "HIDDEN_GEMS" to "Hidden Gems"
+    
 )
 
 private suspend fun <T> retryRequest(
@@ -419,9 +416,6 @@ newMovieLoadResponse(
             logoUrl = metadata.logo
            plot = buildString {
 
-       append("TMDB ID: ${metadata.tmdbId}\n")
-append("AniList Episodes: ${metadata.anilistId}\n")
-
     metadata.countries.firstOrNull()?.let {
         val flag = it.isoCode?.toFlagEmoji().orEmpty()
 
@@ -573,10 +567,6 @@ private suspend fun buildSeriesResponse(
             metadata.logo
 
        plot = buildString {
-
-       append("TMDB ID: ${metadata.tmdbId}\n")
-append("AniList Episodes: ${metadata.anilistId}\n")
-append("Loaded Episodes: ${episodes.size}\n\n")
 
     metadata.countries.firstOrNull()?.let {
         val flag = it.isoCode?.toFlagEmoji().orEmpty()
