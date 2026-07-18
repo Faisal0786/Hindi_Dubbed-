@@ -17,6 +17,8 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 
 import com.hindi.providers.SourceProviders.invokeAllSources
 import com.hindi.providers.SourceProviders.invokeAllAnimeSources
+import com.hindi.providers.toSansSerifBold
+import com.hindi.providers.toSansSerifItalic
 import com.hindi.providers.SourceProviders.invokeAnimes
 import com.hindi.providers.AllLoadLinksData
 import com.hindi.providers.convertImdbToAnimeId
