@@ -714,6 +714,14 @@ suspend fun getLatestBaseUrl(baseUrl: String, source: String): String {
     }
 }
 
+//Emoji String
+fun String.toFlagEmoji(): String {
+    if (length != 2) return ""
+    return uppercase().map {
+        Character.toChars(it.code + 127397).concatToString()
+    }.joinToString("")
+}
+
 //Italic String
 fun String.toSansSerifItalic(): String {
     val builder = StringBuilder()
