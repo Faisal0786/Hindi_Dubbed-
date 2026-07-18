@@ -217,7 +217,7 @@ private val HOME_CACHE_TIME = 12 * 60 * 60 * 1000L
         }
     }
 }
-    
+
     private suspend fun getAniListMedia(
     id: Int
 ): AniListMedia? {
@@ -347,7 +347,7 @@ val metadata =
         null
     }
 
-   
+
 if (metadata == null) {
 
     return newAnimeLoadResponse(
@@ -449,8 +449,9 @@ actors = metadata.cast.map {
    } else {
 
     buildSeriesResponse(
-    tmdbId = tmdbId ?: return null,
+    tmdbId = tmdbId,
     metadata = metadata,
+    ani = ani,
     sourceUrl = url
 )
 }
@@ -503,15 +504,39 @@ private fun selectBestTmdbResult(
 }
 
 private suspend fun buildSeriesResponse(
-    tmdbId: Int,
+    tmdbId: Int?,
     metadata: MetadataAggregator.AggregatedMetadata,
+    ani: AniListMedia,
     sourceUrl: String
 ): LoadResponse {
 
-    val episodes = loadTmdbEpisodes(
-    tmdbId,
-    metadata
-)
+    val episodes =
+    if (tmdbId != null) {
+
+        val tmdbEpisodes = loadTmdbEpisodes(
+            tmdbId,
+            metadata
+        )
+
+        if (tmdbEpisodes.isNotEmpty()) {
+            tmdbEpisodes
+        } else {
+            buildAniListEpisodes(
+                ani,
+                metadata,
+                tmdbId
+            )
+        }
+
+    } else {
+
+        buildAniListEpisodes(
+            ani,
+            metadata,
+            null
+        )
+
+    }
 
     return newAnimeLoadResponse(
         metadata.title ?: "Unknown",
@@ -686,6 +711,61 @@ addDate(
 
     return episodes
 }
+    private fun buildAniListEpisodes(
+    ani: AniListMedia,
+    metadata: MetadataAggregator.AggregatedMetadata,
+    tmdbId: Int?
+): List<Episode> {
+
+    val totalEpisodes = ani.episodes ?: return emptyList()
+
+    val episodes = mutableListOf<Episode>()
+
+    for (ep in 1..totalEpisodes) {
+
+        episodes.add(
+            newEpisode(
+                LoadLinksData(
+                    title = metadata.title ?: (
+                        ani.title?.english
+                            ?: ani.title?.romaji
+                            ?: ani.title?.native
+                            ?: "Unknown"
+                    ),
+                    id = metadata.imdbId ?: (tmdbId?.toString() ?: ani.id.toString()),
+                    tmdbId = tmdbId,
+                    tvtype = "tv",
+                    year = ani.seasonYear?.toString(),
+                    season = 1,
+                    episode = ep,
+                    isAnime = true,
+                    isBollywood = false,
+                    isAsian = false,
+                    isCartoon = true,
+                    imdb_id = metadata.imdbId,
+                    anilistId = ani.id,
+                    malId = ani.idMal,
+                    orgTitle = metadata.originalTitle,
+                    airedYear = ani.seasonYear
+                ).toJson()
+            ) {
+
+                season = 1
+                episode = ep
+
+                name = "Episode $ep"
+
+                posterUrl =
+                    ani.coverImage?.extraLarge
+                        ?: ani.coverImage?.large
+                        ?: ani.coverImage?.medium
+            }
+        )
+    }
+
+    return episodes
+}
+    
 override suspend fun getMainPage(
     page: Int,
     request: MainPageRequest
@@ -949,7 +1029,7 @@ query {
                 TvType.Anime
         ) {
             posterUrl = poster
- 
+
             averageScore?.let {
         score = Score.from10(it / 10.0)
         }
