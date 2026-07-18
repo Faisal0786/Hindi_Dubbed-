@@ -340,7 +340,7 @@ val metadata =
             "&append_to_response=external_ids"
         ).parsed<TmdbDetails>()
 
-        MetadataAggregator.aggregate(
+        AnimeMetadataAggregator.aggregate(
             imdbId = tmdb?.external_ids?.imdbId,
             tmdbId = tmdbId,
             mediaType = mediaType,
@@ -513,7 +513,7 @@ private fun selectBestTmdbResult(
 
 private suspend fun buildSeriesResponse(
     tmdbId: Int?,
-    metadata: MetadataAggregator.AggregatedMetadata,
+    metadata: AnimeMetadataAggregator.AggregatedMetadata,
     ani: AniListMedia,
     sourceUrl: String
 ): LoadResponse {
@@ -640,7 +640,7 @@ actors =
 
 private suspend fun loadTmdbEpisodes(
     tmdbId: Int,
-    metadata: MetadataAggregator.AggregatedMetadata
+    metadata: AnimeMetadataAggregator.AggregatedMetadata
 ): List<Episode> {
 
     val series = app.get(
@@ -726,7 +726,7 @@ addDate(
 }
     private fun buildAniListEpisodes(
     ani: AniListMedia,
-    metadata: MetadataAggregator.AggregatedMetadata,
+    metadata: AnimeMetadataAggregator.AggregatedMetadata,
     tmdbId: Int?
 ): List<Episode> {
 
