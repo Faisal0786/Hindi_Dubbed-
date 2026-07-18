@@ -19,6 +19,7 @@ import com.hindi.providers.SourceProviders.invokeAllSources
 import com.hindi.providers.SourceProviders.invokeAllAnimeSources
 import com.hindi.providers.toSansSerifBold
 import com.hindi.providers.toSansSerifItalic
+import com.hindi.providers.toFlagEmoji
 import com.hindi.providers.SourceProviders.invokeAnimes
 import com.hindi.providers.AllLoadLinksData
 import com.hindi.providers.convertImdbToAnimeId
@@ -198,20 +199,22 @@ newMovieLoadResponse(
             posterUrl = metadata.poster
             backgroundPosterUrl = metadata.backdrop
             logoUrl = metadata.logo
-            plot = buildString {
+           plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("${"Country".toSansSerifItalic()}\n")
-        append("${it.toSansSerifBold()}\n\n")
+        val flag = it.isoCode?.toFlagEmoji().orEmpty()
+
+        append("${"Origin".toSansSerifBold()}: ")
+        append("$flag ${it.name.toSansSerifItalic()}\n\n")
     }
 
     metadata.awards?.let {
-        append("${"🏆 Awards".toSansSerifItalic()}\n")
-        append("$it\n\n")
+        append("${"🏆 Awards".toSansSerifBold()}: ")
+        append("${it.toSansSerifItalic()}\n\n")
     }
 
-    append("${"📖 Description".toSansSerifBold()}\n")
-    append(metadata.description ?: "")
+    append("${"Description".toSansSerifBold()}: ")
+    append(metadata.description?.toSansSerifItalic() ?: "")
 }
             tags = metadata.genres
             year = metadata.year
@@ -276,20 +279,22 @@ private suspend fun buildSeriesResponse(
         logoUrl =
             metadata.logo
 
-        plot = buildString {
+       plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("${"Country".toSansSerifItalic()}\n")
-        append("${it.toSansSerifBold()}\n\n")
+        val flag = it.isoCode?.toFlagEmoji().orEmpty()
+
+        append("${"Origin".toSansSerifBold()}: ")
+        append("$flag ${it.name.toSansSerifItalic()}\n\n")
     }
 
     metadata.awards?.let {
-        append("${"🏆 Awards".toSansSerifItalic()}\n")
-        append("$it\n\n")
+        append("${"🏆 Awards".toSansSerifBold()}: ")
+        append("${it.toSansSerifItalic()}\n\n")
     }
 
-    append("${"📖 Description".toSansSerifBold()}\n")
-    append(metadata.description ?: "")
+    append("${"Description".toSansSerifBold()}: ")
+    append(metadata.description?.toSansSerifItalic() ?: "")
 }
             tags =
                 metadata.genres
@@ -428,7 +433,7 @@ addDate(
 
     return episodes
 }
-    
+
     private fun hasProvider(
     tmdb: TmdbDetails,
     region: String,
@@ -446,7 +451,7 @@ addDate(
         it.provider_id == providerId
     }
 }
-    
+
 override suspend fun getMainPage(
     page: Int,
     request: MainPageRequest
