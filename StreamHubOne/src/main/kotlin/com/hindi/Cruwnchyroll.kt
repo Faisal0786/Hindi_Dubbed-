@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.HomePageList
 import java.net.URLEncoder
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import kotlinx.coroutines.delay
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils
@@ -96,6 +97,27 @@ override val mainPage = mainPageOf(
     "HIDDEN_GEMS" to "Hidden Gems"
 )
 
+private suspend fun <T> retryRequest(
+    times: Int = 3,
+    delayMs: Long = 500,
+    block: suspend () -> T
+): T {
+    var lastError: Throwable? = null
+
+    repeat(times) { attempt ->
+        try {
+            return block()
+        } catch (e: Throwable) {
+            lastError = e
+            if (attempt < times - 1) {
+                delay(delayMs)
+            }
+        }
+    }
+
+    throw lastError ?: RuntimeException("Retry failed")
+}
+
 private data class CachedHomePage(
     val time: Long,
     val items: List<SearchResponse>
@@ -140,10 +162,12 @@ private val HOME_CACHE_TIME = 12 * 60 * 60 * 1000L
         )
     )
 
-    val json = app.post(
+    val json = retryRequest {
+    app.post(
         url = ApiConstants.ANILIST_API,
         json = body
     ).text
+}
 
     val root = tryParseJson<Map<String, Any>>(json)
         ?: return emptyList()
@@ -241,10 +265,12 @@ AnimeCacheStorage.load(key)?.let { cached ->
         )
     )
 
-    val json = app.post(
-    url = ApiConstants.ANILIST_API,
-    json = body
-).text
+    val json = retryRequest {
+    app.post(
+        url = ApiConstants.ANILIST_API,
+        json = body
+    ).text
+}
 
    val media = tryParseJson<AniListResponse>(json)
     ?.data
@@ -853,10 +879,12 @@ query {
     "query" to gql
 )
 
-    val json = app.post(
+    val json = retryRequest {
+    app.post(
         url = ApiConstants.ANILIST_API,
         json = body
     ).text
+}
 
     val root = tryParseJson<Map<String, Any>>(json)
         ?: return newHomePageResponse(
