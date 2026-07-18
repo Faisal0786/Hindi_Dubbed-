@@ -81,7 +81,7 @@ override val mainPage = mainPageOf(
    
     "POPULAR" to "Most Popular",
     "FAVOURITES" to "Fan Favorites",
-    "HIDDEN_GEMS" to "Hidden Gems"
+    "HIDDEN_GEMS" to "Hidden Gems",
     "MOVIE" to " Popular Movies",
     
     "OVA_ONA" to "OVA & ONA",
@@ -93,7 +93,7 @@ override val mainPage = mainPageOf(
     "ISEKAI" to "Isekai",
     "SHOUNEN" to "Shounen Hits",
     "SLICE" to "Slice of Life",
-    "SPORTS" to "Sports Anime",
+    "SPORTS" to "Sports Anime"
     
 )
 
