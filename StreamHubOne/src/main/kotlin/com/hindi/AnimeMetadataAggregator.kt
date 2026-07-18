@@ -283,10 +283,10 @@ private suspend fun fetchExternalIds(
         return null
 
     val query = """
-query (\$id: Int, \$search: String) {
+query (${'$'}id: Int, ${'$'}search: String) {
   Media(
-    id: \$id,
-    search: \$search,
+    id: ${'$'}id,
+    search: ${'$'}search,
     type: ANIME
   ) {
 
@@ -356,7 +356,6 @@ query (\$id: Int, \$search: String) {
 
     characters {
       edges {
-
         role
 
         node {
@@ -366,7 +365,6 @@ query (\$id: Int, \$search: String) {
         }
 
         voiceActors(language: JAPANESE) {
-
           name {
             full
           }
