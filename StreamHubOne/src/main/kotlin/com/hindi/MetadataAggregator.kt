@@ -27,7 +27,7 @@ object MetadataAggregator {
         val runtime: Int? = null,
 
         val genres: List<String> = emptyList(),
-        val countries: List<String> = emptyList(),
+        val countries: List<CountryInfo> = emptyList(),
         val ottProvider: String? = null,
 
         val imdbRating: Double? = null,
@@ -49,6 +49,11 @@ object MetadataAggregator {
         val anidbId: Int? = null,
         val tvdbId: Int? = null
     )
+
+    data class CountryInfo(
+    val name: String,
+    val isoCode: String?
+)
 
     data class ActorData(
         val name: String,
@@ -157,8 +162,13 @@ object MetadataAggregator {
             ),
 
             countries = tmdb?.production_countries
-                ?.mapNotNull { it.name }
-                ?: emptyList(),
+    ?.map {
+        CountryInfo(
+            name = it.name.orEmpty(),
+            isoCode = it.iso_3166_1
+        )
+    }
+    ?: emptyList(),
 
             ottProvider = null,
             imdbRating = cinemeta?.imdbRating?.toDoubleOrNull(),
