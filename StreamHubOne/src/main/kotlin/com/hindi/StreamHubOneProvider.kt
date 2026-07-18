@@ -199,16 +199,16 @@ newMovieLoadResponse(
             plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("[Country]\n")
-        append("*$it*\n\n")
+        append("${"Country".toSansSerifItalic()}\n")
+        append("${it.toSansSerifBold()}\n\n")
     }
 
     metadata.awards?.let {
-        append("[🏆 Awards]\n")
-        append("*$it*\n\n")
+        append("${"🏆 Awards".toSansSerifItalic()}\n")
+        append("$it\n\n")
     }
 
-    append("[📖 Description]\n")
+    append("${"📖 Description".toSansSerifBold()}\n")
     append(metadata.description ?: "")
 }
             tags = metadata.genres
@@ -277,16 +277,16 @@ private suspend fun buildSeriesResponse(
         plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("[ Country]\n")
-        append("*$it*\n\n")
+        append("${"Country".toSansSerifItalic()}\n")
+        append("${it.toSansSerifBold()}\n\n")
     }
 
     metadata.awards?.let {
-        append("[🏆 Awards]\n")
-        append("*$it*\n\n")
+        append("${"🏆 Awards".toSansSerifItalic()}\n")
+        append("$it\n\n")
     }
 
-    append("[📖 Description]\n")
+    append("${"📖 Description".toSansSerifBold()}\n")
     append(metadata.description ?: "")
 }
             tags =
