@@ -25,6 +25,7 @@ import com.hindi.providers.convertTmdbToAnimeId
 import java.util.Calendar
 import com.hindi.providers.toSansSerifBold
 import com.hindi.providers.toSansSerifItalic
+import com.hindi.providers.toFlagEmoji
 
 fun getCurrentAniListSeason(): String {
     val month = Calendar.getInstance().get(Calendar.MONTH)
@@ -416,20 +417,22 @@ newMovieLoadResponse(
             posterUrl = metadata.poster
             backgroundPosterUrl = metadata.backdrop
             logoUrl = metadata.logo
-            plot = buildString {
+           plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("${"Country".toSansSerifItalic()}\n")
-        append("${it.toSansSerifBold()}\n\n")
+        val flag = it.isoCode?.toFlagEmoji().orEmpty()
+
+        append("${"Origin".toSansSerifBold()}: ")
+        append("$flag ${it.name.toSansSerifItalic()}\n\n")
     }
 
     metadata.awards?.let {
-        append("${"🏆 Awards".toSansSerifItalic()}\n")
-        append("$it\n\n")
+        append("${"🏆 Awards".toSansSerifBold()}: ")
+        append("${it.toSansSerifItalic()}\n\n")
     }
 
-    append("${"📖 Description".toSansSerifBold()}\n")
-    append(metadata.description ?: "")
+    append("${"Description".toSansSerifBold()}: ")
+    append(metadata.description?.toSansSerifItalic() ?: "")
 }
             tags = metadata.genres
             year = metadata.year
@@ -566,20 +569,22 @@ private suspend fun buildSeriesResponse(
         logoUrl =
             metadata.logo
 
-        plot = buildString {
+       plot = buildString {
 
     metadata.countries.firstOrNull()?.let {
-        append("${"Country".toSansSerifItalic()}\n")
-        append("${it.toSansSerifBold()}\n\n")
+        val flag = it.isoCode?.toFlagEmoji().orEmpty()
+
+        append("${"Origin".toSansSerifBold()}: ")
+        append("$flag ${it.name.toSansSerifItalic()}\n\n")
     }
 
     metadata.awards?.let {
-        append("${"🏆 Awards".toSansSerifItalic()}\n")
-        append("$it\n\n")
+        append("${"🏆 Awards".toSansSerifBold()}: ")
+        append("${it.toSansSerifItalic()}\n\n")
     }
 
-    append("${"📖 Description".toSansSerifBold()}\n")
-    append(metadata.description ?: "")
+    append("${"Description".toSansSerifBold()}: ")
+    append(metadata.description?.toSansSerifItalic() ?: "")
 }
 
             tags =
