@@ -419,6 +419,10 @@ newMovieLoadResponse(
             logoUrl = metadata.logo
            plot = buildString {
 
+       append("TMDB ID: ${metadata.tmdbId}\n")
+append("AniList Episodes: ${metadata.anilistId}\n")
+append("Loaded Episodes: ${episodes.size}\n\n")
+
     metadata.countries.firstOrNull()?.let {
         val flag = it.isoCode?.toFlagEmoji().orEmpty()
 
@@ -570,6 +574,10 @@ private suspend fun buildSeriesResponse(
             metadata.logo
 
        plot = buildString {
+
+       append("TMDB ID: ${metadata.tmdbId}\n")
+append("AniList Episodes: ${metadata.anilistId}\n")
+append("Loaded Episodes: ${episodes.size}\n\n")
 
     metadata.countries.firstOrNull()?.let {
         val flag = it.isoCode?.toFlagEmoji().orEmpty()
