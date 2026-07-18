@@ -3,6 +3,7 @@ package com.hindi
 import com.lagradost.cloudstream3.app
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import java.net.URLEncoder
 
 object AnimeMetadataAggregator {
 
