@@ -245,3 +245,4 @@ object Settings {
     // ── Entry point ──────────────────────────────────────────
     fun showSettingsDialog(context: Context, onSave: () -> Unit)
 }
+}
