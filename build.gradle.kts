@@ -12,7 +12,7 @@ buildscript {
 
     dependencies {
         classpath("com.android.tools.build:gradle:9.1.0")
-        classpath("com.github.recloudstream.gradle:gradle:81b1d424d")
+        classpath("com.github.recloudstream.gradle:gradle:81b1d424d2")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.20")
     }
 }
@@ -43,24 +43,21 @@ subprojects {
     android {
         namespace = "com.example"
 
-        compileSdk = 35
+        compileSdk = 36
 
         defaultConfig {
             minSdk = 21
         }
 
-        compileOptions {
-            sourceCompatibility = JavaVersion.VERSION_17
-            targetCompatibility = JavaVersion.VERSION_17
+      compileOptions {
+            sourceCompatibility = JavaVersion.VERSION_1_8
+            targetCompatibility = JavaVersion.VERSION_1_8
         }
     }
 
     tasks.withType<KotlinJvmCompile>().configureEach {
-
         compilerOptions {
-
-            jvmTarget.set(JvmTarget.JVM_17)
-
+            jvmTarget.set(JvmTarget.JVM_1_8)
             freeCompilerArgs.addAll(
                 listOf(
                     "-Xno-call-assertions",
@@ -72,26 +69,19 @@ subprojects {
     }
 
     dependencies {
-
         val implementation by configurations
         val cloudstream by configurations
-
         cloudstream("com.lagradost:cloudstream3:pre-release")
-
         implementation(kotlin("stdlib"))
-
-        implementation("com.github.Blatzar:NiceHttp:0.4.17")
-        implementation("org.jsoup:jsoup:1.22.1")
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.20.1")
-
+        implementation("com.github.Blatzar:NiceHttp:0.4.18")
+        implementation("org.jsoup:jsoup:1.22.2")
+        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1")
         implementation("com.squareup.okhttp3:okhttp:4.12.0")
-
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-
-        implementation("org.json:json:20231013")
-
+        implementation("org.mozilla:rhino:1.8.1")
         implementation("androidx.annotation:annotation:1.10.0")
         implementation("androidx.browser:browser:1.8.0")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     }
 }
 
