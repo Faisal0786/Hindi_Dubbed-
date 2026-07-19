@@ -31,38 +31,17 @@ object SourceRegistry {
 
     val builtInProviders = listOf(
         // ── Torrents ──────────────────────────────────────────────
-        SourceProviderDef(
-            key = "p_torrentio", displayName = "🧲 Torrentio", isTorrent = true,
-            executeStandard = { res, _, cb -> invokeStremioTorrents("Torrentio", torrentioAPI, res.imdbId, res.season, res.episode, cb) },
-            executeAnime = { res, _, cb -> invokeStremioTorrents("Torrentio", torrentioAPI, "kitsu:${res.kitsuId}", res.season, res.episode, cb) }
-        ),
-        SourceProviderDef(
-            key = "p_torrentsdb", displayName = "🧲 TorrentsDB", isTorrent = true,
-            executeStandard = { res, _, cb -> invokeStremioTorrents("TorrentsDB", torrentsdbAPI, res.imdbId, res.season, res.episode, cb) },
-            executeAnime = { res, _, cb -> invokeStremioTorrents("TorrentsDB", torrentsdbAPI, "kitsu:${res.kitsuId}", res.season, res.episode, cb) }
-        ),
-        SourceProviderDef(
-            key = "p_animetosho", displayName = "🧲 AnimeTosho", isTorrent = true,
-            executeAnime = { res, _, cb -> invokeAnimetosho(res.kitsuId, res.malId, res.episode, cb) }
-        ),
-
-        // ── Stremio Addons & Subtitles ────────────────────────────
-        SourceProviderDef(
-            key = "p_notorrent", displayName = "NoTorrent",
-            executeStandard = { res, subCb, cb -> invokeStremioStreams("NoTorrent", notorrentAPI, res.imdbId, res.season, res.episode, subCb, cb) }
-        ),
-        SourceProviderDef(
-            key = "p_wyziesubs", displayName = "WYZIESubs",
-            executeStandard = { res, subCb, _ -> invokeWYZIESubs(res.imdbId, res.season, res.episode, subCb) },
-            executeAnime = { res, subCb, _ -> invokeWYZIESubs(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb) }
-        ),
-        SourceProviderDef(
-            key = "p_stremiosubs", displayName = "StremioSubs",
-            executeStandard = { res, subCb, _ -> invokeStremioSubtitles(res.imdbId, res.season, res.episode, subCb) },
-            executeAnime = { res, subCb, _ -> invokeStremioSubtitles(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb) }
-        ),
-
+        
         // ── Direct HTTP SourceProviders ─────────────────────────────────
+        SourceProviderDef(
+            key = "p_moviebox", displayName = "Moviebox",
+            executeStandard = { res, subCb, cb -> invokeMoviebox(res.title, res.season, res.episode, subCb, cb) },
+            executeAnime = { res, subCb, cb -> invokeMoviebox(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
+        ),
+        SourceProviderDef(
+            key = "p_allmovieland", displayName = "Allmovieland",
+            executeStandard = { res, _, cb -> invokeAllmovieland(res.imdbId, res.season, res.episode, cb) },
+        ),
         SourceProviderDef(
             key = "p_showbox", displayName = "ShowBox",
             executeStandard = { res, subCb, cb -> invokeShowbox(res.imdbId, res.season, res.episode, subCb, cb) },
@@ -72,11 +51,7 @@ object SourceRegistry {
             key = "p_vidrock", displayName = "Vidrock",
             executeStandard = { res, _, cb -> invokeVidrock(res.tmdbId, res.season, res.episode, cb) }
         ),
-        SourceProviderDef(
-            key = "p_moviebox", displayName = "Moviebox",
-            executeStandard = { res, subCb, cb -> invokeMoviebox(res.title, res.season, res.episode, subCb, cb) },
-            executeAnime = { res, subCb, cb -> invokeMoviebox(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
-        ),
+        
         SourceProviderDef(
             key = "p_cinemacity", displayName = "Cinemacity",
             executeStandard = { res, subCb, cb -> invokeCinemacity(res.title, res.season, res.episode, subCb, cb) },
@@ -86,10 +61,7 @@ object SourceRegistry {
             key = "p_movieblast", displayName = "MovieBlast",
             executeStandard = { res, subCb, cb -> invokeMovieBlast(res.title, res.season, res.episode, subCb, cb) },
         ),
-        SourceProviderDef(
-            key = "p_allmovieland", displayName = "Allmovieland",
-            executeStandard = { res, _, cb -> invokeAllmovieland(res.imdbId, res.season, res.episode, cb) },
-        ),
+        
         SourceProviderDef(
             key = "p_hexa", displayName = "Hexa",
             executeStandard = { res, _, cb -> invokeHexa(res.tmdbId, res.season, res.episode, cb) },
@@ -373,6 +345,37 @@ object SourceRegistry {
             executeAnime = { res, subCb, cb -> invokeAnimekizz(res.title, res.anilistId, res.episode, subCb, cb) },
             executeMalSync = { data, subCb, cb -> if (data.origin == "imdb") invokeAnimekizz(data.title, data.aniId, data.episode, subCb, cb) }
         ),
+        SourceProviderDef(
+            key = "p_torrentio", displayName = "🧲 Torrentio", isTorrent = true,
+            executeStandard = { res, _, cb -> invokeStremioTorrents("Torrentio", torrentioAPI, res.imdbId, res.season, res.episode, cb) },
+            executeAnime = { res, _, cb -> invokeStremioTorrents("Torrentio", torrentioAPI, "kitsu:${res.kitsuId}", res.season, res.episode, cb) }
+        ),
+        SourceProviderDef(
+            key = "p_torrentsdb", displayName = "🧲 TorrentsDB", isTorrent = true,
+            executeStandard = { res, _, cb -> invokeStremioTorrents("TorrentsDB", torrentsdbAPI, res.imdbId, res.season, res.episode, cb) },
+            executeAnime = { res, _, cb -> invokeStremioTorrents("TorrentsDB", torrentsdbAPI, "kitsu:${res.kitsuId}", res.season, res.episode, cb) }
+        ),
+        SourceProviderDef(
+            key = "p_animetosho", displayName = "🧲 AnimeTosho", isTorrent = true,
+            executeAnime = { res, _, cb -> invokeAnimetosho(res.kitsuId, res.malId, res.episode, cb) }
+        ),
+
+        // ── Stremio Addons & Subtitles ────────────────────────────
+        SourceProviderDef(
+            key = "p_notorrent", displayName = "NoTorrent",
+            executeStandard = { res, subCb, cb -> invokeStremioStreams("NoTorrent", notorrentAPI, res.imdbId, res.season, res.episode, subCb, cb) }
+        ),
+        SourceProviderDef(
+            key = "p_wyziesubs", displayName = "WYZIESubs",
+            executeStandard = { res, subCb, _ -> invokeWYZIESubs(res.imdbId, res.season, res.episode, subCb) },
+            executeAnime = { res, subCb, _ -> invokeWYZIESubs(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb) }
+        ),
+        SourceProviderDef(
+            key = "p_stremiosubs", displayName = "StremioSubs",
+            executeStandard = { res, subCb, _ -> invokeStremioSubtitles(res.imdbId, res.season, res.episode, subCb) },
+            executeAnime = { res, subCb, _ -> invokeStremioSubtitles(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb) }
+        ),
+
     )
 
     // Dynamically provided to Settings.kt
