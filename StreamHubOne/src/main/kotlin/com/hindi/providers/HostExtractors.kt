@@ -36,7 +36,7 @@ import javax.crypto.spec.SecretKeySpec
 import java.security.SecureRandom
 import javax.crypto.Cipher
 
-import com.hindi.providers.settings.Settings
+import com.hindi.providers.Settings
 
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
