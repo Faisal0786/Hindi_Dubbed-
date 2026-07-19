@@ -54,7 +54,7 @@ import java.math.BigInteger
 import kotlin.math.min
 
 // Settings
-//import com.megix.settings.Settings
+//import com.hindi.providers.Settings
 
 
 class SpecOption(searchTerms: List<String>, val label: String) {
