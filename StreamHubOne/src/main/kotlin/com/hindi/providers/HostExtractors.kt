@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 
 import com.lagradost.cloudstream3.extractors.VidHidePro
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
@@ -35,7 +36,9 @@ import javax.crypto.spec.SecretKeySpec
 import java.security.SecureRandom
 import javax.crypto.Cipher
 
-import com.hindi.providers.Settings
+import com.hindi.providers.settings.Settings
+
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 class Streameeeeee : Videostr() {
     override var name = "Streameeeeee"
@@ -289,22 +292,6 @@ open class GDFlix : ExtractorApi() {
     override val mainUrl = "https://gdflix.*"
     override val requiresReferer = false
 
-    private suspend fun CFType(url: String): List<String> {
-        val types = listOf("1", "2")
-        val downloadLinks = mutableListOf<String>()
-
-        types.safeAmap { t ->
-            try {
-                val document = app.get(url + "?type=$t").document
-                val links = document.select("a.btn-success").mapNotNull { it.attr("href") }
-                downloadLinks.addAll(links)
-            } catch (e: Exception) {
-                Log.d("Error", e.toString())
-            }
-        }
-        return downloadLinks
-    }
-
     override suspend fun getUrl(
         url: String,
         referer: String?,
@@ -355,6 +342,21 @@ open class GDFlix : ExtractorApi() {
 
                 text.contains("CLOUD DOWNLOAD [R2]") -> { myCallback(link, "[Cloud]") }
 
+                text.contains("GD Index") -> {
+                    val cfLink = baseUrl + link
+                    val cfTypes = listOf(1, 2)
+
+                    cfTypes.safeAmap { cfType ->
+                        app.get(cfLink + "?type=$cfType")
+                        .document
+                        .select("a.btn-success")
+                        .safeAmap {
+                            val source = it.attr("href")
+                            myCallback(source, "[CF]")
+                        }
+                    }
+                }
+
                 text.contains("FAST CLOUD") -> {
 
                     val dlink = app.get(baseUrl + link)
@@ -401,18 +403,6 @@ open class GDFlix : ExtractorApi() {
                     Log.d("Error", "No Server matched")
                 }
             }
-        }
-
-        //Cloudflare backup links
-        try {
-            val sources = CFType(newUrl.replace("file", "wfile"))
-
-            sources.safeAmap { source ->
-                val redirectUrl = resolveFinalUrl(source) ?: return@safeAmap
-                myCallback(redirectUrl, "[CF]")
-            }
-        } catch (e: Exception) {
-            Log.d("CF", e.toString())
         }
     }
 }
@@ -651,6 +641,11 @@ open class HubCloud : ExtractorApi() {
         return regex.find(html)?.groupValues?.get(1)
     }
 
+    fun extractDoubleAtob(html: String): String? {
+        val regex = Regex("""var\s+url\s*=\s*atob\s*\(\s*atob\s*\(\s*['"]([^'"]+)['"]\s*\)\s*\)""")
+        return regex.find(html)?.groupValues?.get(1)?.let { base64Decode(base64Decode(it)) }
+    }
+
     override suspend fun getUrl(
         url: String,
         referer: String?,
@@ -679,7 +674,12 @@ open class HubCloud : ExtractorApi() {
         }
         else {
             val scriptTag = doc.selectFirst("script:containsData(url)")?.toString() ?: ""
-            Regex("var url = '([^']*)'").find(scriptTag) ?. groupValues ?. get(1) ?: ""
+
+            if(newUrl.contains("vcloud")) {
+                extractDoubleAtob(scriptTag) ?: ""
+            } else {
+                Regex("var url = '([^']*)'").find(scriptTag) ?. groupValues ?. get(1) ?: ""
+            }
         }
 
         if(!link.startsWith("https://")) link = baseUrl + link
@@ -722,6 +722,7 @@ open class HubCloud : ExtractorApi() {
                 if(redirectUrl.contains("link=")) redirectUrl = redirectUrl.substringAfter("link=")
                 myCallback(redirectUrl, "[Download]")
             }
+            else if (text.contains("Gofile")) loadExtractor(link, "", subtitleCallback, callback)
             else { Log.d("Error", "No Server matched") }
         }
     }
@@ -819,7 +820,7 @@ class Pahe : ExtractorApi() {
             kwikUrl,
             mapOf(
                 "User-Agent" to USER_AGENT,
-                "Referer"    to "https://kwik.cx/",
+                "Referer"    to referer.toString(),
             ),
         )
         val fContentString = fContent.text
@@ -910,8 +911,6 @@ open class Cloudnestra : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        Log.d(name, "url : $url")
-
         val headers = mapOf(
             "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -922,45 +921,50 @@ open class Cloudnestra : ExtractorApi() {
             "Sec-Fetch-Site" to "none",
             "Upgrade-Insecure-Requests" to "1",
         )
-
         val iframeHtml = app.get(url, headers = headers).text
         val srcMatch = Regex("""src:\s*['"]([^'"]+)['"]""", RegexOption.IGNORE_CASE).find(iframeHtml)
         val prorcpSrc = srcMatch?.groupValues?.get(1) ?: return
-
-        Log.d(name, "cloudUrl : $mainUrl$prorcpSrc")
-
-        val cloudHtml = app.get(
-            url = "$mainUrl$prorcpSrc",
-            headers = headers
-        ).text
-
-        Log.d(name, "cloudHtml : $cloudHtml")
+        val cloudHtml = app.get(url = "$mainUrl$prorcpSrc", headers = headers).text
 
         val divMatch = Regex("""<div id="([^"]+)"[^>]*style=["']display\s*:\s*none;?["'][^>]*>([a-zA-Z0-9:\/.,{}\-_=+ ]+)</div>""", RegexOption.IGNORE_CASE).find(cloudHtml)
         val divId = divMatch?.groupValues?.get(1) ?: return
         val divText = divMatch.groupValues.get(2)
 
-        val requestBody = mapOf("text" to divText, "div_id" to divId)
-
-        Log.d(name, "requestBody : $requestBody")
-
         val decrypted = app.post(
             url = "$multiDecryptAPI/dec-cloudnestra",
-            json = requestBody,
+            json = mapOf("text" to divText, "div_id" to divId),
             headers = mapOf("Content-Type" to "application/json")
         ).text
 
-        Log.d(name, "decrypted : $decrypted")
-
         val jsonObject = JSONObject(decrypted)
-        val status = jsonObject.getInt("status")
-
-        if (status != 200) return
-
+        if (jsonObject.getInt("status") != 200) return
         val resultArray = jsonObject.getJSONArray("result")
 
+        // cache tokens per host so we don't call generate.php repeatedly for same domain
+        val tokenCache = mutableMapOf<String, String>()
+
+        suspend fun fetchToken(host: String): String {
+            return tokenCache.getOrPut(host) {
+                app.get("https://$host/generate.php", headers = headers).text.trim()
+            }
+        }
+
         for (i in 0 until resultArray.length()) {
-            val streamUrl = resultArray.getString(i)
+            var streamUrl = resultArray.getString(i)
+
+            when {
+                streamUrl.contains("__TOKENPG__") -> {
+                    val token = fetchToken("app2.putgate.com")
+                    streamUrl = streamUrl.replace("__TOKENPG__", token)
+                }
+                streamUrl.contains("__TOKEN__") -> {
+                    val host = streamUrl.toHttpUrlOrNull()?.host
+                        ?: Regex("""https?://([^/]+)""").find(streamUrl)?.groupValues?.get(1)
+                        ?: continue
+                    val token = fetchToken(host)
+                    streamUrl = streamUrl.replace("__TOKEN__", token)
+                }
+            }
 
             M3u8Helper.generateM3u8(
                 name,
@@ -1192,7 +1196,15 @@ open class Asianload : ExtractorApi() {
 
 //Animedao
 
-class VibePlayer : ExtractorApi() {
+class Vivibebe: VibePlayer() {
+    override val mainUrl = "https://vivibebe.site"
+}
+
+class Bibiemb: VibePlayer() {
+    override val mainUrl = "https://bibiemb.xyz"
+}
+
+open class VibePlayer : ExtractorApi() {
     override val name = "VibePlayer"
     override val mainUrl = "https://vibeplayer.site"
     override val requiresReferer = true
@@ -1205,10 +1217,11 @@ class VibePlayer : ExtractorApi() {
     ) {
         val response = app.get(url, referer = referer).text
 
-        val videoUrl = Regex("""src\s=\s"(.*?)\"""")
+        val videoUrl = Regex("""const\s+src\s*=\s*["']([^"']+)["']""")
             .find(response)
-            ?.groupValues?.get(1)
-            ?.takeIf { it.isNotBlank() }
+            ?.groups
+            ?.get(1)
+            ?.value
             ?: return
 
         M3u8Helper.generateM3u8(
@@ -1439,4 +1452,132 @@ open class PpzjYoutube : ExtractorApi() {
         MessageDigest.getInstance("MD5")
             .digest(input.toByteArray())
             .joinToString("") { "%02x".format(it) }
+}
+
+
+class Vidwish : MegaPlay() {
+    override val name = "Vidwish"
+    override val mainUrl = "https://vidwish.live"
+}
+
+class Vidtube : MegaPlay() {
+    override val name = "Vidtube"
+    override val mainUrl = "https://vidtube.site"
+}
+
+open class MegaPlay : ExtractorApi() {
+    override val name = "MegaPlay"
+    override val mainUrl = "https://megaplay.buzz"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        extractMegaPlayUrl(url, referer, mainUrl, name, subtitleCallback, callback)
+    }
+
+    companion object {
+        suspend fun extractMegaPlayUrl(
+            url: String,
+            referer: String?,
+            host: String,
+            serverName: String,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
+        ) {
+            val playbackHeaders = mapOf(
+                "User-Agent" to USER_AGENT,
+                "Accept" to "*/*",
+                "Origin" to host,
+                "Referer" to "$host/",
+            )
+
+            val pageHeaders = mapOf(
+                "User-Agent" to USER_AGENT,
+                "Referer" to (referer ?: "https://anikototv.to/")
+            )
+
+            val doc = app.get(url, headers = pageHeaders).document
+            val playerEl = doc.selectFirst("#megaplay-player")
+            val streamId = playerEl?.attr("data-id")
+                ?: playerEl?.attr("data-realid")
+                ?: Regex("""/stream/s-\d+/(\d+)/""").find(url)?.groupValues?.get(1)
+                ?: return
+
+            val type = if (url.contains("/dub", ignoreCase = true)) "dub" else "sub"
+
+            val ajaxHeaders = mapOf(
+
+                "Referer" to url,
+            )
+
+            val jsonText = try {
+                app.get(
+                    "$host/stream/getSources?id=$streamId&type=$type",
+                    headers = ajaxHeaders,
+                    referer = url
+                ).text
+            } catch (e: Exception) {
+                Log.e("MegaPlay", "getSources failed: ${e.message}")
+                return
+            }
+
+            val root = try {
+                parseJson<MegaPlayResponse>(jsonText)
+            } catch (e: Exception) {
+                null
+            } ?: return
+            val m3u8 = root.sources?.file
+            if (m3u8.isNullOrBlank()) {
+                Log.e("MegaPlay", "No m3u8 in response for id=$streamId")
+                return
+            }
+
+            val generated = M3u8Helper.generateM3u8(serverName, m3u8, host, headers = playbackHeaders)
+            if (generated.isNotEmpty()) {
+                generated.forEach(callback)
+            } else {
+                callback(
+                    newExtractorLink(serverName, serverName, m3u8, ExtractorLinkType.M3U8) {
+                        this.referer = "$host/"
+                        this.headers = playbackHeaders
+                    }
+                )
+            }
+
+            try {
+                root.tracks.forEach { track ->
+                    val kind = track.kind ?: return@forEach
+                    if (kind != "captions" && kind != "subtitles") return@forEach
+                    val file = track.file ?: return@forEach
+                    val label = track.label ?: "Unknown"
+                    subtitleCallback(
+                        newSubtitleFile(label, file) {
+                            this.headers = playbackHeaders
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+    }
+
+    data class MegaPlayResponse(
+        val sources: Sources? = null,
+        val tracks: List<Track> = emptyList()
+    )
+
+    data class Sources(
+        val file: String? = null
+    )
+
+    data class Track(
+        val file: String? = null,
+        val label: String? = null,
+        val kind: String? = null
+    )
 }
