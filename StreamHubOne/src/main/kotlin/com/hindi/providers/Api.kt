@@ -3,6 +3,8 @@ package com.hindi.providers
 import android.util.Log
 import com.lagradost.cloudstream3.app
 import org.json.JSONObject
+import com.megix.BuildConfig
+
 
 // ── 1. Static APIs ──────────────────────────────────────────
 const val malsyncAPI = "https://api.malsync.moe"
