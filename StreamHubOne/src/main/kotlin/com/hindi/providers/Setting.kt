@@ -243,6 +243,6 @@ object Settings {
     fun clearGramCinemaToken()              = setKey(GRAMCINEMA_TOKEN_KEY, null)
 
     // ── Entry point ──────────────────────────────────────────
-    fun showSettingsDialog(context: Context, onSave: () -> Unit)
+    fun showSettingsDialog(context: Context, onSave: () -> Unit){
 }
 }
