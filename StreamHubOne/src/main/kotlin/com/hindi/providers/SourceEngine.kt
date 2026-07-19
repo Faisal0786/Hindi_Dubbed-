@@ -51,9 +51,10 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 import java.math.BigInteger
+import kotlin.math.min
 
 // Settings
-// import com.megix.settings.Settings
+//import com.megix.settings.Settings
 
 
 class SpecOption(searchTerms: List<String>, val label: String) {
@@ -714,28 +715,6 @@ suspend fun getLatestBaseUrl(baseUrl: String, source: String): String {
     }
 }
 
-//Emoji String
-fun String.toFlagEmoji(): String {
-    if (length != 2) return ""
-    return uppercase().map {
-        Character.toChars(it.code + 127397).concatToString()
-    }.joinToString("")
-}
-
-//Italic String
-fun String.toSansSerifItalic(): String {
-    val builder = StringBuilder()
-    for (char in this) {
-        val codePoint = when (char) {
-            in 'A'..'Z' -> 0x1D608 + (char - 'A')
-            in 'a'..'z' -> 0x1D622 + (char - 'a')
-            else -> char.code
-        }
-        builder.append(Character.toChars(codePoint))
-    }
-    return builder.toString()
-}
-
 
 //Bold String
 fun String.toSansSerifBold(): String {
@@ -1363,27 +1342,6 @@ fun extractXpassBackups(html: String): List<Pair<String, String>> {
 }
 
 
-//Mapple
-fun solvePowChallenge(challenge: String, difficulty: Int): String? {
-    val target = BigInteger.ONE.shiftLeft(256 - difficulty)
-    val md = MessageDigest.getInstance("SHA-256")
-
-    var nonce = 0L
-    while (true) {
-        val input = challenge + nonce.toString()
-        val hashBytes = md.digest(input.toByteArray())
-        val hashInt = BigInteger(1, hashBytes)
-
-        if (hashInt < target) {
-            return nonce.toString()
-        }
-
-        nonce++
-        md.reset()
-        if (nonce > 10_000_000) return null
-    }
-}
-
 //Peachify
 fun peachifyDecrypt(encrypt: String): String? {
     return try {
@@ -1393,7 +1351,7 @@ fun peachifyDecrypt(encrypt: String): String? {
         val iv         = b64UrlDecode(parts[0])
         val cipherData = b64UrlDecode(parts[1]) + b64UrlDecode(parts[2])
 
-        val keyBytes = "a8f2a1b5e9c470814f6b2c3a5d8e7f9c1a2b3c4d5e3f7a8b8cad1e2d0a4d5c5b"
+        val keyBytes = "a8f2a1b5e9c470814f6b2c3a5d8e7f9c1a2b3c4d5e3f7a8b8cad1e2d0a4d5c5d"
             .chunked(2)
             .map { it.toInt(16).toByte() }
             .toByteArray()
@@ -1682,4 +1640,248 @@ fun parseQualityDivs(html: String): List<VideoQuality> {
             val quality = Regex("""data-quality="([^"]+)\"""").find(tag)?.groupValues?.get(1) ?: return@mapNotNull null
             VideoQuality(url = url.replace("\\/", "/"), quality = quality)
         }.toList()
+}
+
+//Anichi
+
+fun decodeToBeParsed(encoded: String): String? {
+    return try {
+        val raw = base64DecodeArray(encoded)
+
+        if (raw.size < 29) return null
+
+        val iv = raw.copyOfRange(1, 13)
+
+        val ctr = ByteArray(16)
+        System.arraycopy(iv, 0, ctr, 0, iv.size)
+        ctr[15] = 0x02
+
+        val ciphertext = raw.copyOfRange(13, raw.size - 16)
+
+        val key = MessageDigest
+            .getInstance("SHA-256")
+            .digest("Xot36i3lK3:v1".toByteArray())
+
+        val cipher = Cipher.getInstance("AES/CTR/NoPadding")
+        cipher.init(
+            Cipher.DECRYPT_MODE,
+            SecretKeySpec(key, "AES"),
+            IvParameterSpec(ctr)
+        )
+
+        cipher.doFinal(ciphertext).toString(Charsets.UTF_8)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
+//Castle
+
+val castleHeaders = mapOf(
+    "User-Agent" to "okhttp/4.9.3",
+    "Accept" to "application/json",
+    "Accept-Language" to "en-US,en;q=0.9",
+    "Connection" to "Keep-Alive",
+    "Referer" to "$castleAPI/"
+)
+
+fun decryptCastle(cipherText: String, base64Key: String): String {
+    val pepperWords = "T!BgJB".toByteArray(Charsets.UTF_8)
+
+    val keyWords = base64DecodeArray(base64Key)
+    val combined = keyWords + pepperWords
+
+    val keyMaterial = ByteArray(16)
+    System.arraycopy(combined, 0, keyMaterial, 0, min(combined.size, 16))
+
+    val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
+    val secretKeySpec = SecretKeySpec(keyMaterial, "AES")
+    val ivParameterSpec = IvParameterSpec(keyMaterial)
+
+    cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec)
+
+    val cipherBytes = base64DecodeArray(cipherText)
+
+    return String(cipher.doFinal(cipherBytes), Charsets.UTF_8)
+}
+
+suspend fun getCastleSecurityKey(url: String): String {
+    val response = app.get(url, headers = castleHeaders).text
+    val json = JSONObject(response)
+    return json.optString("data")
+}
+
+suspend fun makeCastleApiRequest(
+    url: String,
+    securityKey: String,
+    method: String = "GET",
+    jsonBody: Any? = null
+): JSONObject {
+    val response = if (method == "POST" && jsonBody != null) {
+        app.post(url, headers = castleHeaders, json = jsonBody).text
+    } else {
+        app.get(url, headers = castleHeaders).text
+    }.trim()
+
+    val cipherText = try {
+        val tempJson = JSONObject(response)
+        if (tempJson.has("data") && tempJson.get("data") is String) {
+            tempJson.getString("data")
+        } else {
+            response
+        }
+    } catch (e: Exception) {
+        response
+    }
+
+    val decryptedStr = decryptCastle(cipherText, securityKey)
+
+    val finalJson = JSONObject(decryptedStr)
+    return finalJson.optJSONObject("data") ?: finalJson
+}
+
+//CtgMovies
+
+fun unescapeNextChunk(raw: String): String {
+    val sb = StringBuilder(raw.length)
+    var i = 0
+    while (i < raw.length) {
+        val c = raw[i]
+        if (c == '\\' && i + 1 < raw.length) {
+            when (raw[i + 1]) {
+                '"' -> { sb.append('"'); i += 2 }
+                '\\' -> { sb.append('\\'); i += 2 }
+                'n' -> { sb.append('\n'); i += 2 }
+                't' -> { sb.append('\t'); i += 2 }
+                'u' -> {
+                    if (i + 5 < raw.length) {
+                        val hex = raw.substring(i + 2, i + 6)
+                        sb.append(hex.toInt(16).toChar())
+                        i += 6
+                    } else { sb.append(c); i++ }
+                }
+                else -> { sb.append(raw[i + 1]); i += 2 }
+            }
+        } else {
+            sb.append(c); i++
+        }
+    }
+    return sb.toString()
+}
+
+// Concatenate every self.__next_f.push chunk into one big decoded blob
+fun buildRscBlob(html: String): String {
+    val NEXT_F_PREFIX = "self.__next_f.push([1,\""
+    val NEXT_F_SUFFIX = "\"])"
+    val blob = StringBuilder()
+    var searchFrom = 0
+    while (true) {
+        val start = html.indexOf(NEXT_F_PREFIX, searchFrom)
+        if (start == -1) break
+        val contentStart = start + NEXT_F_PREFIX.length
+        val end = html.indexOf(NEXT_F_SUFFIX, contentStart)
+        if (end == -1) break
+        val raw = html.substring(contentStart, end)
+        blob.append(unescapeNextChunk(raw))
+        searchFrom = end + NEXT_F_SUFFIX.length
+    }
+    return blob.toString()
+}
+
+// Extract EVERY balanced "links":[...] JSON array found in the blob.
+fun extractAllLinksArraysJson(blob: String): List<String> {
+    val key = "\"links\":["
+    val results = mutableListOf<String>()
+    var searchFrom = 0
+    while (true) {
+        val keyIdx = blob.indexOf(key, searchFrom)
+        if (keyIdx == -1) break
+        val arrStart = keyIdx + key.length - 1 // position of '['
+        var depth = 0
+        var i = arrStart
+        var arrEnd = -1
+        while (i < blob.length) {
+            when (blob[i]) {
+                '[' -> depth++
+                ']' -> {
+                    depth--
+                    if (depth == 0) { arrEnd = i; break }
+                }
+            }
+            i++
+        }
+        if (arrEnd == -1) break
+        results.add(blob.substring(arrStart, arrEnd + 1))
+        searchFrom = arrEnd + 1
+    }
+    return results
+}
+
+fun parseCtgLinks(html: String): List<CTGLink> {
+    val blob = buildRscBlob(html)
+    val arrJsonList = extractAllLinksArraysJson(blob)
+    if (arrJsonList.isEmpty()) return emptyList()
+
+    val result = mutableListOf<CTGLink>()
+    for (arrJson in arrJsonList) {
+        val arr = runCatching { JSONArray(arrJson) }.getOrNull() ?: continue
+        for (idx in 0 until arr.length()) {
+            val obj = arr.optJSONObject(idx) ?: continue
+            val url = obj.optString("url").takeIf { it.isNotBlank() } ?: continue
+
+            val audioTracks = mutableListOf<Pair<String, String>>()
+            obj.optJSONArray("audio_tracks")?.let { tracksArr ->
+                for (j in 0 until tracksArr.length()) {
+                    val t = tracksArr.optJSONObject(j) ?: continue
+                    val aUrl = t.optString("url")
+                    val label = t.optString("label", t.optString("language", ""))
+                    if (aUrl.isNotBlank()) audioTracks.add(aUrl to label)
+                }
+            }
+
+            result.add(
+                CTGLink(
+                    quality = obj.optString("quality"),
+                    url = url,
+                    hlsUrl = obj.optString("hls_url").takeIf { it.isNotBlank() && it != "null" },
+                    type = obj.optString("type"),
+                    source = obj.optString("source"),
+                    language = obj.optString("language"),
+                    sizeBytes = obj.optLong("size_bytes", -1L).takeIf { it >= 0 },
+                    seasonNumber = obj.optInt("season_number", -1).takeIf { it >= 0 },
+                    episodeNumber = obj.optInt("episode_number", -1).takeIf { it >= 0 },
+                    audioTracks = audioTracks
+                )
+            )
+        }
+    }
+
+    // Dedup in case the same link array got captured twice via overlapping matches
+    return result.distinctBy { it.url }
+}
+
+//MovieBlast
+
+fun generateSignedUrl(url: String): String? {
+    return try {
+        val uri = URI(url)
+
+        val path = uri.rawPath
+
+        val timestamp = (System.currentTimeMillis() / 1000).toString()
+
+        val mac = Mac.getInstance("HmacSHA256")
+        val secretKeySpec = SecretKeySpec(MOVIEBLAST_KEY.toByteArray(Charsets.UTF_8), "HmacSHA256")
+        mac.init(secretKeySpec)
+
+        val hmacData = mac.doFinal((path + timestamp).toByteArray(Charsets.UTF_8))
+
+        val signature = base64Encode(hmacData)
+        val encodedSignature = URLEncoder.encode(signature, "UTF-8")
+
+        "$url?verify=$timestamp-$encodedSignature"
+    } catch (e: Exception) {
+        null
+    }
 }
