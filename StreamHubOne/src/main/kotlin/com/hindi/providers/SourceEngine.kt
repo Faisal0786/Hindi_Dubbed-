@@ -716,6 +716,30 @@ suspend fun getLatestBaseUrl(baseUrl: String, source: String): String {
 }
 
 
+//Emoji String
+fun String.toFlagEmoji(): String {
+    if (length != 2) return ""
+    return uppercase().map {
+        Character.toChars(it.code + 127397).concatToString()
+    }.joinToString("")
+}
+
+//Italic String
+fun String.toSansSerifItalic(): String {
+    val builder = StringBuilder()
+    for (char in this) {
+        val codePoint = when (char) {
+            in 'A'..'Z' -> 0x1D608 + (char - 'A')
+            in 'a'..'z' -> 0x1D622 + (char - 'a')
+            else -> char.code
+        }
+        builder.append(Character.toChars(codePoint))
+    }
+    return builder.toString()
+}
+
+
+
 //Bold String
 fun String.toSansSerifBold(): String {
     val builder = StringBuilder()
