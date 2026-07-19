@@ -3,7 +3,7 @@ package com.hindi.providers
 import android.util.Log
 import com.lagradost.cloudstream3.app
 import org.json.JSONObject
-import com.megix.BuildConfig
+import com.hindi.BuildConfig
 
 
 // ── 1. Static APIs ──────────────────────────────────────────
