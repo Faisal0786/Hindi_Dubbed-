@@ -41,8 +41,14 @@ subprojects {
     }
 
     android {
-        namespace = "com.example"
-
+        // Dynamically set namespace based on subproject
+        namespace = when(project.name) {
+            "StreamHubOne" -> "com.hindi.providers"
+            "SDmovies" -> "com.sdmovies"
+            "OttSource" -> "com.ottsource"
+            "ExampleProvider" -> "com.example"
+            else -> "com.example"
+        }
         compileSdk = 36
 
         defaultConfig {
