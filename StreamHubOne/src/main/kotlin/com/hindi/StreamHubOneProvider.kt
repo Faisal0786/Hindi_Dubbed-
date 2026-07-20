@@ -87,19 +87,17 @@ override val mainPage = mainPageOf(
 
 "discover/tv?with_networks=2552" to "Apple TV+",
 
-"discover/tv?with_networks=621" to "MGM+",
+//"discover/tv?with_networks=621" to "MGM+",
 
 "discover/tv?with_networks=49" to "HBO",
 
-"discover/tv?with_networks=435" to "Discovery+",
+//"discover/tv?with_networks=435" to "Discovery+",
 
-"discover/tv?with_networks=4330" to "Paramount+",
+//"discover/tv?with_networks=4330" to "Paramount+",
 
 "discover/tv?with_networks=3353" to "Peacock",
 
-"discover/tv" to "ZEE5",
-
-"discover/tv" to "SonyLIV",
+"discover/tv" to "Sony",
 
 "discover/tv?with_networks=4" to "BBC",
 
