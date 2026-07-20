@@ -463,14 +463,10 @@ override suspend fun getMainPage(
         "Max" -> 1899
         "Disney+" -> 337
         "Hulu" -> 15
-        "Paramount+" -> 531
-        "Peacock" -> 386
         "JioHotstar" -> 122
         "SonyLIV" -> 237
         "ZEE5" -> 232
         "Crunchyroll" -> 283
-        "MGM+" -> 636
-        "Discovery+" -> 435
         "BBC" -> null
         else -> null
     }
@@ -485,6 +481,13 @@ override suspend fun getMainPage(
 
     if (expectedProvider != null) {
         url += "&with_watch_providers=$expectedProvider&watch_region=$region"
+    } else {
+        url += when (request.name) {
+            "MGM+" -> "&with_networks=621"
+            "Discovery+" -> "&with_networks=435"
+            "Paramount+" -> "&with_networks=4330"
+            else -> ""
+        }
     }
 
     val response = app.get(url).parsed<TmdbMultiSearchResponse>()
@@ -516,6 +519,7 @@ override suspend fun getMainPage(
 
     return newHomePageResponse(request.name, items)
 }
+
 
     override suspend fun loadLinks(
         data: String,
