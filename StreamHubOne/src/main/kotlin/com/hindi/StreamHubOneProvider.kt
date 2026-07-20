@@ -457,75 +457,50 @@ override suspend fun getMainPage(
     request: MainPageRequest
 ): HomePageResponse {
     val expectedProvider = when (request.name) {
-    "Netflix" -> 8
-"Prime Video" -> 119
-"Apple TV+" -> 350
-"Max" -> 1899
-"Disney+" -> 337
-"Hulu" -> 15
-"Paramount+" -> 531
-"Peacock" -> 386
-"JioHotstar" -> 122
-"SonyLIV" -> 237
-"ZEE5" -> 232
-"Crunchyroll" -> 283
-"MGM+" -> 636
-"Discovery+" -> 435
-"BBC" -> null
-    else -> null
-}
+        "Netflix" -> 8
+        "Prime Video" -> 119
+        "Apple TV+" -> 350
+        "Max" -> 1899
+        "Disney+" -> 337
+        "Hulu" -> 15
+        "Paramount+" -> 531
+        "Peacock" -> 386
+        "JioHotstar" -> 122
+        "SonyLIV" -> 237
+        "ZEE5" -> 232
+        "Crunchyroll" -> 283
+        "MGM+" -> 636
+        "Discovery+" -> 435
+        "BBC" -> null
+        else -> null
+    }
 
-    val url =
-        if (request.data.contains("?")) {
-            "${ApiConstants.TMDB_BASE}/${request.data}" +
-            "&api_key=${ApiConstants.TMDB_KEY}&page=$page"
-        } else {
-            "${ApiConstants.TMDB_BASE}/${request.data}" +
-            "?api_key=${ApiConstants.TMDB_KEY}&page=$page"
-        }
+    val region = when (request.name) {
+        "JioHotstar", "SonyLIV", "ZEE5", "Crunchyroll", "Netflix", "Prime Video" -> "IN"
+        else -> "US"
+    }
+
+    val baseSeparator = if (request.data.contains("?")) "&" else "?"
+    var url = "${ApiConstants.TMDB_BASE}/${request.data}${baseSeparator}api_key=${ApiConstants.TMDB_KEY}&page=$page"
+
+    if (expectedProvider != null) {
+        url += "&with_watch_providers=$expectedProvider&watch_region=$region"
+    }
 
     val response = app.get(url).parsed<TmdbMultiSearchResponse>()
+        ?: return newHomePageResponse(request.name, emptyList())
 
     val items = response.results.mapNotNull { item ->
         val mediaType = when {
-
-            request.data.startsWith("movie") ->
-                "movie"
-
-            request.data.contains("discover/movie") ->
-                "movie"
-
-            else ->
-                item.media_type ?: "tv"
+            request.data.startsWith("movie") -> "movie"
+            request.data.contains("discover/movie") -> "movie"
+            else -> item.media_type ?: "tv"
         }
 
         val title = item.title ?: item.name ?: return@mapNotNull null
-
         val tmdbId = item.id ?: return@mapNotNull null
 
-if (item.poster_path.isNullOrBlank())
-    return@mapNotNull null
-
-if (expectedProvider != null) {
-
-    val details = app.get(
-        "${ApiConstants.TMDB_BASE}/$mediaType/$tmdbId" +
-        "?api_key=${ApiConstants.TMDB_KEY}" +
-        "&append_to_response=watch/providers"
-    ).parsed<TmdbDetails>()
-
-  val region = when (request.name) {
-    "JioHotstar", "SonyLIV", "ZEE5", "Crunchyroll",  "Netflix", "Prime Video" -> "IN"
-    else -> "US"
-}
-
-if (
-    details == null ||
-    !hasProvider(details, region, expectedProvider)
-) {
-    return@mapNotNull null
-}
-}
+        if (item.poster_path.isNullOrBlank()) return@mapNotNull null
 
         newMovieSearchResponse(
             title,
@@ -541,7 +516,6 @@ if (
 
     return newHomePageResponse(request.name, items)
 }
-
 
     override suspend fun loadLinks(
         data: String,
