@@ -103,3 +103,4 @@ val m4ufreeAPI get() = api("m4ufree")
 val zinkmoviesAPI get() = api("zinkmovies")
 val animedaoAPI get() = api("animedao")
 val mlsbdAPI get() = api("mlsbd")
+const val net27API = "https://net27.cc"
