@@ -1678,6 +1678,135 @@ object SourceProviders {
         }
     }
 
+suspend fun invokeNet27(
+    tmdbId: Int? = null,
+    season: Int? = null,
+    episode: Int? = null,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+) {
+    if (tmdbId == null) return
+
+    val isMovie = season == null
+
+    val net27Headers = mapOf(
+        "Accept" to "application/json",
+        "User-Agent" to USER_AGENT,
+        "Referer" to "$net27API/"
+    )
+
+    val variantsUrl = if (isMovie) {
+        "$net27API/api/variants-tmdb/movie/$tmdbId"
+    } else {
+        "$net27API/api/variants-tmdb/tv/$tmdbId?se=$season&ep=${episode ?: 1}"
+    }
+
+    val variants = try {
+        app.get(
+            variantsUrl,
+            headers = net27Headers
+        ).parsed<Net27VariantsResponse>()
+    } catch (_: Exception) {
+        Net27VariantsResponse()
+    }
+
+    val hasSid =
+        variants.ok == true &&
+        !variants.defaultSubjectId.isNullOrBlank()
+
+    val embedUrl = if (isMovie) {
+        if (hasSid) {
+            "$net27API/api/embed-tmdb/$tmdbId?type=movie" +
+                    "&sid=${variants.defaultSubjectId}" +
+                    "&dp=${variants.defaultDetailPath}"
+        } else {
+            "$net27API/api/embed-tmdb/$tmdbId?type=movie"
+        }
+    } else {
+        if (hasSid) {
+            "$net27API/api/embed-tmdb/$tmdbId" +
+                    "?type=tv" +
+                    "&se=$season" +
+                    "&ep=${episode ?: 1}" +
+                    "&sid=${variants.defaultSubjectId}" +
+                    "&dp=${variants.defaultDetailPath}"
+        } else {
+            "$net27API/api/embed-tmdb/$tmdbId" +
+                    "?type=tv" +
+                    "&se=$season" +
+                    "&ep=${episode ?: 1}"
+        }
+    }
+
+    val response = try {
+        app.get(
+            embedUrl,
+            headers = net27Headers
+        ).parsed<Net27Response>()
+    } catch (_: Exception) {
+        return
+    }
+
+    if (response.ok != true) return
+
+    response.streams
+        ?.sortedByDescending { it.resolution }
+        ?.forEach { stream ->
+
+            callback.invoke(
+                newExtractorLink(
+                    "Net27",
+                    "Net27 ${stream.resolution}p",
+                    stream.url,
+                    ExtractorLinkType.VIDEO
+                ) {
+                    quality = stream.resolution
+                    referer = "$net27API/"
+                    headers = mapOf(
+                        "Referer" to "$net27API/",
+                        "User-Agent" to USER_AGENT
+                    )
+                }
+            )
+        }
+
+    if (response.streams.isNullOrEmpty()) {
+
+        val mp4 = response.mp4 ?: return
+
+        callback.invoke(
+            newExtractorLink(
+                "Net27",
+                "Net27",
+                mp4,
+                ExtractorLinkType.VIDEO
+            ) {
+                referer = "$net27API/"
+                headers = mapOf(
+                    "Referer" to "$net27API/",
+                    "User-Agent" to USER_AGENT
+                )
+            }
+        )
+    }
+
+    response.captions?.forEach { sub ->
+
+        val subUrl =
+            if (sub.url.startsWith("/"))
+                "$net27API${sub.url}"
+            else
+                sub.url
+
+        subtitleCallback.invoke(
+            SubtitleFile(
+                sub.name,
+                subUrl
+            )
+        )
+    }
+}
+
     suspend fun invokeTokyoInsider(
         title: String? = null,
         episode: Int? = null,
