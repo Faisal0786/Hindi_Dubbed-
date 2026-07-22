@@ -1135,3 +1135,39 @@ data class VidupTrack(
     val file: String? = null,
     val label: String? = null
 )
+
+// Net27
+
+data class Net27VariantsResponse(
+    val ok: Boolean? = null,
+
+    @JsonProperty("defaultSubjectId")
+    val defaultSubjectId: String? = null,
+
+    @JsonProperty("defaultDetailPath")
+    val defaultDetailPath: String? = null,
+)
+
+data class Net27Response(
+    val ok: Boolean? = null,
+
+    val mp4: String? = null,
+
+    val streams: List<Net27Stream>? = null,
+
+    val captions: List<Net27Caption>? = null,
+)
+
+data class Net27Stream(
+    val url: String,
+
+    val resolution: Int,
+)
+
+data class Net27Caption(
+    val lang: String? = null,
+
+    val name: String,
+
+    val url: String,
+)
