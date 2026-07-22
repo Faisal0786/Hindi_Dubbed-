@@ -38,6 +38,20 @@ object SourceRegistry {
             executeStandard = { res, subCb, cb -> invokeMoviebox(res.title, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeMoviebox(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
+
+        SourceProviderDef(
+    key = "p_net27",
+    displayName = "Net27",
+    executeStandard = { res, subCb, cb ->
+        invokeNet27(
+            res.tmdbId,
+            res.season,
+            res.episode,
+            subCb,
+            cb
+        )
+    }
+),
         SourceProviderDef(
             key = "p_allmovieland", displayName = "Allmovieland",
             executeStandard = { res, _, cb -> invokeAllmovieland(res.imdbId, res.season, res.episode, cb) },
