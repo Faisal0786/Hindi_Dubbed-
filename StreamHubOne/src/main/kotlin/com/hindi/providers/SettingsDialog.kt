@@ -66,13 +66,12 @@ internal object SettingsDialog {
         }
         layout.addView(buildCollapsibleCard(context, "📡  Active Catalogs",
             accentA = Color.parseColor("#10B981"), accentB = Color.parseColor("#059669")) {
-            addView(buildToggleRow(context, "CineStream", "Cinemeta catalog",
+            addView(buildToggleRow(context, "CWunchyroll", "AniList catalog",
                 Settings.PROVIDER_CINESTREAM, true, pending, onCatalogChanged))
             addView(SettingsWidgets.divider(context))
-            addView(buildToggleRow(context, "CineSimkl", "Simkl catalog",
-                Settings.PROVIDER_SIMKL, true, pending, onCatalogChanged))
+                
             addView(SettingsWidgets.divider(context))
-            addView(buildToggleRow(context, "CineTmdb", "TMDB catalog",
+            addView(buildToggleRow(context, "StreamHubOne", "Multi Api catalog",
                 Settings.PROVIDER_TMDB, true, pending, onCatalogChanged))
         })
 
