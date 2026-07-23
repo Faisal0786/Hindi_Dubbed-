@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.MainActivity
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 import com.hindi.providers.init
-import com.hindi.settings.Settings
+import com.hindi.providers.Settings
 import kotlinx.coroutines.runBlocking
 
 @CloudstreamPlugin
