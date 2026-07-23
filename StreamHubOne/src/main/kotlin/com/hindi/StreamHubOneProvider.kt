@@ -169,21 +169,37 @@ override suspend fun load(url: String): LoadResponse? {
         title = tmdb.title ?: tmdb.name
     )
 
+    val country = metadata.countries.joinToString(" ") { it.name }
+
+val isCartoon = metadata.genres.any {
+    it.contains("Animation", true)
+}
+
+val isAnime = metadata.anilistId != null
+
+val isBollywood = country.contains("India", true)
+
+val isAsian =
+    (country.contains("Korea", true) ||
+     country.contains("China", true)) &&
+    !isAnime
+
     val linkData = LoadLinksData(
     title = metadata.title ?: "Unknown",
     id = metadata.imdbId ?: tmdbId.toString(),
     tmdbId = tmdbId,
     tvtype = mediaType,
     year = metadata.year?.toString(),
-    isAnime = metadata.anilistId != null,
-    isBollywood = false,
-    isAsian = false,
-    isCartoon = metadata.genres.any { it.contains("Animation", true) },
+    isAnime = isAnime,
+isBollywood = isBollywood,
+isAsian = isAsian,
+isCartoon = isCartoon,
     imdb_id = metadata.imdbId,
     anilistId = metadata.anilistId,
     malId = metadata.malId,
     orgTitle = metadata.originalTitle,
     airedYear = metadata.year
+    isAnime = metadata.anilistId != null,
 )
 
 return if (mediaType == "movie") {
@@ -359,6 +375,21 @@ private suspend fun loadTmdbEpisodes(
     val seasonCount =
         series.number_of_seasons ?: return emptyList()
 
+    val country = metadata.countries.joinToString(" ") { it.name }
+
+val isCartoon = metadata.genres.any {
+    it.contains("Animation", true)
+}
+
+val isAnime = metadata.anilistId != null
+
+val isBollywood = country.contains("India", true)
+
+val isAsian =
+    (country.contains("Korea", true) ||
+     country.contains("China", true)) &&
+    !isAnime
+
     val episodes = mutableListOf<Episode>()
 
     for (seasonNumber in 1..seasonCount) {
@@ -382,12 +413,10 @@ private suspend fun loadTmdbEpisodes(
         season = episode.season_number,
         episode = episode.episode_number,
         firstAired = episode.air_date,
-        isAnime = metadata.anilistId != null,
-        isBollywood = false,
-        isAsian = false,
-        isCartoon = metadata.genres.any {
-            it.contains("Animation", true)
-        },
+        isAnime = isAnime,
+isBollywood = isBollywood,
+isAsian = isAsian,
+isCartoon = isCartoon,
         imdb_id = metadata.imdbId,
         anilistId = metadata.anilistId,
         malId = metadata.malId,
