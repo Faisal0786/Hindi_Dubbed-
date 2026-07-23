@@ -213,6 +213,8 @@ newMovieLoadResponse(
             backgroundPosterUrl = metadata.backdrop
             logoUrl = metadata.logo
            plot = buildString {
+append("IMDb ID: ${metadata.imdbId ?: "NULL"}")
+    append("\nTMDB ID: ${metadata.tmdbId ?: "NULL"}")
 
     metadata.countries.firstOrNull()?.let {
         val flag = it.isoCode?.toFlagEmoji().orEmpty()
@@ -293,6 +295,8 @@ private suspend fun buildSeriesResponse(
             metadata.logo
 
        plot = buildString {
+append("IMDb ID: ${metadata.imdbId ?: "NULL"}")
+    append("\nTMDB ID: ${metadata.tmdbId ?: "NULL"}")
 
     metadata.countries.firstOrNull()?.let {
         val flag = it.isoCode?.toFlagEmoji().orEmpty()
