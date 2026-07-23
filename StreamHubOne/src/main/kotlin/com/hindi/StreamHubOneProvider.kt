@@ -198,8 +198,7 @@ isCartoon = isCartoon,
     anilistId = metadata.anilistId,
     malId = metadata.malId,
     orgTitle = metadata.originalTitle,
-    airedYear = metadata.year
-    isAnime = metadata.anilistId != null,
+    airedYear = metadata.year,
 )
 
 return if (mediaType == "movie") {
