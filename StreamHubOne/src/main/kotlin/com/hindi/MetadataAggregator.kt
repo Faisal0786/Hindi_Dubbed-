@@ -68,28 +68,23 @@ object MetadataAggregator {
         title: String? = null
     ): AggregatedMetadata = coroutineScope {
 
-        val tmdbDeferred = async {
-            fetchTmdb(tmdbId, mediaType)
-        }
+        // Pehle TMDB fetch karo
+val tmdb = fetchTmdb(tmdbId, mediaType)
 
-        val cinemetaDeferred = async {
-            fetchCinemeta(imdbId, mediaType)
-        }
+// Final IMDb resolve karo
+val finalImdb = imdbId ?: tmdb?.external_ids?.imdbId
 
-        val idsDeferred = async {
-            fetchExternalIds(imdbId)
-        }
-      
-       // val providerDeferred = async {
-    //fetchWatchProvider(
-     //   tmdbId,
-    //    mediaType
-  //  )
-//}
+// Ab Cinemeta aur External IDs parallel me fetch karo
+val cinemetaDeferred = async {
+    fetchCinemeta(finalImdb, mediaType)
+}
 
-        val tmdb = tmdbDeferred.await()
-        val cinemeta = cinemetaDeferred.await()
-        val ids = idsDeferred.await()
+val idsDeferred = async {
+    fetchExternalIds(finalImdb)
+}
+
+val cinemeta = cinemetaDeferred.await()
+val ids = idsDeferred.await()
        // val provider = providerDeferred.await()
 
         val aniList = async {
@@ -99,7 +94,7 @@ object MetadataAggregator {
         }.await()
 
         AggregatedMetadata(
-            imdbId = imdbId ?: tmdb?.external_ids?.imdbId,
+            imdbId = finalImdb,
             tmdbId = tmdbId ?: tmdb?.id,
 
             title = bestTitle(
