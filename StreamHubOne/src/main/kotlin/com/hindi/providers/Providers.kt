@@ -480,6 +480,148 @@ object SourceProviders {
     }
 
 
+suspend fun invokeNet27(
+    tmdbId: Int? = null,
+    season: Int? = null,
+    episode: Int? = null,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+) {
+    if (tmdbId == null) return
+
+    val isMovie = season == null
+
+    val net27Headers = mapOf(
+        "Accept" to "application/json",
+        "User-Agent" to USER_AGENT,
+        "Referer" to "$net27API/"
+    )
+
+    // Helper Function to route stream links through the Worker Proxy
+    fun buildProxyUrl(rawUrl: String): String {
+        val cleanUrl = rawUrl.replace("&amp;", "&").trim()
+        val encodedUrl = URLEncoder.encode(cleanUrl, "UTF-8")
+        return "https://streamhub-proxy.1545zoya.workers.dev/?url=$encodedUrl"
+    }
+
+    // 1. Fetch Variants
+    val variantsUrl = if (isMovie) {
+        "$net27API/api/variants-tmdb/movie/$tmdbId"
+    } else {
+        "$net27API/api/variants-tmdb/tv/$tmdbId?se=$season&ep=${episode ?: 1}"
+    }
+
+    val variants = try {
+        app.get(variantsUrl, headers = net27Headers).parsed<Net27VariantsResponse>()
+    } catch (_: Exception) {
+        Net27VariantsResponse()
+    }
+
+    val hasSid = variants.ok == true && !variants.defaultSubjectId.isNullOrBlank()
+
+    // 2. Build Embed URL
+    val embedUrl = if (isMovie) {
+        if (hasSid) {
+            "$net27API/api/embed-tmdb/$tmdbId?type=movie&sid=${variants.defaultSubjectId}&dp=${variants.defaultDetailPath}"
+        } else {
+            "$net27API/api/embed-tmdb/$tmdbId?type=movie"
+        }
+    } else {
+        if (hasSid) {
+            "$net27API/api/embed-tmdb/$tmdbId?type=tv&se=$season&ep=${episode ?: 1}&sid=${variants.defaultSubjectId}&dp=${variants.defaultDetailPath}"
+        } else {
+            "$net27API/api/embed-tmdb/$tmdbId?type=tv&se=$season&ep=${episode ?: 1}"
+        }
+    }
+
+    // 3. Fetch Embed Data
+    val response = try {
+        app.get(embedUrl, headers = net27Headers).parsed<Net27Response>()
+    } catch (_: Exception) {
+        return
+    }
+
+    if (response.ok != true) return
+
+    // 4. Extract Streams (Primary Quality Streams)
+    response.streams
+        ?.sortedByDescending { it.resolution }
+        ?.forEach { stream ->
+            val finalProxiedUrl = buildProxyUrl(stream.url)
+
+            callback.invoke(
+                newExtractorLink(
+                    "Net27",
+                    "Net27 ${stream.resolution}p",
+                    finalProxiedUrl,
+                    ExtractorLinkType.VIDEO
+                ) {
+                    quality = stream.resolution
+                    referer = "$net27API/"
+                    headers = mapOf(
+                        "Referer" to "$net27API/",
+                        "User-Agent" to USER_AGENT
+                    )
+                }
+            )
+        }
+
+    // 5. Extract Single MP4 Direct Stream (Fallback)
+    if (response.streams.isNullOrEmpty() && !response.mp4.isNullOrEmpty()) {
+        val finalMp4Url = buildProxyUrl(response.mp4)
+
+        callback.invoke(
+            newExtractorLink(
+                "Net27",
+                "Net27",
+                finalMp4Url,
+                ExtractorLinkType.VIDEO
+            ) {
+                referer = "$net27API/"
+                headers = mapOf(
+                    "Referer" to "$net27API/",
+                    "User-Agent" to USER_AGENT
+                )
+            }
+        )
+    }
+
+    // 6. Extract Fallback HLS Stream (if available in JSON)
+    response.fallbackHls?.let { fallbackPath ->
+        val fullFallbackUrl = if (fallbackPath.startsWith("/")) "$net27API$fallbackPath" else fallbackPath
+        val proxiedFallback = buildProxyUrl(fullFallbackUrl)
+
+        callback.invoke(
+            newExtractorLink(
+                "Net27 - Fallback",
+                "Net27 Auto",
+                proxiedFallback,
+                ExtractorLinkType.M3U8
+            ) {
+                referer = "$net27API/"
+                headers = mapOf(
+                    "Referer" to "$net27API/",
+                    "User-Agent" to USER_AGENT
+                )
+            }
+        )
+    }
+
+    // 7. Extract Captions / Subtitles
+    response.captions?.forEach { sub ->
+        val subUrl = if (sub.url.startsWith("/")) "$net27API${sub.url}" else sub.url
+
+        subtitleCallback.invoke(
+            SubtitleFile(
+                sub.name ?: sub.lang ?: "Subtitle",
+                subUrl
+            )
+        )
+    }
+}
+
+
+
     suspend fun invokeCastle(
         title: String? = null,
         season: Int? = null,
