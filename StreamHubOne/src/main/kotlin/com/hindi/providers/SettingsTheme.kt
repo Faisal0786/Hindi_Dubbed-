@@ -51,6 +51,8 @@ val SUCCESS         = Color.parseColor("#22C55E")
 val WARNING         = Color.parseColor("#F59E0B")
 val ERROR           = Color.parseColor("#EF4444")
 val INFO            = Color.parseColor("#3B82F6")
+val DANGER_BG = Color.parseColor("#1A0A0D")
+val DANGER_BORDER = Color.parseColor("#3A1520")
 
     // ── Drawable factories ───────────────────────────────────
 
