@@ -235,12 +235,30 @@ fun statusChip(
     // Standard card: vertical LinearLayout with side margins, rounded bg, elevation.
 
     fun cardContainer(context: Context) = LinearLayout(context).apply {
-        orientation = LinearLayout.VERTICAL
-        val m = 16.dp(context)
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        ).also { it.setMargins(m, 0, m, m) }
-        background = SettingsTheme.roundRect(SettingsTheme.BG_CARD, SettingsTheme.RADIUS_CARD.dp(context))
-        elevation = 4f
+    orientation = LinearLayout.VERTICAL
+
+    val margin = 16.dp(context)
+
+    layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+    ).apply {
+        setMargins(
+            margin,
+            0,
+            margin,
+            14.dp(context)
+        )
     }
+
+    background = GradientDrawable().apply {
+        cornerRadius = SettingsTheme.RADIUS_CARD.dp(context)
+        setColor(SettingsTheme.BG_CARD)
+        setStroke(2, SettingsTheme.CARD_BORDER)
+    }
+
+    elevation = 8f
+
+    clipToOutline = true
+}
 }
