@@ -48,11 +48,20 @@ internal object SettingsWidgets {
         setBackgroundColor(SettingsTheme.DIVIDER_COLOR)
     }
 
-    // ── Horizontal spacer ────────────────────────────────────
+    // ── Horizontal / vertical spacer ────────────────────────────────────
 
     fun hSpacer(context: Context, widthDp: Int) = View(context).apply {
         layoutParams = LinearLayout.LayoutParams(widthDp.dp(context), 1)
     }
+fun vSpacer(
+    context: Context,
+    heightDp: Int
+) = View(context).apply {
+    layoutParams = LinearLayout.LayoutParams(
+        1,
+        heightDp.dp(context)
+    )
+}
 
     // ── Expand / collapse animation ──────────────────────────
 
