@@ -114,42 +114,62 @@ fun statTile(
 ): LinearLayout {
 
     return LinearLayout(context).apply {
+
         orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER
+        gravity = Gravity.CENTER_VERTICAL
 
         layoutParams = LinearLayout.LayoutParams(
             0,
-            82.dp(context),
+            96.dp(context),
             1f
-        ).also {
-            it.marginStart = 6.dp(context)
-            it.marginEnd = 6.dp(context)
+        ).apply {
+            marginStart = 6.dp(context)
+            marginEnd = 6.dp(context)
         }
 
-        background = SettingsTheme.roundRect(
-            SettingsTheme.BG_SECONDARY,
-            SettingsTheme.RADIUS_CARD.dp(context)
+        setPadding(
+            16.dp(context),
+            14.dp(context),
+            16.dp(context),
+            14.dp(context)
         )
 
-        addView(TextView(context).apply {
-            text = value
-            textSize = 22f
-            gravity = Gravity.CENTER
-            setTypeface(null, Typeface.BOLD)
-            setTextColor(accent)
+        background = GradientDrawable().apply {
+            cornerRadius = SettingsTheme.RADIUS_CARD.dp(context)
+            setColor(SettingsTheme.BG_SECONDARY)
+            setStroke(2, SettingsTheme.CARD_BORDER)
+        }
+
+        // Top colored indicator
+        addView(View(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                26.dp(context),
+                4.dp(context)
+            ).apply {
+                bottomMargin = 10.dp(context)
+            }
+
+            background = GradientDrawable().apply {
+                cornerRadius = 99f
+                setColor(accent)
+            }
         })
 
         addView(TextView(context).apply {
-            text = label
-            gravity = Gravity.CENTER
-            textSize = 11f
+            text = value
+            textSize = 24f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(SettingsTheme.TEXT_PRIMARY)
+        })
+
+        addView(TextView(context).apply {
+            text = label.uppercase()
+            textSize = 10f
             setTextColor(SettingsTheme.TEXT_SECONDARY)
             setPadding(0, 4.dp(context), 0, 0)
         })
     }
 }
-
-
 //Sectione Title
 
 fun sectionTitle(
