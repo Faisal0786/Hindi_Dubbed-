@@ -25,6 +25,33 @@ internal object SettingsTheme {
     val DIVIDER_COLOR  = Color.parseColor("#1F2235")
     val DANGER_COLOR   = Color.parseColor("#FF4E6A")
 
+// ── Android 12 Design Tokens ─────────────────────────────
+
+val BG_SURFACE      = Color.parseColor("#09090B")
+val BG_ELEVATED     = Color.parseColor("#10131A")
+val BG_SECONDARY    = Color.parseColor("#161922")
+
+val CARD_BORDER     = Color.parseColor("#2B3147")
+val CARD_PRESSED    = Color.parseColor("#323A54")
+
+val PURPLE          = Color.parseColor("#7C3AED")
+val PURPLE_LIGHT    = Color.parseColor("#8B5CF6")
+
+val BLUE            = Color.parseColor("#2563EB")
+val BLUE_LIGHT      = Color.parseColor("#3B82F6")
+
+val GREEN           = Color.parseColor("#22C55E")
+val ORANGE          = Color.parseColor("#F59E0B")
+val RED             = Color.parseColor("#EF4444")
+
+val CHIP_BG         = Color.parseColor("#1B2132")
+val CHIP_BORDER     = Color.parseColor("#36415F")
+
+val SUCCESS         = Color.parseColor("#22C55E")
+val WARNING         = Color.parseColor("#F59E0B")
+val ERROR           = Color.parseColor("#EF4444")
+val INFO            = Color.parseColor("#3B82F6")
+
     // ── Drawable factories ───────────────────────────────────
 
     fun roundRect(color: Int, radius: Float) = GradientDrawable().apply {
@@ -68,6 +95,26 @@ internal object SettingsTheme {
         setColor(Color.parseColor("#0D1117"))
         setStroke(1, Color.parseColor("#2E2850"))
     }
+
+// ── Radius Tokens ────────────────────────────────────────
+
+const val RADIUS_SMALL = 12f
+const val RADIUS_CARD = 22f
+const val RADIUS_CHIP = 99f
+const val RADIUS_DIALOG = 28f
+
+// ── Alpha ────────────────────────────────────────────────
+
+const val DISABLED_ALPHA = 0.45f
+const val SECONDARY_ALPHA = 0.72f
+
+// ── Typography ───────────────────────────────────────────
+
+const val TITLE_SIZE = 22f
+const val HEADER_SIZE = 16f
+const val BODY_SIZE = 14f
+const val CAPTION_SIZE = 12f
+const val OVERLINE_SIZE = 11f
 
     // ── dp helpers ───────────────────────────────────────────
 
