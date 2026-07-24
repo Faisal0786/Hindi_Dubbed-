@@ -497,13 +497,6 @@ suspend fun invokeNet27(
         "Referer" to "$net27API/"
     )
 
-    fun buildProxyUrl(rawUrl: String): String {
-        val cleanUrl = rawUrl.replace("&amp;", "&").trim()
-        val encodedUrl = URLEncoder.encode(cleanUrl, "UTF-8")
-        return "https://streamhub-proxy.1545zoya.workers.dev/?url=$encodedUrl"
-    }
-
-    // 1. Fetch Variants
     val variantsUrl = if (isMovie) {
         "$net27API/api/variants-tmdb/movie/$tmdbId"
     } else {
@@ -518,7 +511,6 @@ suspend fun invokeNet27(
 
     val hasSid = variants.ok == true && !variants.defaultSubjectId.isNullOrBlank()
 
-    // 2. Build Embed URL
     val embedUrl = if (isMovie) {
         if (hasSid) {
             "$net27API/api/embed-tmdb/$tmdbId?type=movie&sid=${variants.defaultSubjectId}&dp=${variants.defaultDetailPath}"
@@ -533,7 +525,6 @@ suspend fun invokeNet27(
         }
     }
 
-    // 3. Fetch Embed Data
     val response = try {
         app.get(embedUrl, headers = net27Headers).parsed<Net27Response>()
     } catch (_: Exception) {
@@ -542,63 +533,42 @@ suspend fun invokeNet27(
 
     if (response.ok != true) return
 
-    // 4. Streams Extraction
-    response.streams
-        ?.filter { !it.url.isNullOrBlank() }
-        ?.sortedByDescending { it.resolution ?: 0 }
-        ?.forEach { stream ->
-            val rawStreamUrl = stream.url ?: return@forEach
-            val finalProxiedUrl = buildProxyUrl(rawStreamUrl)
-            val resQuality = stream.resolution ?: 0
+    val sid = response.subjectId ?: variants.defaultSubjectId
+
+    if (!sid.isNullOrBlank()) {
+        val qualities = listOf("1080", "720", "480", "360")
+        val seasonNum = if (isMovie) 1 else (season ?: 1)
+        val episodeNum = if (isMovie) 1 else (episode ?: 1)
+
+        qualities.forEach { q ->
+            val cacheStreamUrl = "https://net27-r2-cache.bupcdn74213.workers.dev/v1/$sid/s$seasonNum/e$episodeNum/$q.mp4"
 
             callback.invoke(
                 newExtractorLink(
                     "Net27",
-                    "Net27 ${resQuality}p",
-                    finalProxiedUrl,
+                    "Net27 ${q}p",
+                    cacheStreamUrl,
                     ExtractorLinkType.VIDEO
                 ) {
-                    quality = resQuality
+                    quality = q.toIntOrNull() ?: 0
                     referer = "$net27API/"
                     headers = mapOf(
-                        "Referer" to "$net27API/",
                         "User-Agent" to USER_AGENT
                     )
                 }
             )
         }
-
-    // 5. Fallback MP4
-    if (response.streams.isNullOrEmpty() && !response.mp4.isNullOrBlank()) {
-        val finalMp4Url = buildProxyUrl(response.mp4!!)
-
-        callback.invoke(
-            newExtractorLink(
-                "Net27",
-                "Net27",
-                finalMp4Url,
-                ExtractorLinkType.VIDEO
-            ) {
-                referer = "$net27API/"
-                headers = mapOf(
-                    "Referer" to "$net27API/",
-                    "User-Agent" to USER_AGENT
-                )
-            }
-        )
     }
 
-    // 6. Fallback HLS
     response.fallbackHls?.let { fallbackPath ->
         if (fallbackPath.isNotBlank()) {
             val fullFallbackUrl = if (fallbackPath.startsWith("/")) "$net27API$fallbackPath" else fallbackPath
-            val proxiedFallback = buildProxyUrl(fullFallbackUrl)
 
             callback.invoke(
                 newExtractorLink(
                     "Net27 - Fallback",
                     "Net27 Auto",
-                    proxiedFallback,
+                    fullFallbackUrl,
                     ExtractorLinkType.M3U8
                 ) {
                     referer = "$net27API/"
@@ -611,7 +581,6 @@ suspend fun invokeNet27(
         }
     }
 
-    // 7. Subtitles Extraction
     response.captions?.forEach { sub ->
         val rawUrl = sub.url ?: return@forEach
         val subUrl = if (rawUrl.startsWith("/")) "$net27API$rawUrl" else rawUrl
@@ -625,7 +594,6 @@ suspend fun invokeNet27(
         )
     }
 }
-
 
     suspend fun invokeCastle(
         title: String? = null,
