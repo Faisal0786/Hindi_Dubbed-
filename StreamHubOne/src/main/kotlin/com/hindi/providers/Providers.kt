@@ -497,7 +497,6 @@ suspend fun invokeNet27(
         "Referer" to "$net27API/"
     )
 
-    // Helper Function to route stream links through the Worker Proxy
     fun buildProxyUrl(rawUrl: String): String {
         val cleanUrl = rawUrl.replace("&amp;", "&").trim()
         val encodedUrl = URLEncoder.encode(cleanUrl, "UTF-8")
@@ -543,20 +542,23 @@ suspend fun invokeNet27(
 
     if (response.ok != true) return
 
-    // 4. Extract Streams (Primary Quality Streams)
+    // 4. Streams Extraction
     response.streams
-        ?.sortedByDescending { it.resolution }
+        ?.filter { !it.url.isNullOrBlank() }
+        ?.sortedByDescending { it.resolution ?: 0 }
         ?.forEach { stream ->
-            val finalProxiedUrl = buildProxyUrl(stream.url)
+            val rawStreamUrl = stream.url ?: return@forEach
+            val finalProxiedUrl = buildProxyUrl(rawStreamUrl)
+            val resQuality = stream.resolution ?: 0
 
             callback.invoke(
                 newExtractorLink(
                     "Net27",
-                    "Net27 ${stream.resolution}p",
+                    "Net27 ${resQuality}p",
                     finalProxiedUrl,
                     ExtractorLinkType.VIDEO
                 ) {
-                    quality = stream.resolution
+                    quality = resQuality
                     referer = "$net27API/"
                     headers = mapOf(
                         "Referer" to "$net27API/",
@@ -566,9 +568,9 @@ suspend fun invokeNet27(
             )
         }
 
-    // 5. Extract Single MP4 Direct Stream (Fallback)
-    if (response.streams.isNullOrEmpty() && !response.mp4.isNullOrEmpty()) {
-        val finalMp4Url = buildProxyUrl(response.mp4)
+    // 5. Fallback MP4
+    if (response.streams.isNullOrEmpty() && !response.mp4.isNullOrBlank()) {
+        val finalMp4Url = buildProxyUrl(response.mp4!!)
 
         callback.invoke(
             newExtractorLink(
@@ -586,40 +588,43 @@ suspend fun invokeNet27(
         )
     }
 
-    // 6. Extract Fallback HLS Stream (if available in JSON)
+    // 6. Fallback HLS
     response.fallbackHls?.let { fallbackPath ->
-        val fullFallbackUrl = if (fallbackPath.startsWith("/")) "$net27API$fallbackPath" else fallbackPath
-        val proxiedFallback = buildProxyUrl(fullFallbackUrl)
+        if (fallbackPath.isNotBlank()) {
+            val fullFallbackUrl = if (fallbackPath.startsWith("/")) "$net27API$fallbackPath" else fallbackPath
+            val proxiedFallback = buildProxyUrl(fullFallbackUrl)
 
-        callback.invoke(
-            newExtractorLink(
-                "Net27 - Fallback",
-                "Net27 Auto",
-                proxiedFallback,
-                ExtractorLinkType.M3U8
-            ) {
-                referer = "$net27API/"
-                headers = mapOf(
-                    "Referer" to "$net27API/",
-                    "User-Agent" to USER_AGENT
-                )
-            }
-        )
+            callback.invoke(
+                newExtractorLink(
+                    "Net27 - Fallback",
+                    "Net27 Auto",
+                    proxiedFallback,
+                    ExtractorLinkType.M3U8
+                ) {
+                    referer = "$net27API/"
+                    headers = mapOf(
+                        "Referer" to "$net27API/",
+                        "User-Agent" to USER_AGENT
+                    )
+                }
+            )
+        }
     }
 
-    // 7. Extract Captions / Subtitles
+    // 7. Subtitles Extraction
     response.captions?.forEach { sub ->
-        val subUrl = if (sub.url.startsWith("/")) "$net27API${sub.url}" else sub.url
+        val rawUrl = sub.url ?: return@forEach
+        val subUrl = if (rawUrl.startsWith("/")) "$net27API$rawUrl" else rawUrl
+        val subName = sub.name ?: sub.lang ?: "Subtitle"
 
         subtitleCallback.invoke(
-            SubtitleFile(
-                sub.name ?: sub.lang ?: "Subtitle",
+            newSubtitleFile(
+                subName,
                 subUrl
             )
         )
     }
 }
-
 
 
     suspend fun invokeCastle(
