@@ -152,22 +152,26 @@ layout.addView(View(context).apply {
         }
         content.block()
 
-        val chevron = TextView(context).apply {
-            text = if (expanded) "▲" else "▼"; textSize = 11f; setTextColor(theme.TEXT_SECONDARY)
-        }
+       val chevron = TextView(context).apply {
+    text = if (expanded) "▲" else "▼"
+    textSize = 14f
+    setTypeface(null, Typeface.BOLD)
+    setTextColor(theme.TEXT_SECONDARY)
+}
 
         card.addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(20.dp(context), 16.dp(context), 16.dp(context), 16.dp(context))
+            setPadding(24.dp(context), 18.dp(context), 20.dp(context), 18.dp(context))
             gravity     = Gravity.CENTER_VERTICAL
             isClickable = true; isFocusable = true; isFocusableInTouchMode = false
             background  = theme.stateDrawable(context)
 
             addView(SettingsWidgets.accentBar(context, accentA, accentB))
             addView(TextView(context).apply {
-                text = title; textSize = 12f
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(theme.TEXT_SECONDARY); letterSpacing = 0.08f
+                text = title; textSize = 14f
+setTypeface(null, Typeface.BOLD)
+setTextColor(theme.TEXT_PRIMARY)
+letterSpacing = 0.02f
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
             addView(chevron)
@@ -177,7 +181,16 @@ layout.addView(View(context).apply {
                 SettingsWidgets.animateExpand(content, expanded)
             }
         })
-
+card.addView(View(context).apply {
+    layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        1.dp(context)
+    ).apply {
+        marginStart = 20.dp(context)
+        marginEnd = 20.dp(context)
+    }
+    setBackgroundColor(theme.DIVIDER_COLOR)
+})
         card.addView(content)
         SettingsWidgets.fadeInSlide(card)
         return card
