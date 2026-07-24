@@ -12,6 +12,7 @@ import android.view.View
 import android.webkit.CookieManager
 import android.widget.*
 import com.hindi.providers.SettingsTheme.dp
+import com.hindi.providers.SettingsDashboard
 
 /**
  * Assembles the full Settings AlertDialog and every collapsible card inside it.
@@ -41,9 +42,15 @@ internal object SettingsDialog {
         }
 
         layout.addView(buildHeroBanner(context))
-        layout.addView(View(context).apply {
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 8.dp(context))
-        })
+
+layout.addView(SettingsDashboard.buildDashboard(context))
+
+layout.addView(View(context).apply {
+    layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        8.dp(context)
+    )
+})
 
         // Scraping settings card
         layout.addView(buildCollapsibleCard(context, "⚙️  Scraping Settings",
