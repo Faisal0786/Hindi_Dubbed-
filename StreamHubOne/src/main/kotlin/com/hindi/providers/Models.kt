@@ -1143,6 +1143,7 @@ data class Net27Response(
     val tmdbId: Int? = null,
     val title: String? = null,
     val mp4: String? = null,
+    val subjectId: String? = null,
     val fallbackHls: String? = null,
     val streams: List<Net27Stream>? = null,
     val captions: List<Net27Caption>? = null
