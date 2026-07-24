@@ -96,6 +96,111 @@ internal object SettingsWidgets {
         Color.parseColor("#3A1520"),
         onClick
     )
+// stat Tile
+
+fun statTile(
+    context: Context,
+    value: String,
+    label: String,
+    accent: Int
+): LinearLayout {
+
+    return LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+
+        layoutParams = LinearLayout.LayoutParams(
+            0,
+            82.dp(context),
+            1f
+        ).also {
+            it.marginStart = 6.dp(context)
+            it.marginEnd = 6.dp(context)
+        }
+
+        background = SettingsTheme.roundRect(
+            SettingsTheme.BG_SECONDARY,
+            SettingsTheme.RADIUS_CARD.dp(context)
+        )
+
+        addView(TextView(context).apply {
+            text = value
+            textSize = 22f
+            gravity = Gravity.CENTER
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(accent)
+        })
+
+        addView(TextView(context).apply {
+            text = label
+            gravity = Gravity.CENTER
+            textSize = 11f
+            setTextColor(SettingsTheme.TEXT_SECONDARY)
+            setPadding(0, 4.dp(context), 0, 0)
+        })
+    }
+}
+
+
+//Sectione Title
+
+fun sectionTitle(
+    context: Context,
+    text: String
+): TextView {
+
+    return TextView(context).apply {
+
+        this.text = text
+
+        textSize = SettingsTheme.HEADER_SIZE
+
+        setTypeface(null, Typeface.BOLD)
+
+        setTextColor(SettingsTheme.TEXT_PRIMARY)
+
+        setPadding(
+            22.dp(context),
+            8.dp(context),
+            22.dp(context),
+            12.dp(context)
+        )
+    }
+}
+
+//status Chip
+
+fun statusChip(
+    context: Context,
+    text: String,
+    color: Int
+): TextView {
+
+    return TextView(context).apply {
+
+        this.text = text
+
+        textSize = 10f
+
+        gravity = Gravity.CENTER
+
+        setTypeface(null, Typeface.BOLD)
+
+        setTextColor(color)
+
+        setPadding(
+            10.dp(context),
+            4.dp(context),
+            10.dp(context),
+            4.dp(context)
+        )
+
+        background = SettingsTheme.pill(
+            SettingsTheme.CHIP_BG,
+            color
+        )
+    }
+}
 
     // ── Styled switch ────────────────────────────────────────
     // Single place for all switch tint boilerplate.
