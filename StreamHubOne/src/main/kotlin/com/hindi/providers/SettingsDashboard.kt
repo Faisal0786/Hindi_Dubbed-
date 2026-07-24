@@ -9,6 +9,16 @@ import com.hindi.providers.SettingsTheme.dp
 
 internal object SettingsDashboard {
 
+//dashboard refrence
+
+private lateinit var providersValue: TextView
+private lateinit var enabledValue: TextView
+private lateinit var addonsValue: TextView
+private lateinit var threadsValue: TextView
+
+private lateinit var tokenChip: TextView
+private lateinit var cookieChip: TextView
+
     fun buildDashboard(context: Context): LinearLayout {
 
         val card = SettingsWidgets.cardContainer(context)
