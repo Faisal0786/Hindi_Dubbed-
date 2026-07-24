@@ -1150,24 +1150,10 @@ data class Net27VariantsResponse(
 
 data class Net27Response(
     val ok: Boolean? = null,
-
+    val tmdbId: Int? = null,
+    val title: String? = null,
     val mp4: String? = null,
-
+    val fallbackHls: String? = null, // Added from DevTools response log
     val streams: List<Net27Stream>? = null,
-
-    val captions: List<Net27Caption>? = null,
-)
-
-data class Net27Stream(
-    val url: String,
-
-    val resolution: Int,
-)
-
-data class Net27Caption(
-    val lang: String? = null,
-
-    val name: String,
-
-    val url: String,
+    val captions: List<Net27Caption>? = null
 )
