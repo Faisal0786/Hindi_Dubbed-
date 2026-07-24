@@ -14,24 +14,24 @@ import android.util.TypedValue
 internal object SettingsTheme {
 
     // ── Color palette ────────────────────────────────────────
-    val BG_DARK        = Color.parseColor("#0D0F14")
-    val BG_CARD        = Color.parseColor("#13161E")
-    val ACCENT_START   = Color.parseColor("#6C63FF")
-    val ACCENT_END     = Color.parseColor("#A855F7")
-    val TEXT_PRIMARY   = Color.parseColor("#F0F2FF")
-    val TEXT_SECONDARY = Color.parseColor("#7B82A0")
+    val BG_DARK        = Color.parseColor("#080B12")
+    val BG_CARD        = Color.parseColor("#161D29")
+    val ACCENT_START = Color.parseColor("#7C5CFF")
+val ACCENT_END   = Color.parseColor("#29D3FF")
+   val TEXT_PRIMARY   = Color.parseColor("#F8FAFF")
+val TEXT_SECONDARY = Color.parseColor("#A7B3CC")
     val SWITCH_ON      = Color.parseColor("#6C63FF")
     val SWITCH_OFF     = Color.parseColor("#2A2D3E")
-    val DIVIDER_COLOR  = Color.parseColor("#1F2235")
+    val DIVIDER_COLOR  = Color.parseColor("#2A3448")
     val DANGER_COLOR   = Color.parseColor("#FF4E6A")
 
 // ── Android 12 Design Tokens ─────────────────────────────
 
-val BG_SURFACE      = Color.parseColor("#09090B")
-val BG_ELEVATED     = Color.parseColor("#10131A")
-val BG_SECONDARY    = Color.parseColor("#161922")
+val BG_SURFACE      = Color.parseColor("#0E1420")
+val BG_ELEVATED     = Color.parseColor("#1B2432")
+val BG_SECONDARY    = Color.parseColor("#222E42")
 
-val CARD_BORDER     = Color.parseColor("#2B3147")
+val CARD_BORDER     = Color.parseColor("#324158")
 val CARD_PRESSED    = Color.parseColor("#323A54")
 
 val PURPLE          = Color.parseColor("#7C3AED")
@@ -44,8 +44,8 @@ val GREEN           = Color.parseColor("#22C55E")
 val ORANGE          = Color.parseColor("#F59E0B")
 val RED             = Color.parseColor("#EF4444")
 
-val CHIP_BG         = Color.parseColor("#1B2132")
-val CHIP_BORDER     = Color.parseColor("#36415F")
+val CHIP_BG = Color.parseColor("#1A2434")
+val CHIP_BORDER     = Color.parseColor("#40506E")
 
 val SUCCESS         = Color.parseColor("#22C55E")
 val WARNING         = Color.parseColor("#F59E0B")
@@ -57,9 +57,10 @@ val DANGER_BORDER = Color.parseColor("#3A1520")
     // ── Drawable factories ───────────────────────────────────
 
     fun roundRect(color: Int, radius: Float) = GradientDrawable().apply {
-        cornerRadius = radius
-        setColor(color)
-    }
+    cornerRadius = radius
+    setColor(color)
+    setStroke(1, CARD_BORDER)
+}
 
     fun colorDrawable(color: Int) = ColorDrawable(color)
 
