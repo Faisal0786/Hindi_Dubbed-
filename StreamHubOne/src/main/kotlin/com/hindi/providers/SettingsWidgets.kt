@@ -91,13 +91,19 @@ internal object SettingsWidgets {
 
     // ── Danger pill shortcut ─────────────────────────────────
 
-    fun dangerBtn(context: Context, label: String, onClick: () -> Unit) = pillBtn(
-        context, label,
-        SettingsTheme.DANGER_COLOR,
-        SettingsTheme.DANGER_BG
-SettingsTheme.DANGER_BORDER
-        onClick
-    )
+    fun dangerBtn(
+    context: Context,
+    label: String,
+    onClick: () -> Unit
+) = pillBtn(
+    context,
+    label,
+    SettingsTheme.DANGER_COLOR,
+    SettingsTheme.DANGER_BG,
+    SettingsTheme.DANGER_BORDER,
+    onClick
+)
+
 // stat Tile
 
 fun statTile(
