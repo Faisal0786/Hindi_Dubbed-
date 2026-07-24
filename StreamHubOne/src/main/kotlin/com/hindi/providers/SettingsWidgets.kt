@@ -9,6 +9,8 @@ import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
 import com.hindi.providers.SettingsTheme.dp
+import android.graphics.Typeface
+import android.view.Gravity
 
 /**
  * Small, reusable UI building blocks shared across all Settings card files.
