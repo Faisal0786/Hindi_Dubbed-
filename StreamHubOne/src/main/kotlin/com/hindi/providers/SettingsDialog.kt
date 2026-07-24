@@ -37,7 +37,7 @@ internal object SettingsDialog {
 
         val layout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, 24.dp(context))
+            setPadding(0, 0, 0, 32.dp(context))
             background = theme.colorDrawable(theme.BG_DARK)
         }
 
@@ -115,7 +115,9 @@ layout.addView(View(context).apply {
             .setNegativeButton("Cancel", null)
             .create()
 
-        dialog.window?.setBackgroundDrawable(theme.roundRect(theme.BG_DARK, 20f.dp(context)))
+    dialog.window?.setBackgroundDrawable(
+    theme.roundRect(theme.BG_SURFACE, SettingsTheme.RADIUS_DIALOG.dp(context))
+)
         dialog.show()
         dialog.window?.setLayout(
             (context.resources.displayMetrics.widthPixels * 0.95).toInt(),
@@ -1066,22 +1068,33 @@ layout.addView(View(context).apply {
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(28.dp(context), 32.dp(context), 28.dp(context), 24.dp(context))
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.parseColor("#1A1730"), theme.BG_DARK))
+            background = GradientDrawable(
+    GradientDrawable.Orientation.TL_BR,
+    intArrayOf(
+        Color.parseColor("#2A2258"),
+        Color.parseColor("#171C2E"),
+        theme.BG_DARK
+    )
+).apply {
+    cornerRadius = SettingsTheme.RADIUS_DIALOG.dp(context)
+}
 
             addView(View(context).apply {
-                layoutParams = LinearLayout.LayoutParams(48.dp(context), 4.dp(context))
+              layoutParams = LinearLayout.LayoutParams(
+    72.dp(context),
+    5.dp(context)
+)
                     .also { it.bottomMargin = 16.dp(context) }
                 background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
                     intArrayOf(theme.ACCENT_START, theme.ACCENT_END)).apply { cornerRadius = 99f }
             })
             addView(TextView(context).apply {
-                text = "Plugin Settings"; textSize = 22f
+                text = "Plugin Settings"; textSize = 26f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(theme.TEXT_PRIMARY); letterSpacing = -0.02f
             })
             addView(TextView(context).apply {
-                text = "Configure sources, catalogs & cookies"
+               text = "Manage providers, tokens, catalogs and streaming settings"
                 textSize = 13f; setTextColor(theme.TEXT_SECONDARY); setPadding(0, 6.dp(context), 0, 0)
             })
         }
