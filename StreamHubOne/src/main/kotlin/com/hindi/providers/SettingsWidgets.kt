@@ -29,7 +29,7 @@ internal object SettingsWidgets {
         setTextColor(textColor)
         setPadding(12.dp(context), 6.dp(context), 12.dp(context), 6.dp(context))
         background = GradientDrawable().apply {
-            cornerRadius = 99f; setColor(bgColor); setStroke(1, borderColor)
+            cornerRadius = SettingsTheme.RADIUS_CHIP.dp(context); setColor(bgColor); setStroke(1, borderColor)
         }
         isClickable = true; isFocusable = true; isFocusableInTouchMode = false
         setOnClickListener {
@@ -94,8 +94,8 @@ internal object SettingsWidgets {
     fun dangerBtn(context: Context, label: String, onClick: () -> Unit) = pillBtn(
         context, label,
         SettingsTheme.DANGER_COLOR,
-        Color.parseColor("#1A0A0D"),
-        Color.parseColor("#3A1520"),
+        SettingsTheme.DANGER_BG
+SettingsTheme.DANGER_BORDER
         onClick
     )
 // stat Tile
@@ -234,7 +234,7 @@ fun statusChip(
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
         ).also { it.setMargins(m, 0, m, m) }
-        background = SettingsTheme.roundRect(SettingsTheme.BG_CARD, 16f.dp(context))
+        background = SettingsTheme.roundRect(SettingsTheme.BG_CARD, SettingsTheme.RADIUS_CARD.dp(context))
         elevation = 4f
     }
 }
