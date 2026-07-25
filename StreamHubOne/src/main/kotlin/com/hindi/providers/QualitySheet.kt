@@ -25,7 +25,7 @@ internal object QualitySheet {
             .setSingleChoiceItems(items, selected) { _, which ->
                 selected = which
             }
-            ..setPositiveButton("Save") { dialog, _ ->
+            .setPositiveButton("Save") { dialog, _ ->
     Settings.setQualityMode(
         Settings.QualityMode.values()[selected]
     )
