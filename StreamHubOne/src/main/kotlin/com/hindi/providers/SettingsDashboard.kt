@@ -37,6 +37,17 @@ return card
         }
 
     // --------------------------------------------------------
+
+private fun qualityText(): String {
+    return when (Settings.getQualityMode()) {
+        Settings.QualityMode.AUTO -> "Auto"
+        Settings.QualityMode.Q4K -> "4K"
+        Settings.QualityMode.Q1080 -> "1080p"
+        Settings.QualityMode.Q720 -> "720p"
+        Settings.QualityMode.Q480 -> "480p"
+    }
+}
+
     // Hero
     // --------------------------------------------------------
 private fun buildHero(context: Context): LinearLayout {
@@ -78,10 +89,10 @@ private fun buildHero(context: Context): LinearLayout {
             SettingsWidgets.heroChip(
                 context,
                 "🎥",
-                "720p",
+                qualityText(),
                 SettingsTheme.BLUE
             ) {
-                // TODO
+                SettingsBottomSheets.showQuality(context)
             }.apply {
                 layoutParams = chipMargin(context)
             }
@@ -229,12 +240,24 @@ private fun buildQuickControls(
                 orientation = LinearLayout.HORIZONTAL
 
                 addView(
-                    tile(
-                        "🎥",
-                        "Quality",
-                        "720p",
-                        SettingsTheme.BLUE
-                    )
+                    SettingsWidgets.controlTile(
+    context,
+    "🎥",
+    "Quality",
+    qualityText(),
+    SettingsTheme.BLUE
+) {
+    SettingsBottomSheets.showQuality(context)
+}.apply {
+    layoutParams = LinearLayout.LayoutParams(
+        0,
+        LinearLayout.LayoutParams.WRAP_CONTENT,
+        1f
+    ).apply {
+        marginEnd = 8.dp(context)
+        bottomMargin = 8.dp(context)
+    }
+}
                 )
 
                 addView(
