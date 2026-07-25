@@ -12,7 +12,10 @@ internal object SettingsBottomSheets {
         QualitySheet.show(context)
     }
 
-fun showHindi(context: Context) {
+fun showHindi(
+    context: Context,
+    onSaved: (() -> Unit)? = null
+) {
 
     val toggle = Switch(context).apply {
         text = "Show Hindi Providers Only"
@@ -25,6 +28,7 @@ fun showHindi(context: Context) {
         .setView(toggle)
         .setPositiveButton("Save") { dialog, _ ->
             Settings.setHindiProvidersOnly(toggle.isChecked)
+onSaved?.invoke()
             dialog.dismiss()
         }
         .setNegativeButton("Cancel", null)
