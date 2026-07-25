@@ -28,7 +28,7 @@ private lateinit var cookieChip: TextView
 
 card.addView(buildHero(context, card))
 card.addView(SettingsWidgets.vSpacer(context, 16))
-card.addView(buildQuickControls(context))
+parent.addView(buildQuickControls(context, parent))
 
 SettingsWidgets.fadeInSlide(card)
 
