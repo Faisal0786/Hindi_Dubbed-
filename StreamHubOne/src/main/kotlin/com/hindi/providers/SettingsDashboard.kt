@@ -6,6 +6,9 @@ import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.hindi.providers.SettingsTheme.dp
+import android.view.View
+import android.graphics.drawable.GradientDrawable
+
 
 internal object SettingsDashboard {
 
@@ -72,115 +75,109 @@ private fun buildHero(context: Context): LinearLayout {
         }
 
         chipRow.addView(
-    SettingsWidgets.heroChip(
-        context,
-        "🎥",
-        "720p",
-        SettingsTheme.BLUE
-    ) {
-        // TODO Phase 3
-    }.apply {
-        layoutParams = chipMargin(context)
-    }
-)
-
-        chipRow.addView(
-            SettingsWidgets.hSpacer(context,8)
+            SettingsWidgets.heroChip(
+                context,
+                "🎥",
+                "720p",
+                SettingsTheme.BLUE
+            ) {
+                // TODO
+            }.apply {
+                layoutParams = chipMargin(context)
+            }
         )
 
+        chipRow.addView(SettingsWidgets.hSpacer(context, 8))
+
         chipRow.addView(
-    SettingsWidgets.heroChip(
-        context,
-        "🇮🇳",
-        if (Settings.onlyHindiProviders()) "Hindi ON" else "Hindi OFF",
-        SettingsTheme.ORANGE
-    ) {
-        // TODO
-    }.apply {
-        layoutParams = chipMargin(context)
-    }
-)
+            SettingsWidgets.heroChip(
+                context,
+                "🇮🇳",
+                if (Settings.onlyHindiProviders()) "Hindi ON" else "Hindi OFF",
+                SettingsTheme.ORANGE
+            ) {
+                // TODO
+            }.apply {
+                layoutParams = chipMargin(context)
+            }
+        )
+
         addView(chipRow)
 
-        addView(SettingsWidgets.vSpacer(context,8))
+        addView(SettingsWidgets.vSpacer(context, 8))
 
         val chipRow2 = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
         }
-       chipRow2.addView(
-        SettingsWidgets.heroChip(
-    context,
-    "⚡",
-    "${SettingsStats.concurrency()} Threads",
-    SettingsTheme.PURPLE
-) {
-    // TODO
-}.apply {
-    layoutParams = chipMargin(context)
-}
 
         chipRow2.addView(
-            SettingsWidgets.hSpacer(context,8)
+            SettingsWidgets.heroChip(
+                context,
+                "⚡",
+                "${SettingsStats.concurrency()} Threads",
+                SettingsTheme.PURPLE
+            ) {
+                // TODO
+            }.apply {
+                layoutParams = chipMargin(context)
+            }
         )
-      chipRow2.addView(
-        SettingsWidgets.heroChip(
-    context,
-    "🎬",
-    "${SettingsStats.providerCount()} Sources",
-    SettingsTheme.GREEN
-) {
-    // TODO
-}.apply {
-    layoutParams = chipMargin(context)
-}
+
+        chipRow2.addView(SettingsWidgets.hSpacer(context, 8))
+
+        chipRow2.addView(
+            SettingsWidgets.heroChip(
+                context,
+                "🎬",
+                "${SettingsStats.providerCount()} Sources",
+                SettingsTheme.GREEN
+            ) {
+                // TODO
+            }.apply {
+                layoutParams = chipMargin(context)
+            }
+        )
 
         addView(chipRow2)
-    }
 
-addView(SettingsWidgets.vSpacer(context, 18))
+        addView(SettingsWidgets.vSpacer(context, 18))
 
-addView(
-    TextView(context).apply {
-        text = "Performance"
-        textSize = 13f
-        setTypeface(null, Typeface.BOLD)
-        setTextColor(SettingsTheme.TEXT_PRIMARY)
-    }
-)
-
-addView(SettingsWidgets.vSpacer(context, 8))
-
-addView(
-    View(context).apply {
-
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            8.dp(context)
+        addView(
+            TextView(context).apply {
+                text = "Performance"
+                textSize = 13f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(SettingsTheme.TEXT_PRIMARY)
+            }
         )
 
-        background = GradientDrawable().apply {
-            cornerRadius = 99f
-            setColor(SettingsTheme.BG_SECONDARY)
-        }
+        addView(SettingsWidgets.vSpacer(context, 8))
+
+        addView(
+            View(context).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    8.dp(context)
+                )
+
+                background = GradientDrawable().apply {
+                    cornerRadius = 99f
+                    setColor(SettingsTheme.BG_SECONDARY)
+                }
+            }
+        )
+
+        addView(
+            TextView(context).apply {
+                text = "Balanced • ${SettingsStats.concurrency()} Threads"
+                textSize = 11f
+                gravity = Gravity.END
+                setPadding(0, 8.dp(context), 0, 0)
+                setTextColor(SettingsTheme.TEXT_SECONDARY)
+            }
+        )
     }
-)
-
-addView(
-    TextView(context).apply {
-
-        text = "Balanced • ${SettingsStats.concurrency()} Threads"
-
-        textSize = 11f
-
-        gravity = Gravity.END
-
-        setPadding(0, 8.dp(context), 0, 0)
-
-        setTextColor(SettingsTheme.TEXT_SECONDARY)
-    }
-)
 }
-
 //controll panel 
   
     // --------------------------------------------------------
