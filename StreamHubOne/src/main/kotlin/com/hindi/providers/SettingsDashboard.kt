@@ -26,7 +26,7 @@ private lateinit var cookieChip: TextView
 
         val card = SettingsWidgets.glassCard(context)
 
-card.addView(buildHero(context))
+card.addView(buildHero(context, card))
 card.addView(SettingsWidgets.vSpacer(context, 16))
 card.addView(buildQuickControls(context))
 
@@ -50,7 +50,10 @@ private fun qualityText(): String {
 
     // Hero
     // --------------------------------------------------------
-private fun buildHero(context: Context): LinearLayout {
+private fun buildHero(
+    context: Context,
+    parent: LinearLayout
+): LinearLayout {
 
     return LinearLayout(context).apply {
 
@@ -107,7 +110,9 @@ private fun buildHero(context: Context): LinearLayout {
                 if (Settings.onlyHindiProviders()) "Hindi ON" else "Hindi OFF",
                 SettingsTheme.ORANGE
             ) {
-                SettingsBottomSheets.showHindi(context)
+                SettingsBottomSheets.showHindi(context) {
+    refresh(parent, context)
+}
             }.apply {
                 layoutParams = chipMargin(context)
             }
