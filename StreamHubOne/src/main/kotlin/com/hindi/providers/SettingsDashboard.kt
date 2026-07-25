@@ -95,7 +95,9 @@ private fun buildHero(
                 qualityText(),
                 SettingsTheme.BLUE
             ) {
-                SettingsBottomSheets.showQuality(context)
+                SettingsBottomSheets.showQuality(context) {
+    refresh(parent, context)
+}
             }.apply {
                 layoutParams = chipMargin(context)
             }
@@ -199,7 +201,8 @@ private fun buildHero(
     // --------------------------------------------------------
 
 private fun buildQuickControls(
-    context: Context
+    context: Context,
+    parent: LinearLayout
 ): LinearLayout {
 
     fun tile(
@@ -252,7 +255,9 @@ private fun buildQuickControls(
     qualityText(),
     SettingsTheme.BLUE
 ) {
-    SettingsBottomSheets.showQuality(context)
+    SettingsBottomSheets.showQuality(context) {
+    refresh(parent, context)
+}
 }.apply {
     layoutParams = LinearLayout.LayoutParams(
         0,
@@ -328,7 +333,7 @@ private fun chipMargin(context: Context): LinearLayout.LayoutParams {
 
     parent.removeAllViews()
 
-    parent.addView(buildHero(context))
+    parent.addView(buildHero(context, parent))
 
     parent.addView(
         SettingsWidgets.vSpacer(context,16)
