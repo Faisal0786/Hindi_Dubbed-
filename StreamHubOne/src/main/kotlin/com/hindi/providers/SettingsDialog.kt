@@ -78,9 +78,60 @@ internal object SettingsDialog {
 
     addView(SettingsWidgets.divider(context))
 
-    addView(buildConcurrencyRow(context, pending))
+addView(TextView(context).apply {
+    text = "🎥 Video Quality Preference"
+    textSize = 13f
+    setTypeface(null, Typeface.BOLD)
+    setTextColor(SettingsTheme.TEXT_PRIMARY)
+    setPadding(20.dp(context), 12.dp(context), 20.dp(context), 8.dp(context))
 })
 
+addView(buildToggleRow(
+    context,
+    "4K",
+    "2160p + 1440p",
+    Settings.ONLY_4K,
+    true,
+    pending
+))
+
+addView(SettingsWidgets.divider(context))
+
+addView(buildToggleRow(
+    context,
+    "1080p",
+    "1080p",
+    Settings.ONLY_1080P,
+    true,
+    pending
+))
+
+addView(SettingsWidgets.divider(context))
+
+addView(buildToggleRow(
+    context,
+    "720p",
+    "720p",
+    Settings.ONLY_720P,
+    true,
+    pending
+))
+
+addView(SettingsWidgets.divider(context))
+
+addView(buildToggleRow(
+    context,
+    "480p",
+    "480p + 360p",
+    Settings.ONLY_480P,
+    true,
+    pending
+))
+
+addView(SettingsWidgets.divider(context))
+
+addView(buildConcurrencyRow(context, pending))
+})
         layout.addView(buildCloudflareBypassCard(context, pending))
 
         // API Tokens card (Febbox + Wyzie Subs)
