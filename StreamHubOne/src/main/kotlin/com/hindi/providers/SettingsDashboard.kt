@@ -136,6 +136,49 @@ private fun buildHero(context: Context): LinearLayout {
 
         addView(chipRow2)
     }
+
+addView(SettingsWidgets.vSpacer(context, 18))
+
+addView(
+    TextView(context).apply {
+        text = "Performance"
+        textSize = 13f
+        setTypeface(null, Typeface.BOLD)
+        setTextColor(SettingsTheme.TEXT_PRIMARY)
+    }
+)
+
+addView(SettingsWidgets.vSpacer(context, 8))
+
+addView(
+    View(context).apply {
+
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            8.dp(context)
+        )
+
+        background = GradientDrawable().apply {
+            cornerRadius = 99f
+            setColor(SettingsTheme.BG_SECONDARY)
+        }
+    }
+)
+
+addView(
+    TextView(context).apply {
+
+        text = "Balanced • ${SettingsStats.concurrency()} Threads"
+
+        textSize = 11f
+
+        gravity = Gravity.END
+
+        setPadding(0, 8.dp(context), 0, 0)
+
+        setTextColor(SettingsTheme.TEXT_SECONDARY)
+    }
+)
 }
 
 //controll panel 
@@ -146,9 +189,35 @@ private fun buildQuickControls(
     context: Context
 ): LinearLayout {
 
+    fun tile(
+        icon: String,
+        title: String,
+        value: String,
+        color: Int
+    ): LinearLayout {
+
+        return SettingsWidgets.controlTile(
+            context,
+            icon,
+            title,
+            value,
+            color
+        ).apply {
+
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply {
+                marginEnd = 8.dp(context)
+                bottomMargin = 8.dp(context)
+            }
+        }
+    }
+
     return LinearLayout(context).apply {
 
-        orientation = LinearLayout.HORIZONTAL
+        orientation = LinearLayout.VERTICAL
 
         setPadding(
             14.dp(context),
@@ -158,27 +227,56 @@ private fun buildQuickControls(
         )
 
         addView(
-            SettingsWidgets.controlTile(
-                context,
-                "🎥",
-                "Quality",
-                "720p",
-                SettingsTheme.BLUE
-            )
+            LinearLayout(context).apply {
+
+                orientation = LinearLayout.HORIZONTAL
+
+                addView(
+                    tile(
+                        "🎥",
+                        "Quality",
+                        "720p",
+                        SettingsTheme.BLUE
+                    )
+                )
+
+                addView(
+                    tile(
+                        "⚡",
+                        "Threads",
+                        SettingsStats.concurrency().toString(),
+                        SettingsTheme.ORANGE
+                    )
+                )
+            }
         )
 
         addView(
-            SettingsWidgets.controlTile(
-                context,
-                "⚡",
-                "Threads",
-                SettingsStats.concurrency().toString(),
-                SettingsTheme.ORANGE
-            )
+            LinearLayout(context).apply {
+
+                orientation = LinearLayout.HORIZONTAL
+
+                addView(
+                    tile(
+                        "☁",
+                        "Cloudflare",
+                        SettingsStats.cookieCount().toString(),
+                        SettingsTheme.GREEN
+                    )
+                )
+
+                addView(
+                    tile(
+                        "🔑",
+                        "Tokens",
+                        SettingsStats.tokenCount().toString(),
+                        SettingsTheme.PURPLE
+                    )
+                )
+            }
         )
     }
 }
-
     // Stats
     // --------------------------------------------------------
 
