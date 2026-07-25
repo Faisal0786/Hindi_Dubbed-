@@ -11,8 +11,21 @@ internal object SettingsBottomSheets {
     }
 
     fun showThreads(context: Context) {
-        Toast.makeText(context, "Threads Selector (Coming Soon)", Toast.LENGTH_SHORT).show()
-    }
+    val values = (1..20).map { it.toString() }.toTypedArray()
+    var selected = (Settings.getConcurrency() - 1).coerceIn(0, 19)
+
+    android.app.AlertDialog.Builder(context)
+        .setTitle("Concurrent Threads")
+        .setSingleChoiceItems(values, selected) { _, which ->
+            selected = which
+        }
+        .setPositiveButton("Save") { dialog, _ ->
+            Settings.setConcurrency(selected + 1)
+            dialog.dismiss()
+        }
+        .setNegativeButton("Cancel", null)
+        .show()
+}
 
     fun showProviders(context: Context) {
         Toast.makeText(context, "Providers Manager (Coming Soon)", Toast.LENGTH_SHORT).show()
