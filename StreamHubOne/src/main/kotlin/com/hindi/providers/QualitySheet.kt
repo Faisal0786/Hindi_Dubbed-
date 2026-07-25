@@ -5,7 +5,10 @@ import android.content.Context
 
 internal object QualitySheet {
 
-    fun show(context: Context) {
+    fun show(
+    context: Context,
+    onSaved: (() -> Unit)? = null
+) {
 
         val items = arrayOf(
             "Auto",
@@ -22,11 +25,13 @@ internal object QualitySheet {
             .setSingleChoiceItems(items, selected) { _, which ->
                 selected = which
             }
-            .setPositiveButton("Save") { _, _ ->
-                Settings.setQualityMode(
-                    Settings.QualityMode.values()[selected]
-                )
-            }
+            ..setPositiveButton("Save") { dialog, _ ->
+    Settings.setQualityMode(
+        Settings.QualityMode.values()[selected]
+    )
+    onSaved?.invoke()
+    dialog.dismiss()
+}
             .setNegativeButton("Cancel", null)
             .show()
     }
