@@ -15,12 +15,22 @@ data class MalSyncData(
     val animepaheTitle: String?,
 )
 
+
+
 /** * Defines a SourceProvider and its execution logic for Standard, Anime, and MALSync data.
  * The `CineStreamExtractors.` receiver allows direct access to internal scraping functions.
  */
+
+
+enum class ProviderCategory {
+    DEFAULT,
+    HINDI
+}
+
 data class SourceProviderDef(
     val key: String,
     val displayName: String,
+val category: ProviderCategory = ProviderCategory.DEFAULT,
     val isTorrent: Boolean = false,
     val executeStandard: (suspend SourceProviders.(res: AllLoadLinksData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null,
     val executeAnime: (suspend SourceProviders.(res: AllLoadLinksData, subCb: (SubtitleFile) -> Unit, cb: (ExtractorLink) -> Unit) -> Unit)? = null,
@@ -172,6 +182,7 @@ object SourceRegistry {
         ),
         SourceProviderDef(
             key = "p_vegamovies", displayName = "VegaMovies",
+category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (!res.isBollywood) invokeVegamovies("VegaMovies", res.imdbId, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeVegamovies("VegaMovies", res.imdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
@@ -194,6 +205,7 @@ object SourceRegistry {
         ),
         SourceProviderDef(
             key = "p_moviesmod", displayName = "Moviesmod",
+category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (!res.isBollywood) invokeMoviesmod(res.imdbId, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeMoviesmod(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
