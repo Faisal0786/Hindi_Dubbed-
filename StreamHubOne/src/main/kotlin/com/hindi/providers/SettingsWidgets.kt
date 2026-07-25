@@ -436,4 +436,17 @@ fun controlTile(
         }
     }
 }
+fun glassCard(context: Context): LinearLayout {
+
+    return cardContainer(context).apply {
+
+        background = glassBackground(
+            fill = SettingsTheme.BG_CARD,
+            stroke = SettingsTheme.CARD_BORDER,
+            radius = 24f
+        )
+
+        elevation = 10f
+    }
+}
 }
