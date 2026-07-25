@@ -28,7 +28,7 @@ private lateinit var cookieChip: TextView
 
 card.addView(buildHero(context, card))
 card.addView(SettingsWidgets.vSpacer(context, 16))
-parent.addView(buildQuickControls(context, parent))
+card.addView(buildQuickControls(context, card))
 
 SettingsWidgets.fadeInSlide(card)
 
@@ -340,7 +340,7 @@ private fun chipMargin(context: Context): LinearLayout.LayoutParams {
     )
 
     parent.addView(
-        buildQuickControls(context)
-    )
+    buildQuickControls(context, parent)
+)
 }
 }
