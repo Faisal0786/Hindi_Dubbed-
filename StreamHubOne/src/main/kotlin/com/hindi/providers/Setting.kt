@@ -11,6 +11,7 @@ object Settings {
     // ── Global keys ──────────────────────────────────────────
     const val CONCURRENCY_KEY          = "ScrapeConcurrency"
     const val DOWNLOAD_ENABLE          = "DownloadEnable"
+const val HINDI_PROVIDERS_ONLY = "HindiProvidersOnly"
     const val PROVIDER_CINESTREAM      = "ProviderCineStream"
     const val PROVIDER_SIMKL           = "ProviderSimkl"
     const val PROVIDER_TMDB            = "ProviderTmdb"
@@ -32,6 +33,9 @@ object Settings {
 
     val activeProviderOrder: List<String>
         get() = getOrder().filter { enabled(it) }
+
+fun onlyHindiProviders(): Boolean =
+    getKey(HINDI_PROVIDERS_ONLY) ?: false
 
     fun cloudflareBypassEnabled(): Boolean = getKey<Boolean>(CF_BYPASS_ENABLED) ?: false
 
