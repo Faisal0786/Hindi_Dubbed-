@@ -69,6 +69,10 @@ fun setQualityMode(mode: QualityMode) {
     // ── Configuration Getters ────────────────────────────────
     fun getConcurrency(): Int = getKey<Int>(CONCURRENCY_KEY) ?: 10
 
+fun setConcurrency(value: Int) {
+    setKey(CONCURRENCY_KEY, value.coerceIn(1, 20))
+}
+
     val allowDownloadLinks: Boolean
         get() = getKey<Boolean>(DOWNLOAD_ENABLE) ?: false
 
