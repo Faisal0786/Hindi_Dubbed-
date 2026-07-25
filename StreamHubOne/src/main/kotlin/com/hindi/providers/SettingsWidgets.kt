@@ -290,4 +290,150 @@ fun statusChip(
 
     clipToOutline = true
 }
+
+
+fun pressAnimation(view: View) {
+    view.animate()
+        .scaleX(0.96f)
+        .scaleY(0.96f)
+        .setDuration(70)
+        .withEndAction {
+            view.animate()
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(120)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
+        .start()
+}
+
+fun glassBackground(
+    fill: Int = SettingsTheme.BG_CARD,
+    stroke: Int = SettingsTheme.CARD_BORDER,
+    radius: Float = SettingsTheme.RADIUS_CARD.toFloat()
+): GradientDrawable {
+
+    return GradientDrawable().apply {
+        cornerRadius = radius
+        setColor(fill)
+        setStroke(2, stroke)
+    }
+}
+
+fun heroChip(
+    context: Context,
+    icon: String,
+    text: String,
+    accent: Int,
+    onClick: (() -> Unit)? = null
+): TextView {
+
+    return TextView(context).apply {
+
+        this.text = "$icon  $text"
+
+        textSize = 12f
+
+        gravity = Gravity.CENTER
+
+        setTypeface(null, Typeface.BOLD)
+
+        setTextColor(SettingsTheme.TEXT_PRIMARY)
+
+        setPadding(
+            14.dp(context),
+            10.dp(context),
+            14.dp(context),
+            10.dp(context)
+        )
+
+        background = glassBackground(
+    fill = SettingsTheme.BG_SECONDARY,
+    stroke = accent,
+    radius = 999f
+)
+
+        if (onClick != null) {
+            isClickable = true
+            isFocusable = true
+
+            setOnClickListener {
+                pressAnimation(this)
+                onClick()
+            }
+        }
+    }
+}
+
+fun controlTile(
+    context: Context,
+    icon: String,
+    title: String,
+    value: String,
+    accent: Int,
+    onClick: (() -> Unit)? = null
+): LinearLayout {
+
+    return LinearLayout(context).apply {
+
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+
+        layoutParams = LinearLayout.LayoutParams(
+            0,
+            112.dp(context),
+            1f
+        ).apply {
+            marginStart = 6.dp(context)
+            marginEnd = 6.dp(context)
+        }
+
+        setPadding(
+            16.dp(context),
+            14.dp(context),
+            16.dp(context),
+            14.dp(context)
+        )
+
+        background = glassBackground()
+
+        val iconView = TextView(context).apply {
+            text = icon
+            textSize = 22f
+            gravity = Gravity.CENTER
+        }
+
+        val titleView = TextView(context).apply {
+            text = title
+            textSize = 11f
+            gravity = Gravity.CENTER
+            setTextColor(SettingsTheme.TEXT_SECONDARY)
+            setPadding(0, 6.dp(context), 0, 0)
+        }
+
+        val valueView = TextView(context).apply {
+            text = value
+            textSize = 18f
+            gravity = Gravity.CENTER
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(accent)
+            setPadding(0, 2.dp(context), 0, 0)
+        }
+
+        addView(iconView)
+        addView(titleView)
+        addView(valueView)
+
+        if (onClick != null) {
+            isClickable = true
+            isFocusable = true
+
+            setOnClickListener {
+                pressAnimation(this)
+                onClick()
+            }
+        }
+    }
+}
 }
