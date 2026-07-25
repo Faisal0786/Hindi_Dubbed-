@@ -107,7 +107,7 @@ private fun buildHero(context: Context): LinearLayout {
                 if (Settings.onlyHindiProviders()) "Hindi ON" else "Hindi OFF",
                 SettingsTheme.ORANGE
             ) {
-                // TODO
+                SettingsBottomSheets.showHindi(context)
             }.apply {
                 layoutParams = chipMargin(context)
             }
