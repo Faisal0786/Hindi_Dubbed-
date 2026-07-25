@@ -78,6 +78,10 @@ fun setQualityMode(mode: QualityMode) {
 fun onlyHindiProviders(): Boolean =
     getKey(HINDI_PROVIDERS_ONLY) ?: false
 
+fun setHindiProvidersOnly(enabled: Boolean) {
+    setKey(HINDI_PROVIDERS_ONLY, enabled)
+}
+
 fun only4K() = getKey<Boolean>(ONLY_4K) ?: true
 
 fun only1080p() = getKey<Boolean>(ONLY_1080P) ?: true
