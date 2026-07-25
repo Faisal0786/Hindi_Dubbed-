@@ -53,13 +53,33 @@ internal object SettingsDialog {
 
         // Scraping settings card
         layout.addView(buildCollapsibleCard(context, "⚙️  Scraping Settings",
-            accentA = Color.parseColor("#06B6D4"), accentB = Color.parseColor("#0891B2")) {
-            addView(buildToggleRow(context, "Download Only Links",
-                "Only great for downloading (Not for Streaming)",
-                Settings.DOWNLOAD_ENABLE, false, pending))
-            addView(SettingsWidgets.divider(context))
-            addView(buildConcurrencyRow(context, pending))
-        })
+    accentA = Color.parseColor("#06B6D4"),
+    accentB = Color.parseColor("#0891B2")
+) {
+    addView(buildToggleRow(
+        context,
+        "Download Only Links",
+        "Only great for downloading (Not for Streaming)",
+        Settings.DOWNLOAD_ENABLE,
+        false,
+        pending
+    ))
+
+    addView(SettingsWidgets.divider(context))
+
+    addView(buildToggleRow(
+        context,
+        "🇮🇳 Hindi Providers Only",
+        "Only invoke providers marked as Hindi",
+        Settings.HINDI_PROVIDERS_ONLY,
+        false,
+        pending
+    ))
+
+    addView(SettingsWidgets.divider(context))
+
+    addView(buildConcurrencyRow(context, pending))
+})
 
         layout.addView(buildCloudflareBypassCard(context, pending))
 
