@@ -32,6 +32,40 @@ const val ONLY_1080P = "Only1080p"
 const val ONLY_720P = "Only720p"
 const val ONLY_480P = "Only480p"
 
+
+enum class QualityMode {
+    AUTO,
+    Q4K,
+    Q1080,
+    Q720,
+    Q480
+}
+
+fun getQualityMode(): QualityMode {
+    return when {
+        only4K() -> QualityMode.Q4K
+        only1080p() -> QualityMode.Q1080
+        only720p() -> QualityMode.Q720
+        only480p() -> QualityMode.Q480
+        else -> QualityMode.AUTO
+    }
+}
+
+fun setQualityMode(mode: QualityMode) {
+    setKey(ONLY_4K, false)
+    setKey(ONLY_1080P, false)
+    setKey(ONLY_720P, false)
+    setKey(ONLY_480P, false)
+
+    when (mode) {
+        QualityMode.AUTO -> Unit
+        QualityMode.Q4K -> setKey(ONLY_4K, true)
+        QualityMode.Q1080 -> setKey(ONLY_1080P, true)
+        QualityMode.Q720 -> setKey(ONLY_720P, true)
+        QualityMode.Q480 -> setKey(ONLY_480P, true)
+    }
+}
+
     // ── Configuration Getters ────────────────────────────────
     fun getConcurrency(): Int = getKey<Int>(CONCURRENCY_KEY) ?: 10
 
