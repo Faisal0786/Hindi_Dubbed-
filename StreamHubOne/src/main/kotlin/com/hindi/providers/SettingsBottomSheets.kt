@@ -8,9 +8,12 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 
 internal object SettingsBottomSheets {
 
-    fun showQuality(context: Context) {
-        QualitySheet.show(context)
-    }
+    fun showQuality(
+    context: Context,
+    onSaved: (() -> Unit)? = null
+) {
+    QualitySheet.show(context, onSaved)
+}
 
 fun showHindi(
     context: Context,
