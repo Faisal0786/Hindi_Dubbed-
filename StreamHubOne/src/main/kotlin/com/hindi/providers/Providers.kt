@@ -53,8 +53,11 @@ object SourceProviders {
     ) {
         val stremioMap = getDynamicStremioMap(res.imdbId, res.season, res.episode, subtitleCallback, callback)
 
+val providers = SourceRegistry.builtInProviders.filter {
+    it.category == ProviderCategory.HINDI
+}
         val executionList = Settings.activeProviderOrder.mapNotNull { key ->
-            SourceRegistry.builtInProviders.find { it.key == key }?.executeStandard?.let { action ->
+            providers.find { it.key == key }?.executeStandard?.let { action ->
                 suspend { this.action(res, subtitleCallback, callback) }
             } ?: stremioMap[key]
         }
