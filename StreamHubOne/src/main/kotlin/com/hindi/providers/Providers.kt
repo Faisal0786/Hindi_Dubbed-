@@ -77,11 +77,20 @@ val providers =
     ) {
         val stremioMap = getDynamicStremioMap(res.imdbId, res.imdbSeason, res.imdbEpisode, subtitleCallback, callback)
 
-        val executionList = Settings.activeProviderOrder.mapNotNull { key ->
-            SourceRegistry.builtInProviders.find { it.key == key }?.executeAnime?.let { action ->
-                suspend { this.action(res, subtitleCallback, callback) }
-            } ?: stremioMap[key]
+        val providers =
+    if (Settings.onlyHindiProviders()) {
+        SourceRegistry.builtInProviders.filter {
+            it.category == ProviderCategory.HINDI
         }
+    } else {
+        SourceRegistry.builtInProviders
+    }
+
+val executionList = Settings.activeProviderOrder.mapNotNull { key ->
+    providers.find { it.key == key }?.executeAnime?.let { action ->
+        suspend { this.action(res, subtitleCallback, callback) }
+    } ?: stremioMap[key]
+}
 
         runLimitedAsync(concurrency = Settings.getConcurrency(), *executionList.toTypedArray())
     }
