@@ -7,7 +7,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 internal object SettingsBottomSheets {
 
     fun showQuality(context: Context) {
-        Toast.makeText(context, "Quality Selector (Coming Soon)", Toast.LENGTH_SHORT).show()
+        QualitySheet.show(context)
     }
 
     fun showThreads(context: Context) {
