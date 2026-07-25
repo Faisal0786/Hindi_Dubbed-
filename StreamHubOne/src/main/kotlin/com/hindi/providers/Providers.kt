@@ -38,6 +38,27 @@ import com.hindi.providers.Settings
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+
+private fun allowQuality(link: ExtractorLink): Boolean {
+    val q = link.quality
+
+    
+    if (
+        !Settings.only4K() &&
+        !Settings.only1080p() &&
+        !Settings.only720p() &&
+        !Settings.only480p()
+    ) return true
+
+    return when (q) {
+        2160, 1440 -> Settings.only4K()
+        1080 -> Settings.only1080p()
+        720 -> Settings.only720p()
+        480, 360 -> Settings.only480p()
+        else -> true
+    }
+}
+
 object SourceProviders {
 
     private const val CF_LOG_TAG = "CineStreamCloudflare"
@@ -63,7 +84,16 @@ val providers =
     }
         val executionList = Settings.activeProviderOrder.mapNotNull { key ->
             providers.find { it.key == key }?.executeStandard?.let { action ->
-                suspend { this.action(res, subtitleCallback, callback) }
+                suspend {
+    this.action(
+        res,
+        subtitleCallback
+    ) { link ->
+        if (allowQuality(link)) {
+            callback(link)
+        }
+    }
+}
             } ?: stremioMap[key]
         }
 
@@ -88,7 +118,16 @@ val providers =
 
 val executionList = Settings.activeProviderOrder.mapNotNull { key ->
     providers.find { it.key == key }?.executeAnime?.let { action ->
-        suspend { this.action(res, subtitleCallback, callback) }
+        suspend {
+    this.action(
+        res,
+        subtitleCallback
+    ) { link ->
+        if (allowQuality(link)) {
+            callback(link)
+        }
+    }
+}
     } ?: stremioMap[key]
 }
 
@@ -126,7 +165,16 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
 
         val executionList = Settings.activeProviderOrder.mapNotNull { key ->
             SourceRegistry.builtInProviders.find { it.key == key }?.executeMalSync?.let { action ->
-                suspend { this.action(malData, subtitleCallback, callback) }
+                suspend {
+    this.action(
+        malData,
+        subtitleCallback
+    ) { link ->
+        if (allowQuality(link)) {
+            callback(link)
+        }
+    }
+}
             }
         }
 
