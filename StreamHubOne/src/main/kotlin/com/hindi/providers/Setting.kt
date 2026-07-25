@@ -25,6 +25,13 @@ const val HINDI_PROVIDERS_ONLY = "HindiProvidersOnly"
     private const val SEEN_PROVIDERS_KEY = "seen_providers"
     private const val PROVIDER_ORDER_KEY = "provider_order"
 
+//quality preference keys
+
+const val ONLY_4K = "Only4K"
+const val ONLY_1080P = "Only1080p"
+const val ONLY_720P = "Only720p"
+const val ONLY_480P = "Only480p"
+
     // ── Configuration Getters ────────────────────────────────
     fun getConcurrency(): Int = getKey<Int>(CONCURRENCY_KEY) ?: 10
 
@@ -36,6 +43,14 @@ const val HINDI_PROVIDERS_ONLY = "HindiProvidersOnly"
 
 fun onlyHindiProviders(): Boolean =
     getKey(HINDI_PROVIDERS_ONLY) ?: false
+
+fun only4K() = getKey<Boolean>(ONLY_4K) ?: true
+
+fun only1080p() = getKey<Boolean>(ONLY_1080P) ?: true
+
+fun only720p() = getKey<Boolean>(ONLY_720P) ?: true
+
+fun only480p() = getKey<Boolean>(ONLY_480P) ?: true
 
     fun cloudflareBypassEnabled(): Boolean = getKey<Boolean>(CF_BYPASS_ENABLED) ?: false
 
