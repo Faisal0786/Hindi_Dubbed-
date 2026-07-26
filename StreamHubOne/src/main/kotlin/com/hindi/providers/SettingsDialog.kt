@@ -223,6 +223,7 @@ addView(buildConcurrencyRow(context, pending))
         val card  = SettingsWidgets.cardContainer(context)
 
         var expanded = startExpanded
+lateinit var chevron: TextView
         val content  = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, 8.dp(context))
@@ -230,7 +231,7 @@ addView(buildConcurrencyRow(context, pending))
         }
         content.block()
 
-        val chevron = TextView(context).apply {
+        chevron = TextView(context).apply {
             text = if (expanded) "▲" else "▼"
             textSize = 14f
             setTypeface(null, Typeface.BOLD)
