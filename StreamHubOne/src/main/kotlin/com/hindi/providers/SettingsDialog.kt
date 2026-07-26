@@ -1,4 +1,4 @@
-Package com.hindi.providers
+package com.hindi.providers
 
 import android.app.AlertDialog
 import android.content.ClipData
