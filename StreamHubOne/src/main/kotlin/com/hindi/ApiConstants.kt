@@ -11,6 +11,9 @@ object ApiConstants {
 
     const val ANILIST_API =
         "https://graphql.anilist.co"
+  
+    const val ANIZIP_API = 
+         "https://api.ani.zip"
 
     const val KITSU_API =
         "https://anime-kitsu.strem.fun"
