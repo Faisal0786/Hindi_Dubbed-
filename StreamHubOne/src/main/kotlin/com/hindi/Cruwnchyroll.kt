@@ -515,12 +515,15 @@ private suspend fun buildSeriesResponse(
     sourceUrl: String
 ): LoadResponse {
 
+    val aniZip = fetchAniZip(metadata.anilistId)
+
     val episodes =
     if (tmdbId != null) {
 
         val tmdbEpisodes = loadTmdbEpisodes(
             tmdbId,
-            metadata
+            metadata,
+            aniZip
         )
 
         if (tmdbEpisodes.isNotEmpty()) {
@@ -529,7 +532,8 @@ private suspend fun buildSeriesResponse(
             buildAniListEpisodes(
                 ani,
                 metadata,
-                tmdbId
+                tmdbId,
+                aniZip
             )
         }
 
@@ -538,7 +542,8 @@ private suspend fun buildSeriesResponse(
         buildAniListEpisodes(
             ani,
             metadata,
-            null
+            null,
+            aniZip
         )
 
     }
@@ -637,7 +642,8 @@ actors =
 
 private suspend fun loadTmdbEpisodes(
     tmdbId: Int,
-    metadata: AnimeMetadataAggregator.AggregatedMetadata
+    metadata: AnimeMetadataAggregator.AggregatedMetadata,
+    aniZip: AniZipResponse?
 ): List<Episode> {
 
     val series = app.get(
@@ -724,7 +730,8 @@ addDate(
     private fun buildAniListEpisodes(
     ani: AniListMedia,
     metadata: AnimeMetadataAggregator.AggregatedMetadata,
-    tmdbId: Int?
+    tmdbId: Int?,
+    aniZip: AniZipResponse?
 ): List<Episode> {
 
     val totalEpisodes = ani.episodes ?: return emptyList()
