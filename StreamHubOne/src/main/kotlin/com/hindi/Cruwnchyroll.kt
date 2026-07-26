@@ -667,6 +667,12 @@ private suspend fun loadTmdbEpisodes(
 
         season.episodes.forEach { episode ->
 
+val zipEpisode =
+    aniZip?.episodes?.get(
+        episode.episode_number.toString()
+    )
+
+
             episodes.add(
                 newEpisode(
     LoadLinksData(
@@ -699,24 +705,33 @@ private suspend fun loadTmdbEpisodes(
                         episode.episode_number
 
                     this.name =
-                        episode.name
+    episode.name
+        ?.takeIf { it.isNotBlank() }
+        ?: zipEpisode?.title?.get("en")
+        ?: zipEpisode?.title?.get("romaji")
+        ?: "Episode ${episode.episode_number}"
 
                     this.description =
-                        episode.overview
+    episode.overview
+        ?.takeIf { it.isNotBlank() }
+        ?: zipEpisode?.overview
 
                     this.posterUrl =
-                        episode.still_path?.let {
-                            "${ApiConstants.TMDB_BACKDROP}$it"
-                        }
+    episode.still_path?.let {
+        "${ApiConstants.TMDB_BACKDROP}$it"
+    }
+        ?: zipEpisode?.image
 
                     this.score =
     Score.from10(
         episode.vote_average
+            ?: zipEpisode?.rating?.toDoubleOrNull()
     )
+
 
 this.runTime =
     episode.runtime
-
+        ?: zipEpisode?.runtime
 addDate(
     episode.air_date
 )
