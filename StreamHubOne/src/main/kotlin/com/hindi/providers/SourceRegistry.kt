@@ -44,7 +44,7 @@ object SourceRegistry {
         
         // ── Direct HTTP SourceProviders ─────────────────────────────────
         SourceProviderDef(
-            key = "p_moviebox", displayName = "Moviebox",
+            key = "p_moviebox", displayName = "Moviebox",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeMoviebox(res.title, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeMoviebox(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
@@ -63,7 +63,7 @@ object SourceRegistry {
     }
 ),
         SourceProviderDef(
-            key = "p_allmovieland", displayName = "Allmovieland",
+            key = "p_allmovieland", displayName = "Allmovieland",category = ProviderCategory.HINDI,
             executeStandard = { res, _, cb -> invokeAllmovieland(res.imdbId, res.season, res.episode, cb) },
         ),
         SourceProviderDef(
@@ -82,7 +82,7 @@ object SourceRegistry {
             executeAnime = { res, subCb, cb -> invokeCinemacity(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_movieblast", displayName = "MovieBlast",
+            key = "p_movieblast", displayName = "MovieBlast",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeMovieBlast(res.title, res.season, res.episode, subCb, cb) },
         ),
         
@@ -99,7 +99,7 @@ object SourceRegistry {
             executeStandard = { res, _, cb -> invokePlaysrc(res.tmdbId, res.season, res.episode, cb) }
         ),
         SourceProviderDef(
-            key = "p_fshare", displayName = "Fshare",
+            key = "p_fshare", displayName = "Fshare",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (res.season == null) invokeFshare(res.title, res.imdbId, subCb, cb) }
         ),
         SourceProviderDef(
@@ -121,7 +121,7 @@ object SourceRegistry {
             executeAnime = { res, subCb, cb -> invokePlayImdb(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_ctgmovies", displayName = "CtgMovies",
+            key = "p_ctgmovies", displayName = "CtgMovies",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeCtgMovies(res.title, res.season, res.episode, "normal" ,subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeCtgMovies(res.imdbTitle, res.imdbSeason, res.imdbEpisode, "anime" ,subCb, cb) }
         ),
@@ -130,7 +130,7 @@ object SourceRegistry {
             executeStandard = { res, subCb, cb -> invokeVidzee(res.tmdbId, res.season, res.episode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_peachify", displayName = "Peachify",
+            key = "p_peachify", displayName = "Peachify",category = ProviderCategory.HINDI,
             executeStandard = { res, _, cb -> invokePeachify(res.tmdbId, res.season, res.episode, cb) }
         ),
         SourceProviderDef(
@@ -156,7 +156,7 @@ object SourceRegistry {
             executeAnime = { res, subCb, cb -> invokeReanime(res.anilistId, res.episode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_zinkmovies", displayName = "Zinkmovies",
+            key = "p_zinkmovies", displayName = "Zinkmovies",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeZinkmovies(res.title, res.year, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeZinkmovies(res.imdbTitle, res.imdbYear, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
@@ -176,7 +176,7 @@ object SourceRegistry {
         //     executeAnime = { res, subCb, cb -> invokeNetmirror("Hotstar", "hs", res.imdbTitle, res.imdbYear, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         // ),
         SourceProviderDef(
-            key = "p_bollywood", displayName = "Gramcinema",
+            key = "p_bollywood", displayName = "Gramcinema",category = ProviderCategory.HINDI,
             executeStandard = { res, _, cb -> invokeBollywood(res.title, res.year, res.season, res.episode, cb) },
             executeAnime = { res, _, cb -> invokeBollywood(res.imdbTitle, res.imdbYear, res.imdbSeason, res.imdbEpisode, cb) }
         ),
@@ -188,15 +188,16 @@ category = ProviderCategory.HINDI,
         ),
         SourceProviderDef(
             key = "p_rogmovies", displayName = "RogMovies",
+category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (res.isBollywood) invokeVegamovies("RogMovies", res.imdbId, res.season, res.episode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_bollyflix", displayName = "Bollyflix",
+            key = "p_bollyflix", displayName = "Bollyflix",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeBollyflix(res.imdbId, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeBollyflix(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_topmovies", displayName = "TopMovies",
+            key = "p_topmovies", displayName = "TopMovies",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (res.isBollywood) invokeTopMovies(res.imdbId, res.season, res.episode, subCb, cb) }
         ),
         SourceProviderDef(
@@ -210,7 +211,7 @@ category = ProviderCategory.HINDI,
             executeAnime = { res, subCb, cb -> invokeMoviesmod(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_movies4u", displayName = "Movies4u",
+            key = "p_movies4u", displayName = "Movies4u",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeMovies4u(res.imdbId, res.title, res.year, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeMovies4u(res.imdbId, res.imdbTitle, res.imdbYear, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
@@ -220,22 +221,22 @@ category = ProviderCategory.HINDI,
             executeAnime = { res, subCb, cb -> invokeDudefilms(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_uhdmovies", displayName = "UHDMovies",
+            key = "p_uhdmovies", displayName = "UHDMovies",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (!res.isBollywood) invokeUhdmovies(res.title, res.year, res.season, res.episode, cb, subCb) },
             executeAnime = { res, subCb, cb -> invokeUhdmovies(res.imdbTitle, res.imdbYear, res.imdbSeason, res.imdbEpisode, cb, subCb) }
         ),
         SourceProviderDef(
-            key = "p_moviesdrive", displayName = "MoviesDrive",
+            key = "p_moviesdrive", displayName = "MoviesDrive",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeMoviesdrive(res.title, res.imdbId, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeMoviesdrive(res.imdbTitle, res.imdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_hindmoviez", displayName = "Hindmoviez",
+            key = "p_hindmoviez", displayName = "Hindmoviez",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (!res.isBollywood) invokeHindmoviez(res.imdbId, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeHindmoviez(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_4khdhub", displayName = "4KHDHub",
+            key = "p_4khdhub", displayName = "4KHDHub",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (!res.isBollywood) invoke4khdhub(res.title, res.year, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invoke4khdhub(res.imdbTitle, res.imdbYear, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
@@ -257,7 +258,7 @@ category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeLevidia(res.title, res.year, res.season, res.episode, subCb, cb) },
         ),
         SourceProviderDef(
-            key = "p_hdghartv", displayName = "HdGharTv",
+            key = "p_hdghartv", displayName = "HdGharTv",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if(!res.isAnime) invokeHdGharTv(res.title, res.tmdbId, res.season, res.episode, subCb, cb) },
         ),
         SourceProviderDef(
@@ -266,16 +267,16 @@ category = ProviderCategory.HINDI,
             executeAnime = { res, _, cb -> invokeDahmerMovies(res.imdbTitle, res.imdbYear, res.imdbSeason, res.imdbEpisode, cb) }
         ),
         SourceProviderDef(
-            key = "p_animesalt", displayName = "Animesalt",
+            key = "p_animesalt", displayName = "Animesalt",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (res.isAnime || res.isCartoon) invokeAnimesalt(res.title, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeAnimesalt(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_m4ufree", displayName = "M4ufree",
+            key = "p_m4ufree", displayName = "M4ufree",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeM4ufree(res.title, res.year, res.season, res.episode, subCb, cb) },
         ),
         SourceProviderDef(
-            key = "p_multimovies", displayName = "Multimovies",
+            key = "p_multimovies", displayName = "Multimovies",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeMultimovies(res.title, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeMultimovies(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
@@ -292,11 +293,11 @@ category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (!res.isAnime) invokeAsiaflix(res.title, res.season, res.episode, res.airedYear ?: res.year, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_skymovies", displayName = "SkyMovies",
+            key = "p_skymovies", displayName = "SkyMovies",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (!res.isAnime) invokeSkymovies(res.title, res.airedYear ?: res.year, res.episode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_hdmovie2", displayName = "HDMovie2",
+            key = "p_hdmovie2", displayName = "HDMovie2",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (!res.isAnime) invokeHdmovie2(res.title, res.airedYear ?: res.year, res.episode, subCb, cb) }
         ),
         SourceProviderDef(
@@ -310,11 +311,11 @@ category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (res.isAsian) invokeKisskh(res.title, res.year, res.season, res.episode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_onetouchtv", displayName = "Onetouchtv",
+            key = "p_onetouchtv", displayName = "Onetouchtv",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeOnetouchtv(res.title, res.airedYear ?: res.year, res.season, res.episode, subCb, cb) }
         ),
         SourceProviderDef(
-            key = "p_toonstream", displayName = "Toonstream",
+            key = "p_toonstream", displayName = "Toonstream",category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (res.isAnime || res.isCartoon) invokeToonstream(res.title, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeToonstream(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
