@@ -51,6 +51,13 @@ internal object SettingsDialog {
             )
         })
 
+data class CollapsibleSection(
+    val view: View,
+    val toggle: () -> Unit,
+    val expand: () -> Unit,
+    val collapse: () -> Unit,
+    val isExpanded: () -> Boolean
+)
         // Scraping settings card
         layout.addView(buildCollapsibleCard(context, "⚙️  Scraping Settings",
     accentA = Color.parseColor("#06B6D4"),
@@ -211,7 +218,7 @@ addView(buildConcurrencyRow(context, pending))
         accentA: Int = SettingsTheme.ACCENT_START,
         accentB: Int = SettingsTheme.ACCENT_END,
         block: LinearLayout.() -> Unit
-    ): View {
+    ): CollapsibleSection {
         val theme = SettingsTheme
         val card  = SettingsWidgets.cardContainer(context)
 
