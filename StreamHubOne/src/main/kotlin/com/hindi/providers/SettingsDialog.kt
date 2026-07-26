@@ -1,4 +1,4 @@
-package com.hindi.providers
+Package com.hindi.providers
 
 import android.app.AlertDialog
 import android.content.ClipData
@@ -41,9 +41,9 @@ internal object SettingsDialog {
         }
 
         layout.addView(buildHeroBanner(context))
-        
+
         layout.addView(SettingsDashboard.buildDashboard(context))
-        
+
         layout.addView(View(context).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -51,94 +51,88 @@ internal object SettingsDialog {
             )
         })
 
-data class CollapsibleSection(
-    val view: View,
-    val toggle: () -> Unit,
-    val expand: () -> Unit,
-    val collapse: () -> Unit,
-    val isExpanded: () -> Boolean
-)
         // Scraping settings card
         layout.addView(buildCollapsibleCard(context, "⚙️  Scraping Settings",
-    accentA = Color.parseColor("#06B6D4"),
-    accentB = Color.parseColor("#0891B2")
-) {
-    addView(buildToggleRow(
-        context,
-        "Download Only Links",
-        "Only great for downloading (Not for Streaming)",
-        Settings.DOWNLOAD_ENABLE,
-        false,
-        pending
-    ))
+            accentA = Color.parseColor("#06B6D4"),
+            accentB = Color.parseColor("#0891B2")
+        ) {
+            addView(buildToggleRow(
+                context,
+                "Download Only Links",
+                "Only great for downloading (Not for Streaming)",
+                Settings.DOWNLOAD_ENABLE,
+                false,
+                pending
+            ))
 
-    addView(SettingsWidgets.divider(context))
+            addView(SettingsWidgets.divider(context))
 
-    addView(buildToggleRow(
-        context,
-        "🇮🇳 Hindi Providers Only",
-        "Only invoke providers marked as Hindi",
-        Settings.HINDI_PROVIDERS_ONLY,
-        false,
-        pending
-    ))
+            addView(buildToggleRow(
+                context,
+                "🇮🇳 Hindi Providers Only",
+                "Only invoke providers marked as Hindi",
+                Settings.HINDI_PROVIDERS_ONLY,
+                false,
+                pending
+            ))
 
-    addView(SettingsWidgets.divider(context))
+            addView(SettingsWidgets.divider(context))
 
-addView(TextView(context).apply {
-    text = "🎥 Video Quality Preference"
-    textSize = 13f
-    setTypeface(null, Typeface.BOLD)
-    setTextColor(SettingsTheme.TEXT_PRIMARY)
-    setPadding(20.dp(context), 12.dp(context), 20.dp(context), 8.dp(context))
-})
+            addView(TextView(context).apply {
+                text = "🎥 Video Quality Preference"
+                textSize = 13f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(SettingsTheme.TEXT_PRIMARY)
+                setPadding(20.dp(context), 12.dp(context), 20.dp(context), 8.dp(context))
+            })
 
-addView(buildToggleRow(
-    context,
-    "4K",
-    "2160p + 1440p",
-    Settings.ONLY_4K,
-    true,
-    pending
-))
+            addView(buildToggleRow(
+                context,
+                "4K",
+                "2160p + 1440p",
+                Settings.ONLY_4K,
+                true,
+                pending
+            ))
 
-addView(SettingsWidgets.divider(context))
+            addView(SettingsWidgets.divider(context))
 
-addView(buildToggleRow(
-    context,
-    "1080p",
-    "1080p",
-    Settings.ONLY_1080P,
-    true,
-    pending
-))
+            addView(buildToggleRow(
+                context,
+                "1080p",
+                "1080p",
+                Settings.ONLY_1080P,
+                true,
+                pending
+            ))
 
-addView(SettingsWidgets.divider(context))
+            addView(SettingsWidgets.divider(context))
 
-addView(buildToggleRow(
-    context,
-    "720p",
-    "720p",
-    Settings.ONLY_720P,
-    true,
-    pending
-))
+            addView(buildToggleRow(
+                context,
+                "720p",
+                "720p",
+                Settings.ONLY_720P,
+                true,
+                pending
+            ))
 
-addView(SettingsWidgets.divider(context))
+            addView(SettingsWidgets.divider(context))
 
-addView(buildToggleRow(
-    context,
-    "480p",
-    "480p + 360p",
-    Settings.ONLY_480P,
-    true,
-    pending
-))
+            addView(buildToggleRow(
+                context,
+                "480p",
+                "480p + 360p",
+                Settings.ONLY_480P,
+                true,
+                pending
+            ))
 
-addView(SettingsWidgets.divider(context))
+            addView(SettingsWidgets.divider(context))
 
-addView(buildConcurrencyRow(context, pending))
-})
+            addView(buildConcurrencyRow(context, pending))
+        })
+
         layout.addView(buildCloudflareBypassCard(context, pending))
 
         // API Tokens card (Febbox + Wyzie Subs)
@@ -150,13 +144,10 @@ addView(buildConcurrencyRow(context, pending))
         }
         layout.addView(buildCollapsibleCard(context, "📡  Active Catalogs",
             accentA = Color.parseColor("#10B981"), accentB = Color.parseColor("#059669")) {
-            addView(buildToggleRow(context, "CineStream", "Cinemeta catalog",
+            addView(buildToggleRow(context, "StreamHubOne", "StreamHub catalog",
                 Settings.PROVIDER_CINESTREAM, true, pending, onCatalogChanged))
             addView(SettingsWidgets.divider(context))
-            addView(buildToggleRow(context, "CineSimkl", "Simkl catalog",
-                Settings.PROVIDER_SIMKL, true, pending, onCatalogChanged))
-            addView(SettingsWidgets.divider(context))
-            addView(buildToggleRow(context, "CineTmdb", "TMDB catalog",
+            addView(buildToggleRow(context, "Crunchyroll", "Crunchyroll catalog",
                 Settings.PROVIDER_TMDB, true, pending, onCatalogChanged))
         })
 
@@ -211,14 +202,6 @@ addView(buildConcurrencyRow(context, pending))
     //  COLLAPSIBLE CARD TEMPLATE
     // =========================================================
 
-data class CollapsibleSection(
-    val view: View,
-    val toggle: () -> Unit,
-    val expand: () -> Unit,
-    val collapse: () -> Unit,
-    val isExpanded: () -> Boolean
-)
-
     fun buildCollapsibleCard(
         context: Context,
         title: String,
@@ -226,12 +209,11 @@ data class CollapsibleSection(
         accentA: Int = SettingsTheme.ACCENT_START,
         accentB: Int = SettingsTheme.ACCENT_END,
         block: LinearLayout.() -> Unit
-    ): CollapsibleSection {
+    ): View {
         val theme = SettingsTheme
         val card  = SettingsWidgets.cardContainer(context)
 
         var expanded = startExpanded
-lateinit var chevron: TextView
         val content  = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, 8.dp(context))
@@ -239,7 +221,7 @@ lateinit var chevron: TextView
         }
         content.block()
 
-        chevron = TextView(context).apply {
+        val chevron = TextView(context).apply {
             text = if (expanded) "▲" else "▼"
             textSize = 14f
             setTypeface(null, Typeface.BOLD)
@@ -264,16 +246,11 @@ lateinit var chevron: TextView
             })
             addView(chevron)
 
-            fun setExpanded(value: Boolean) {
-    if (expanded == value) return
-    expanded = value
-    chevron.text = if (expanded) "▲" else "▼"
-    SettingsWidgets.animateExpand(content, expanded)
-}
-
-setOnClickListener {
-    setExpanded(!expanded)
-}
+            setOnClickListener {
+                expanded = !expanded
+                chevron.text = if (expanded) "▲" else "▼"
+                SettingsWidgets.animateExpand(content, expanded)
+            }
         })
 
         card.addView(View(context).apply {
@@ -288,15 +265,8 @@ setOnClickListener {
         })
 
         card.addView(content)
-SettingsWidgets.fadeInSlide(card)
-
-return CollapsibleSection(
-    view = card,
-    toggle = { setExpanded(!expanded) },
-    expand = { setExpanded(true) },
-    collapse = { setExpanded(false) },
-    isExpanded = { expanded }
-)
+        SettingsWidgets.fadeInSlide(card)
+        return card
     }
 
     // =========================================================
@@ -1023,8 +993,7 @@ return CollapsibleSection(
         val CREDIT_BORDER = Color.parseColor("#1A3040")
 
         val contributors = listOf(
-            Triple("phisher98",     "For multi-source plugin inspiration", "github.com/phisher98"),
-            Triple("yogesh-hacker", "For providing reference",             "github.com/yogesh-hacker"),
+            Triple("sourabh kaperwen", "For providing reference and inspiration", ""),
         )
 
         val card = SettingsWidgets.cardContainer(context)
@@ -1075,8 +1044,12 @@ return CollapsibleSection(
                 addView(col)
                 addView(SettingsWidgets.pillBtn(context, "GitHub", CREDIT_ACCENT, CREDIT_BG, CREDIT_BORDER) {
                     try {
-                        context.startActivity(android.content.Intent(
-                            android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://$url")))
+                        if (url.isNotBlank()) {
+                            context.startActivity(android.content.Intent(
+                                android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://$url")))
+                        } else {
+                            Toast.makeText(context, "No URL provided", Toast.LENGTH_SHORT).show()
+                        }
                     } catch (_: Exception) {
                         Toast.makeText(context, url, Toast.LENGTH_SHORT).show()
                     }
