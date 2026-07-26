@@ -755,6 +755,8 @@ addDate(
 
     for (ep in 1..totalEpisodes) {
 
+        val zipEpisode = aniZip?.episodes?.get(ep.toString())
+
         episodes.add(
             newEpisode(
                 LoadLinksData(
@@ -785,19 +787,35 @@ addDate(
                 season = 1
                 episode = ep
 
-                name = "Episode $ep"
+                name =
+                    zipEpisode?.title?.get("en")
+                        ?: zipEpisode?.title?.get("romaji")
+                        ?: "Episode $ep"
+
+                description =
+                    zipEpisode?.overview
 
                 posterUrl =
-                    ani.coverImage?.extraLarge
+                    zipEpisode?.image
+                        ?: ani.coverImage?.extraLarge
                         ?: ani.coverImage?.large
                         ?: ani.coverImage?.medium
+
+                runTime =
+                    zipEpisode?.runtime
+
+                score =
+                    zipEpisode?.rating
+                        ?.toDoubleOrNull()
+                        ?.let { Score.from10(it) }
             }
         )
     }
 
     return episodes
 }
-    
+
+
 override suspend fun getMainPage(
     page: Int,
     request: MainPageRequest
