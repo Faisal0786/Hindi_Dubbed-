@@ -211,6 +211,14 @@ addView(buildConcurrencyRow(context, pending))
     //  COLLAPSIBLE CARD TEMPLATE
     // =========================================================
 
+data class CollapsibleSection(
+    val view: View,
+    val toggle: () -> Unit,
+    val expand: () -> Unit,
+    val collapse: () -> Unit,
+    val isExpanded: () -> Boolean
+)
+
     fun buildCollapsibleCard(
         context: Context,
         title: String,
