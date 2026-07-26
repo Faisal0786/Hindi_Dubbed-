@@ -256,10 +256,16 @@ lateinit var chevron: TextView
             })
             addView(chevron)
 
-            setOnClickListener {
-                expanded = !expanded; chevron.text = if (expanded) "▲" else "▼"
-                SettingsWidgets.animateExpand(content, expanded)
-            }
+            fun setExpanded(value: Boolean) {
+    if (expanded == value) return
+    expanded = value
+    chevron.text = if (expanded) "▲" else "▼"
+    SettingsWidgets.animateExpand(content, expanded)
+}
+
+setOnClickListener {
+    setExpanded(!expanded)
+}
         })
 
         card.addView(View(context).apply {
@@ -274,8 +280,15 @@ lateinit var chevron: TextView
         })
 
         card.addView(content)
-        SettingsWidgets.fadeInSlide(card)
-        return card
+SettingsWidgets.fadeInSlide(card)
+
+return CollapsibleSection(
+    view = card,
+    toggle = { setExpanded(!expanded) },
+    expand = { setExpanded(true) },
+    collapse = { setExpanded(false) },
+    isExpanded = { expanded }
+)
     }
 
     // =========================================================
