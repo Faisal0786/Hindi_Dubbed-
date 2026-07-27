@@ -305,12 +305,13 @@ override suspend fun load(url: String): LoadResponse? {
         ?: ani.title?.native
         ?: return null
 
-    val tmdbSearch = app.get(
+    val searchUrl =
     "${ApiConstants.TMDB_BASE}/search/multi" +
     "?api_key=${ApiConstants.TMDB_KEY}" +
     "&query=${URLEncoder.encode(title, "UTF-8")}"
-).parsed<TmdbMultiSearchResponse>()
 
+val tmdbSearch = app.get(searchUrl)
+    .parsed<TmdbMultiSearchResponse>()
 
 
    val tmdbResult = selectBestTmdbResult(
@@ -376,28 +377,39 @@ if (metadata == null) {
     append("AniList ID : ${ani.id}\n\n")
 
     append("TMDB Search Results:\n")
+append("Search URL:\n")
+append(searchUrl)
+append("\n\n")
+
+append("Original Query : $title\n")
+append("Encoded Query : ${URLEncoder.encode(title, "UTF-8")}\n")
+append("Results Count : ${tmdbSearch?.results?.size}\n\n")
 
     tmdbSearch?.results
-        ?.take(5)
-        ?.forEachIndexed { index, item ->
+    ?.forEachIndexed { index, item ->
 
-            append(
-                "${index + 1}. ${
-                    item.name
-                        ?: item.title
-                        ?: item.originalName
-                        ?: item.originalTitle
-                } | ${item.media_type} | id=${item.id}\n"
-            )
-        }
+        append(
+            """
+[$index]
+id=${item.id}
+media=${item.media_type}
+title=${item.title}
+name=${item.name}
+originalTitle=${item.originalTitle}
+originalName=${item.originalName}
+language=${item.originalLanguage}
+release=${item.release_date}
+air=${item.first_air_date}
+genres=${item.genreIds}
 
-    if (tmdbSearch?.results.isNullOrEmpty()) {
-        append("No TMDB results found\n")
+""".trimIndent()
+        )
+
+        append("\n--------------------------\n")
     }
 
-    append("\n========================\n\n")
-
-    append(ani.description ?: "")
+if (tmdbSearch?.results.isNullOrEmpty()) {
+    append("No TMDB results found\n")
 }
         tags =
             ani.genres
