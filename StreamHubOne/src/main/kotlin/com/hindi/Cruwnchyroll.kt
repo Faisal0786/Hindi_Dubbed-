@@ -367,8 +367,18 @@ if (metadata == null) {
         backgroundPosterUrl =
             ani.bannerImage
 
-        plot =
-            ani.description
+        plot = buildString {
+
+    append("===== METADATA NULL =====\n")
+    append("Ani ID : ${ani.id}\n")
+    append("Title : $title\n")
+    append("TMDB ID : $tmdbId\n")
+    append("Format : ${aniData.format}\n")
+    append("Episodes : ${ani.episodes}\n")
+    append("=========================\n\n")
+
+    append(ani.description ?: "")
+}
 
         tags =
             ani.genres
