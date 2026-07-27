@@ -411,6 +411,7 @@ genres=${item.genreIds}
 if (tmdbSearch?.results.isNullOrEmpty()) {
     append("No TMDB results found\n")
 }
+}
         tags =
             ani.genres
 
