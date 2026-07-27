@@ -368,21 +368,37 @@ if (metadata == null) {
             ani.bannerImage
 
         plot = buildString {
-append("English : ${ani.title?.english}\n")
-append("Romaji : ${ani.title?.romaji}\n")
-append("Native : ${ani.title?.native}\n")
 
     append("===== METADATA NULL =====\n")
-    append("Ani ID : ${ani.id}\n")
-    append("Title : $title\n")
-    append("TMDB ID : $tmdbId\n")
-    append("Format : ${aniData.format}\n")
-    append("Episodes : ${ani.episodes}\n")
-    append("=========================\n\n")
+    append("English : ${ani.title?.english}\n")
+    append("Romaji : ${ani.title?.romaji}\n")
+    append("Native : ${ani.title?.native}\n")
+    append("AniList ID : ${ani.id}\n\n")
+
+    append("TMDB Search Results:\n")
+
+    tmdbSearch?.results
+        ?.take(5)
+        ?.forEachIndexed { index, item ->
+
+            append(
+                "${index + 1}. ${
+                    item.name
+                        ?: item.title
+                        ?: item.originalName
+                        ?: item.originalTitle
+                } | ${item.media_type} | id=${item.id}\n"
+            )
+        }
+
+    if (tmdbSearch?.results.isNullOrEmpty()) {
+        append("No TMDB results found\n")
+    }
+
+    append("\n========================\n\n")
 
     append(ani.description ?: "")
 }
-
         tags =
             ani.genres
 
