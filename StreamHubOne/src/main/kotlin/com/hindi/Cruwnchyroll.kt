@@ -355,6 +355,7 @@ val tmdbSearch =
 
 val metadata =
     if (tmdbId != null) {
+
         val tmdb = app.get(
             "${ApiConstants.TMDB_BASE}/$mediaType/$tmdbId" +
             "?api_key=${ApiConstants.TMDB_KEY}" +
@@ -365,10 +366,20 @@ val metadata =
             imdbId = tmdb?.external_ids?.imdbId,
             tmdbId = tmdbId,
             mediaType = mediaType,
-            title = title
+            title = title,
+            aniListId = ani.id
         )
+
     } else {
-        null
+
+        AnimeMetadataAggregator.aggregate(
+            imdbId = null,
+            tmdbId = null,
+            mediaType = mediaType,
+            title = title,
+            aniListId = ani.id
+        )
+
     }
 
 
@@ -392,44 +403,7 @@ if (metadata == null) {
             ani.bannerImage
 
         plot = buildString {
-append("\n========== ENGLISH ==========\n")
-append("Title : $englishTitle\n")
-append("Results : ${englishSearch?.results?.size}\n")
 
-englishSearch?.results?.forEachIndexed { i, item ->
-    append("${i + 1}. ${item.name ?: item.title} | ${item.id}\n")
-}
-
-append("\n========== ROMAJI ==========\n")
-append("Title : $romajiTitle\n")
-append("Results : ${romajiSearch?.results?.size}\n")
-
-romajiSearch?.results?.forEachIndexed { i, item ->
-    append("${i + 1}. ${item.name ?: item.title} | ${item.id}\n")
-}
-
-append("\n========== NATIVE ==========\n")
-append("Title : $nativeTitle\n")
-append("Results : ${nativeSearch?.results?.size}\n")
-
-nativeSearch?.results?.forEachIndexed { i, item ->
-    append("${i + 1}. ${item.name ?: item.title} | ${item.id}\n")
-}
-
-    append("===== METADATA NULL =====\n")
-    append("English : ${ani.title?.english}\n")
-    append("Romaji : ${ani.title?.romaji}\n")
-    append("Native : ${ani.title?.native}\n")
-    append("AniList ID : ${ani.id}\n\n")
-
-    append("TMDB Search Results:\n")
-append("Search URL:\n")
-append(searchUrl)
-append("\n\n")
-
-append("Original Query : $title\n")
-append("Encoded Query : ${URLEncoder.encode(title, "UTF-8")}\n")
-append("Results Count : ${tmdbSearch?.results?.size}\n\n")
 
 
     tmdbSearch?.results
@@ -664,20 +638,6 @@ private suspend fun buildSeriesResponse(
 
     metadata.countries.firstOrNull()?.let {
         val flag = it.isoCode?.toFlagEmoji().orEmpty()
-
-//Debugging 
-append("===== DEBUG =====\n")
-append("English : ${ani.title?.english}\n")
-append("Romaji : ${ani.title?.romaji}\n")
-append("Native : ${ani.title?.native}\n")
-append("AniList ID : ${metadata.anilistId}\n")
-append("TMDB ID    : $tmdbId\n")
-append("Ani Title  : ${ani.title?.english ?: ani.title?.romaji ?: ani.title?.native}\n")
-append("Ani Episodes : ${ani.episodes}\n")
-append("Ani Format : ${ani.format}\n")
-append("TMDB Runtime : ${metadata.runtime}\n")
-append("Loaded Episodes : ${episodes.size}\n")
-append("===============\n\n") //debugging 
 
         append("${"Origin".toSansSerifBold()}: ")
         append("$flag ${it.name.toSansSerifItalic()}\n\n")
