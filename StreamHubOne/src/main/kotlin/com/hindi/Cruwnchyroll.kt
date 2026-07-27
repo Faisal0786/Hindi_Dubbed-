@@ -368,6 +368,9 @@ if (metadata == null) {
             ani.bannerImage
 
         plot = buildString {
+append("English : ${ani.title?.english}\n")
+append("Romaji : ${ani.title?.romaji}\n")
+append("Native : ${ani.title?.native}\n")
 
     append("===== METADATA NULL =====\n")
     append("Ani ID : ${ani.id}\n")
@@ -588,6 +591,9 @@ private suspend fun buildSeriesResponse(
 
 //Debugging 
 append("===== DEBUG =====\n")
+append("English : ${ani.title?.english}\n")
+append("Romaji : ${ani.title?.romaji}\n")
+append("Native : ${ani.title?.native}\n")
 append("AniList ID : ${metadata.anilistId}\n")
 append("TMDB ID    : $tmdbId\n")
 append("Ani Title  : ${ani.title?.english ?: ani.title?.romaji ?: ani.title?.native}\n")
