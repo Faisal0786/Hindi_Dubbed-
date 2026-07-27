@@ -313,6 +313,14 @@ override suspend fun load(url: String): LoadResponse? {
 val tmdbSearch = app.get(searchUrl)
     .parsed<TmdbMultiSearchResponse>()
 
+val tvSearchUrl =
+    "${ApiConstants.TMDB_BASE}/search/tv" +
+    "?api_key=${ApiConstants.TMDB_KEY}" +
+    "&query=${URLEncoder.encode(title, "UTF-8")}"
+
+val tvSearch = app.get(tvSearchUrl)
+    .parsed<TmdbTvSearchResponse>()
+
 
    val tmdbResult = selectBestTmdbResult(
     tmdbSearch?.results ?: emptyList(),
@@ -384,6 +392,12 @@ append("\n\n")
 append("Original Query : $title\n")
 append("Encoded Query : ${URLEncoder.encode(title, "UTF-8")}\n")
 append("Results Count : ${tmdbSearch?.results?.size}\n\n")
+append("\n========== TV SEARCH ==========\n")
+append("Count : ${tvSearch?.results?.size}\n")
+
+tvSearch?.results?.forEachIndexed { i, item ->
+    append("${i + 1}. ${item.name} | ${item.id}\n")
+}
 
     tmdbSearch?.results
     ?.forEachIndexed { index, item ->
