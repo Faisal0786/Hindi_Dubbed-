@@ -309,7 +309,7 @@ val title =
 val romajiTitle = ani.title?.romaji
 val nativeTitle = ani.title?.native
 
-fun tmdbSearch(query: String?): TmdbMultiSearchResponse? {
+suspend fun tmdbSearch(query: String?): TmdbMultiSearchResponse? {
     if (query.isNullOrBlank()) return null
 
     val url =
