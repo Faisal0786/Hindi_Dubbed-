@@ -299,27 +299,42 @@ override suspend fun load(url: String): LoadResponse? {
         aniData.id
     ) ?: return null
 
-    val title =
+val title =
     ani.title?.english
         ?: ani.title?.romaji
         ?: ani.title?.native
         ?: return null
+
+    val englishTitle = ani.title?.english
+val romajiTitle = ani.title?.romaji
+val nativeTitle = ani.title?.native
+
+fun tmdbSearch(query: String?): TmdbMultiSearchResponse? {
+    if (query.isNullOrBlank()) return null
+
+    val url =
+        "${ApiConstants.TMDB_BASE}/search/multi" +
+        "?api_key=${ApiConstants.TMDB_KEY}" +
+        "&query=${URLEncoder.encode(query, "UTF-8")}"
+
+    return app.get(url).parsed<TmdbMultiSearchResponse>()
+}
+
+val englishSearch = tmdbSearch(englishTitle)
+val romajiSearch = tmdbSearch(romajiTitle)
+val nativeSearch = tmdbSearch(nativeTitle)
+
 
     val searchUrl =
     "${ApiConstants.TMDB_BASE}/search/multi" +
     "?api_key=${ApiConstants.TMDB_KEY}" +
     "&query=${URLEncoder.encode(title, "UTF-8")}"
 
-val tmdbSearch = app.get(searchUrl)
-    .parsed<TmdbMultiSearchResponse>()
+val tmdbSearch =
+    englishSearch
+        ?: romajiSearch
+        ?: nativeSearch
 
-val tvSearchUrl =
-    "${ApiConstants.TMDB_BASE}/search/tv" +
-    "?api_key=${ApiConstants.TMDB_KEY}" +
-    "&query=${URLEncoder.encode(title, "UTF-8")}"
-
-val tvSearch = app.get(tvSearchUrl)
-    .parsed<TmdbTvSearchResponse>()
 
 
    val tmdbResult = selectBestTmdbResult(
@@ -377,6 +392,29 @@ if (metadata == null) {
             ani.bannerImage
 
         plot = buildString {
+append("\n========== ENGLISH ==========\n")
+append("Title : $englishTitle\n")
+append("Results : ${englishSearch?.results?.size}\n")
+
+englishSearch?.results?.forEachIndexed { i, item ->
+    append("${i + 1}. ${item.name ?: item.title} | ${item.id}\n")
+}
+
+append("\n========== ROMAJI ==========\n")
+append("Title : $romajiTitle\n")
+append("Results : ${romajiSearch?.results?.size}\n")
+
+romajiSearch?.results?.forEachIndexed { i, item ->
+    append("${i + 1}. ${item.name ?: item.title} | ${item.id}\n")
+}
+
+append("\n========== NATIVE ==========\n")
+append("Title : $nativeTitle\n")
+append("Results : ${nativeSearch?.results?.size}\n")
+
+nativeSearch?.results?.forEachIndexed { i, item ->
+    append("${i + 1}. ${item.name ?: item.title} | ${item.id}\n")
+}
 
     append("===== METADATA NULL =====\n")
     append("English : ${ani.title?.english}\n")
@@ -392,12 +430,7 @@ append("\n\n")
 append("Original Query : $title\n")
 append("Encoded Query : ${URLEncoder.encode(title, "UTF-8")}\n")
 append("Results Count : ${tmdbSearch?.results?.size}\n\n")
-append("\n========== TV SEARCH ==========\n")
-append("Count : ${tvSearch?.results?.size}\n")
 
-tvSearch?.results?.forEachIndexed { i, item ->
-    append("${i + 1}. ${item.name} | ${item.id}\n")
-}
 
     tmdbSearch?.results
     ?.forEachIndexed { index, item ->
