@@ -576,6 +576,17 @@ private suspend fun buildSeriesResponse(
     metadata.countries.firstOrNull()?.let {
         val flag = it.isoCode?.toFlagEmoji().orEmpty()
 
+//Debugging 
+append("===== DEBUG =====\n")
+append("AniList ID : ${metadata.anilistId}\n")
+append("TMDB ID    : $tmdbId\n")
+append("Ani Title  : ${ani.title?.english ?: ani.title?.romaji ?: ani.title?.native}\n")
+append("Ani Episodes : ${ani.episodes}\n")
+append("Ani Format : ${ani.format}\n")
+append("TMDB Runtime : ${metadata.runtime}\n")
+append("Loaded Episodes : ${episodes.size}\n")
+append("===============\n\n") //debugging 
+
         append("${"Origin".toSansSerifBold()}: ")
         append("$flag ${it.name.toSansSerifItalic()}\n\n")
     }
