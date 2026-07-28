@@ -82,7 +82,7 @@ val providers =
         SourceRegistry.builtInProviders
     }
         val executionList = Settings.activeProviderOrder.mapNotNull { key ->
-            providers.find { it.key == key }?.executeStandard?.let { action ->
+            SourceRegistry.find { it.key == key }?.executeStandard?.let { action ->
                 suspend {
     this.action(
         res,
@@ -116,7 +116,7 @@ val providers =
     }
 
 val executionList = Settings.activeProviderOrder.mapNotNull { key ->
-    providers.find { it.key == key }?.executeAnime?.let { action ->
+    SourceRegistry.find { it.key == key }?.executeAnime?.let { action ->
         suspend {
     this.action(
         res,
