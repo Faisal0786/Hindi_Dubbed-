@@ -14,6 +14,7 @@ android {
         buildConfigField("String", "MOVIEBLAST_TOKEN", "\"${properties.getProperty("MOVIEBLAST_TOKEN")}\"")
         buildConfigField("String", "MOVIEBLAST_API", "\"${properties.getProperty("MOVIEBLAST_API")}\"")
         buildConfigField("String", "MOVIEBLAST_KEY", "\"${properties.getProperty("MOVIEBLAST_KEY")}\"")
+    buildConfigField("String", "NETMIRROR_TOKEN", "\"${properties.getProperty("NETMIRROR_TOKEN")}\"")
     }
 }
 
