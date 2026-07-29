@@ -47,7 +47,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4.0.1
 
-           - name: Access Secrets & Create Properties
+      - name: Access Secrets & Create Properties
         env:
           SIMKL_API: ${{ secrets.SIMKL_API }}
           TMDB_KEY: ${{ secrets.TMDB_KEY }}
