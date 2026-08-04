@@ -524,15 +524,13 @@ private fun buildAniListCast(
         ?.take(20)
         ?.mapNotNull { edge ->
 
-            val actor =
-                edge.voiceActors.firstOrNull()
+            val actor = edge.voiceActors.firstOrNull()
 
-            MetadataAggregator.ActorData(
-                name = actor?.name?.full
-                    ?: return@mapNotNull null,
-                role = edge.node?.name?.full,
-                image = actor.image?.large
-            )
+MetadataAggregator.ActorData(
+    name = actor?.name?.full ?: return@mapNotNull null,
+    role = edge.node?.name?.full,
+    image = edge.node?.image?.large ?: actor.image?.large
+)
         }
         ?: emptyList()
 }
