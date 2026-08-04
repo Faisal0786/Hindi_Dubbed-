@@ -117,7 +117,8 @@ data class AniListCharacterEdge(
 )
 
 data class AniListCharacterNode(
-    val name: AniListCharacterName?
+    val name: AniListCharacterName?,
+    val image: AniListVoiceActorImage?
 )
 
 data class AniListCharacterName(
