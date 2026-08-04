@@ -119,11 +119,13 @@ object AnimeMetadataAggregator {
             ?: cinemeta?.aliases?.firstOrNull(),
 
     description =
-        cleanDescription(
+    tmdb?.overview
+        ?.takeIf { it.isNotBlank() }
+        ?: cleanDescription(
             aniList?.description
         )
-            ?: tmdb?.overview
-            ?: cinemeta?.description,
+        ?: cinemeta?.description
+            ?.takeIf { it.isNotBlank() },
 
     poster =
         selectPoster(
@@ -603,24 +605,23 @@ private fun buildCountries(
 
     val list = mutableListOf<MetadataAggregator.CountryInfo>()
 
-    aniList?.countryOfOrigin?.let {
+    // TMDB first
+    tmdb?.production_countries
+        ?.forEach {
+            list += MetadataAggregator.CountryInfo(
+                name = it.name.orEmpty(),
+                isoCode = it.iso_3166_1
+            )
+        }
 
-        list += MetadataAggregator.CountryInfo(
-            name = it,
-            isoCode = it
-        )
-    }
-
+    // Fallback to AniList
     if (list.isEmpty()) {
-
-        tmdb?.production_countries
-            ?.forEach {
-
-                list += MetadataAggregator.CountryInfo(
-                    name = it.name.orEmpty(),
-                    isoCode = it.iso_3166_1
-                )
-            }
+        aniList?.countryOfOrigin?.let {
+            list += MetadataAggregator.CountryInfo(
+                name = it,
+                isoCode = it
+            )
+        }
     }
 
     return list
