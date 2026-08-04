@@ -359,10 +359,14 @@ query (${'$'}id: Int, ${'$'}search: String) {
         role
 
         node {
-          name {
-            full
-          }
-        }
+    name {
+        full
+    }
+
+    image {
+        large
+    }
+}
 
         voiceActors(language: JAPANESE) {
           name {
