@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.app
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import java.net.URLEncoder
+import org.json.JSONObject
 
 object AnimeMetadataAggregator {
 
@@ -209,11 +210,14 @@ object AnimeMetadataAggregator {
         cinemeta?.awards,
 
     cast =
-        buildAniListCast(
-            aniList
-        ).ifEmpty {
-            buildCast(tmdb)
-        }
+    fetchTvdbCast(
+        imdbId,
+        mediaType
+    ).ifEmpty {
+        buildAniListCast(aniList)
+    }.ifEmpty {
+        buildCast(tmdb)
+    }
 )
 }
     
@@ -498,6 +502,84 @@ private fun selectTrailer(
     return tmdbTrailer?.key?.let {
         "${ApiConstants.YOUTUBE_BASE}$it"
     }
+}
+
+private suspend fun fetchTvdbCast(
+    imdbId: String?,
+    mediaType: String
+): List<MetadataAggregator.ActorData> {
+
+    if (imdbId.isNullOrBlank()) return emptyList()
+
+    val tvType =
+        if (mediaType.equals("movie", true))
+            "movie"
+        else
+            "series"
+
+    val urls = listOf(
+        "https://aiometadata.elfhosted.com/stremio/9197a4a9-2f5b-4911-845e-8704c520bdf7/meta/$tvType/$imdbId.json",
+        "https://94c8cb9f702d-tmdb-addon.baby-beamup.club/meta/$tvType/$imdbId.json"
+    )
+
+    for (url in urls) {
+
+        val result = runCatching {
+            app.get(url, timeout = 6L).text
+        }.getOrNull()
+
+        if (result.isNullOrBlank()) continue
+
+        val root = runCatching {
+            JSONObject(result)
+        }.getOrNull() ?: continue
+
+        val meta = root.optJSONObject("meta") ?: continue
+
+        val castArray =
+            meta.optJSONObject("app_extras")
+                ?.optJSONArray("cast")
+                ?: continue
+
+        val cast = (0 until castArray.length())
+            .mapNotNull { index ->
+
+                val member =
+                    castArray.optJSONObject(index)
+                        ?: return@mapNotNull null
+
+                val name =
+                    member.optString("name")
+                        .takeIf {
+                            it.isNotBlank() && it != "null"
+                        }
+                        ?: return@mapNotNull null
+
+                val image =
+                    member.optString("photo")
+                        .takeIf {
+                            it.isNotBlank() && it != "null"
+                        }
+
+                val character =
+                    member.optString("character")
+                        .takeIf {
+                            it.isNotBlank() && it != "null"
+                        }
+
+                MetadataAggregator.ActorData(
+                    name = name,
+                    role = character,
+                    image = image
+                )
+            }
+
+        if (cast.isNotEmpty()) {
+            return cast.take(20)
+        }
+    }
+
+    return emptyList()
 }
 
 private fun buildCast(
