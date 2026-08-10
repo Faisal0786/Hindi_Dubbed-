@@ -58,7 +58,14 @@ class Cwunchyroll : MainAPI() {
 
     override var mainUrl = "https://graphql.anilist.co"
 
+
     override var lang = "en"
+
+private val haglund_url =
+    "https://arm.haglund.dev/api/v2"
+
+private val cinemeta_url =
+    "https://v3-cinemeta.strem.io"
 
     override val hasMainPage = true
 
@@ -1236,6 +1243,8 @@ return newHomePageResponse(
         val anilistId : Int? = null,
         val malId : Int? = null,
         val kitsuId : String? = null,
+val orgTitle: String? = null,
+val airedYear: Int? = null,
     )
 
     data class PassData(
