@@ -1442,4 +1442,4 @@ return newHomePageResponse(
         )
     }
 }
-
+}
