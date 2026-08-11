@@ -1170,14 +1170,14 @@ return newHomePageResponse(
 }
 
 
-                    override suspend fun loadLinks(
+                        override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val res = parseJson<LoadLinksData>(data)
-        val year = getYear(res)
+        val year = res.airedYear ?: getYear(res)
         val seasonYear = getSeasonYear(res)
 
         return when {
@@ -1192,64 +1192,46 @@ return newHomePageResponse(
                             val animeId = if (res.kitsuId != null) "kitsu:${res.kitsuId}" else res.imdb_id
                             invokeAllAnimeSources(
                                 AllLoadLinksData(
-                                    res.title,
-                                    animeId, 
-                                    res.tmdbId,
-                                    res.anilistId,
-                                    res.malId,
-                                    res.kitsuId,
-                                    year,
-                                    seasonYear,
-                                    res.season,
-                                    res.episode,
-                                    true,
-                                    res.isBollywood,
-                                    res.isAsian,
-                                    res.isCartoon,
-                                    null,
-                                    null,
-                                    res.imdbSeason,
-                                    res.imdbEpisode,
-                                    null
+                                    res.title, animeId, res.tmdbId, res.anilistId, res.malId, res.kitsuId, year, seasonYear, res.season, res.episode, true, res.isBollywood, res.isAsian, res.isCartoon, res.orgTitle, null, res.imdbSeason, res.imdbEpisode, res.airedYear
                                 ),
-                                subtitleCallback,
-                                callback
+                                subtitleCallback, callback
                             )
                         }
                     },
                     {
                         invokeAllSources(
                             AllLoadLinksData(
-                                res.title,
-                                res.imdb_id,
-                                res.tmdbId,
-                                res.anilistId,
-                                res.malId,
-                                res.kitsuId,
-                                year,
-                                seasonYear,
-                                res.season,
-                                res.episode,
-                                res.isAnime,
-                                res.isBollywood,
-                                res.isAsian,
-                                res.isCartoon,
-                                null,
-                                null,
-                                res.imdbSeason,
-                                res.imdbEpisode,
-                                null
+                                res.title, res.imdb_id, res.tmdbId, res.anilistId, res.malId, res.kitsuId, year, seasonYear, res.season, res.episode, res.isAnime, res.isBollywood, res.isAsian, res.isCartoon, res.orgTitle, null, res.imdbSeason, res.imdbEpisode, res.airedYear
                             ),
-                            subtitleCallback,
-                            callback
+                            subtitleCallback, callback
                         )
                     },
                     {
                         if (res.isAnime) {
-                            val finalMalId = res.malId ?: convertImdbToAnimeId(res.title, year, res.firstAired, if (res.tvtype == "movie") TvType.AnimeMovie else TvType.Anime).second
-                            val finalAniId = res.anilistId ?: convertImdbToAnimeId(res.title, year, res.firstAired, if (res.tvtype == "movie") TvType.AnimeMovie else TvType.Anime).first
-                            
-                            invokeAnimes(finalMalId, finalAniId, res.episode, seasonYear, "imdb", subtitleCallback, callback)
+                            var aniId = res.anilistId
+                            var malId = res.malId
+                            var animeSource = "imdb"
+
+                            if (aniId == null && malId == null) {
+                                val imdbResult = convertImdbToAnimeId(
+                                    res.title, year, res.firstAired, 
+                                    if (res.tvtype == "movie") TvType.AnimeMovie else TvType.Anime
+                                )
+                                aniId = imdbResult.id
+                                malId = imdbResult.idMal
+
+                                if (aniId == null && malId == null) {
+                                    val tmdbResult = convertTmdbToAnimeId(
+                                        res.title, year?.toString(), res.airedDate ?: res.firstAired, 
+                                        if (res.tvtype == "movie") TvType.AnimeMovie else TvType.Anime
+                                    )
+                                    aniId = tmdbResult.id
+                                    malId = tmdbResult.idMal
+                                    animeSource = "tmdb"
+                                }
+                            }
+
+                            invokeAnimes(malId, aniId, res.episode, seasonYear, animeSource, subtitleCallback, callback)
                         }
                     }
                 )
@@ -1257,6 +1239,7 @@ return newHomePageResponse(
             }
         }
     }
+
 data class LoadLinksData(  
     val title: String,  
     val id: String,  
