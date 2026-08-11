@@ -1257,6 +1257,7 @@ return newHomePageResponse(
             }
         }
     }
+}
 
     data class LoadLinksData(
         val title: String,
@@ -1442,4 +1443,4 @@ return newHomePageResponse(
         )
     }
 }
-}
+
