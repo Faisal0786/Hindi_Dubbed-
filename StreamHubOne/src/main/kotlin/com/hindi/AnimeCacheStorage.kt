@@ -23,7 +23,7 @@ object AnimeCacheStorage {
 
     fun load(
         key: String,
-        maxAge: Long = 24L * 60L * 60L * 1000L
+        maxAge: Long = 20L * 60L * 1000L
     ): String? {
 
         val time = prefs.getLong("${key}_time", 0L)
