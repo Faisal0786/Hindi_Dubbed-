@@ -547,7 +547,7 @@ override suspend fun getMainPage(
 }
 
 
-    override suspend fun loadLinks(
+        override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -555,7 +555,35 @@ override suspend fun getMainPage(
     ): Boolean {
         val res = parseJson<LoadLinksData>(data)
         val year = res.airedYear ?: getYear(res)
-val seasonYear = getSeasonYear(res)
+        val seasonYear = getSeasonYear(res)
+
+        var finalAniId = res.anilistId
+        var finalMalId = res.malId
+        var animeSource = "imdb"
+        val fallbackImdbTitle = res.title
+
+        if (res.isAnime && finalAniId == null && finalMalId == null) {
+            val imdbResult = convertImdbToAnimeId(
+                res.title,
+                year,
+                res.firstAired,
+                if (res.tvtype == "movie") TvType.AnimeMovie else TvType.Anime
+            )
+            finalAniId = imdbResult.id
+            finalMalId = imdbResult.idMal
+
+            if (finalAniId == null && finalMalId == null) {
+                val tmdbResult = convertTmdbToAnimeId(
+                    res.title,
+                    year?.toString(),
+                    res.airedDate ?: res.firstAired,
+                    if (res.tvtype == "movie") TvType.AnimeMovie else TvType.Anime
+                )
+                finalAniId = tmdbResult.id
+                finalMalId = tmdbResult.idMal
+                animeSource = "tmdb"
+            }
+        }
 
         return when {
             res.isKitsu -> {
@@ -567,88 +595,51 @@ val seasonYear = getSeasonYear(res)
                     {
                         invokeAllSources(
                             AllLoadLinksData(
-    res.title,
-    res.id,
-    res.tmdbId,
-    res.anilistId,
-    res.malId,
-    res.kitsuId,
-    year,
-    seasonYear,
-    res.season,
-    res.episode,
-    res.isAnime,
-    res.isBollywood,
-    res.isAsian,
-    res.isCartoon,
-    res.orgTitle,
-    null,
-    res.imdbSeason,
-    res.imdbEpisode,
-    res.airedYear,
-),
+                                title = res.title,
+                                imdbId = res.imdb_id, 
+                                tmdbId = res.tmdbId,
+                                anilistId = finalAniId,
+                                malId = finalMalId,
+                                kitsuId = res.kitsuId,
+                                year = year,
+                                seasonYear = seasonYear,
+                                season = res.season,
+                                episode = res.episode,
+                                isAnime = res.isAnime,
+                                isBollywood = res.isBollywood,
+                                isAsian = res.isAsian,
+                                isCartoon = res.isCartoon,
+                                orgTitle = res.orgTitle,
+                                imdbTitle = fallbackImdbTitle, 
+                                imdbSeason = res.imdbSeason,
+                                imdbEpisode = res.imdbEpisode,
+                                airedYear = res.airedYear,
+                            ),
                             subtitleCallback,
                             callback
                         )
                     },
                     {
                         if (res.isAnime) {
-
-    var aniId = res.anilistId
-    var malId = res.malId
-
-    var animeSource = "imdb"
-
-    if (aniId == null && malId == null) {
-
-        val imdbResult = convertImdbToAnimeId(
-    res.title,
-    year,
-    res.firstAired,
-    if (res.tvtype == "movie")
-        TvType.AnimeMovie
-    else
-        TvType.Anime
-)
-
-aniId = imdbResult.id
-malId = imdbResult.idMal
-
-        if (aniId == null && malId == null) {
-
-            val tmdbResult = convertTmdbToAnimeId(
-                res.title,
-                year?.toString(),
-                res.airedDate ?: res.firstAired,
-                if (res.tvtype == "movie")
-                    TvType.AnimeMovie
-                else
-                    TvType.Anime
-            )
-
-            aniId = tmdbResult.id
-            malId = tmdbResult.idMal
-
-            animeSource = "tmdb"
-        }
-    }
-
-    invokeAnimes(
-        malId,
-        aniId,
-        res.episode,
-        seasonYear,
-        animeSource,
-        subtitleCallback,
-        callback
-    )
-}
+                            invokeAnimes(
+                                finalMalId,
+                                finalAniId,
+                                res.episode,
+                                seasonYear,
+                                animeSource,
+                                subtitleCallback,
+                                callback
+                            )
+                        }
                     }
                 )
                 true
             }
         }
     }
+
+    
+
 
     data class LoadLinksData(
         val title: String,
@@ -807,8 +798,8 @@ malId = imdbResult.idMal
 
         try {
             val json = app.get(
-    "${ApiConstants.CINEMETA_BASE}/meta/${res.tvtype}/${res.imdb_id}.json"
-).text
+                "${ApiConstants.CINEMETA_BASE}/meta/${res.tvtype}/${res.imdb_id}.json"
+            ).text
             val movieData = tryParseJson<ResponseData>(json)
 
             movieData?.meta?.let { meta ->
@@ -823,30 +814,29 @@ malId = imdbResult.idMal
         }
 
         invokeAllAnimeSources(
-    AllLoadLinksData(
-        res.title,
-        res.imdb_id,
-        tmdbId,
-        res.anilistId,
-        res.malId,
-        res.kitsuId,
-        year,
-        seasonYear,
-        res.season,
-        res.episode,
-        res.isAnime,
-        res.isBollywood,
-        res.isAsian,
-        res.isCartoon,
-        res.orgTitle,
-        imdbTitle,
-        res.imdbSeason,
-        res.imdbEpisode,
-        imdbYear,
-    ),
-    subtitleCallback,
-    callback
-
+            AllLoadLinksData(
+                title = res.title,
+                imdbId = res.imdb_id,
+                tmdbId = tmdbId ?: res.tmdbId,
+                anilistId = res.anilistId,
+                malId = res.malId,
+                kitsuId = res.kitsuId,
+                year = year,
+                seasonYear = seasonYear,
+                season = res.season,
+                episode = res.episode,
+                isAnime = res.isAnime,
+                isBollywood = res.isBollywood,
+                isAsian = res.isAsian,
+                isCartoon = res.isCartoon,
+                orgTitle = res.orgTitle,
+                imdbTitle = imdbTitle ?: res.title,
+                imdbSeason = res.imdbSeason,
+                imdbEpisode = res.imdbEpisode,
+                airedYear = imdbYear ?: res.airedYear,
+            ),
+            subtitleCallback,
+            callback
         )
     }
 }
