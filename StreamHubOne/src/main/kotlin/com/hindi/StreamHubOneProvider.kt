@@ -547,7 +547,7 @@ override suspend fun getMainPage(
 }
 
 
-        override suspend fun loadLinks(
+            override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -596,24 +596,24 @@ override suspend fun getMainPage(
                         invokeAllSources(
                             AllLoadLinksData(
                                 title = res.title,
-                                imdbId = res.imdb_id, 
+                                imdbId = res.imdb_id,
                                 tmdbId = res.tmdbId,
                                 anilistId = finalAniId,
                                 malId = finalMalId,
                                 kitsuId = res.kitsuId,
                                 year = year,
-                                seasonYear = seasonYear,
+                                airedYear = seasonYear,
                                 season = res.season,
                                 episode = res.episode,
                                 isAnime = res.isAnime,
                                 isBollywood = res.isBollywood,
                                 isAsian = res.isAsian,
                                 isCartoon = res.isCartoon,
-                                orgTitle = res.orgTitle,
-                                imdbTitle = fallbackImdbTitle, 
+                                originalTitle = res.orgTitle,
+                                imdbTitle = fallbackImdbTitle,
                                 imdbSeason = res.imdbSeason,
                                 imdbEpisode = res.imdbEpisode,
-                                airedYear = res.airedYear,
+                                imdbYear = res.airedYear
                             ),
                             subtitleCallback,
                             callback
@@ -637,6 +637,9 @@ override suspend fun getMainPage(
             }
         }
     }
+
+    
+
 
     
 
@@ -785,7 +788,7 @@ override suspend fun getMainPage(
         else res.firstAired?.substringBefore("-")?.toIntOrNull() ?: res.firstAired?.substringBefore("–")?.toIntOrNull()
     }
 
-    private suspend fun runKitsuInvokers(
+   private suspend fun runKitsuInvokers(
         res: LoadLinksData,
         year: Int?,
         seasonYear: Int?,
@@ -822,18 +825,18 @@ override suspend fun getMainPage(
                 malId = res.malId,
                 kitsuId = res.kitsuId,
                 year = year,
-                seasonYear = seasonYear,
+                airedYear = seasonYear,
                 season = res.season,
                 episode = res.episode,
                 isAnime = res.isAnime,
                 isBollywood = res.isBollywood,
                 isAsian = res.isAsian,
                 isCartoon = res.isCartoon,
-                orgTitle = res.orgTitle,
+                originalTitle = res.orgTitle,
                 imdbTitle = imdbTitle ?: res.title,
                 imdbSeason = res.imdbSeason,
                 imdbEpisode = res.imdbEpisode,
-                airedYear = imdbYear ?: res.airedYear,
+                imdbYear = imdbYear ?: res.airedYear
             ),
             subtitleCallback,
             callback
