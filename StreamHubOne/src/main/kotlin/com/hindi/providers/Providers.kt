@@ -4954,57 +4954,105 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
 
 
 suspend fun invokeAnizone2(
- title: String? = null,
- episode: Int? = null,
- subtitleCallback: (SubtitleFile) -> Unit,
- callback: (ExtractorLink) -> Unit
+    title: String? = null,
+    episode: Int? = null,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
 ) {
- if (title.isNullOrEmpty()) return
+    if (title.isNullOrEmpty()) return
 
-val mainUrl = anizoneAPI
-val searchUrl = "$mainUrl/anime?search=$title"
+    val mainUrl = anizoneAPI
 
-val searchDocument = app.get(searchUrl).document
-val animeLink = searchDocument
-    .select("div.truncate > a")
-    .firstOrNull()
-    ?.attr("href") ?: return
+    // ── Search Anime ─────────────────────────────────────────────
+    val searchUrl = "$mainUrl/anime?search=${URLEncoder.encode(title, "UTF-8")}"
+    val searchDocument = app.get(searchUrl).document
 
-val episodeUrl = "${animeLink.trimEnd('/')}/${episode ?: 1}"
-val episodeDocument = app.get(episodeUrl).document
+    val xData = searchDocument
+        .select("div[x-data]")
+        .firstOrNull { it.attr("x-data").contains("items: JSON.parse") }
+        ?.attr("x-data")
+        ?: return
 
-episodeDocument.select("track").forEach { track ->
-    val subUrl = track.attr("src")
-    val label = track.attr("label")
+    val animeSlug = Regex(
+        """\\?"slug\\?":\\?"([^"]+)"""
+    )
+        .find(xData)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?: return
 
-    if (subUrl.isNotBlank()) {
-        subtitleCallback.invoke(
-            newSubtitleFile(
-                lang = if (label.isNotBlank()) label else "Unknown",
-                url = fixUrl(subUrl, mainUrl)
-            )
+    val animeLink = "$mainUrl/anime/$animeSlug"
+
+    // ── Episode Page ─────────────────────────────────────────────
+    val episodeNumber = episode ?: 1
+    val episodeUrl = "${animeLink.trimEnd('/')}/$episodeNumber"
+
+    val episodeDocument = app.get(
+        episodeUrl,
+        headers = mapOf(
+            "Referer" to "$mainUrl/",
+            "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/127.0.0.0 Mobile Safari/537.36"
         )
-    }
-}
+    ).document
 
-val streamUrl = episodeDocument.select("video > source").attr("src").ifEmpty {
-    episodeDocument.select("media-player").attr("src")
-}
+    // ── Vidstack Player Data ────────────────────────────────────
+    val playerData = episodeDocument
+        .select("[x-data]")
+        .firstOrNull {
+            it.attr("x-data").contains("vidstackPlayer")
+        }
+        ?.attr("x-data")
+        ?: return
 
-if (streamUrl.isNotBlank()) {
-    val headers = mapOf(
-        "Referer" to "https://anizone.to/",
-        "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36"
+    // ── M3U8 Stream ─────────────────────────────────────────────
+    val streamUrl = Regex(
+        """\\u0022src\\u0022:\\u0022(.*?)\\u0022"""
+    )
+        .find(playerData)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.replace("\\/", "/")
+        ?: return
+
+    val finalUrl = fixUrl(streamUrl, mainUrl)
+
+    // ── Subtitles ────────────────────────────────────────────────
+    val subtitleRegex = Regex(
+        """\\u0022title\\u0022:\\u0022(.*?)\\u0022.*?\\u0022language\\u0022:\\u0022(.*?)\\u0022.*?\\u0022file\\u0022:\\u0022(.*?)\\u0022"""
     )
 
+    subtitleRegex.findAll(playerData).forEach { match ->
+        val label = match.groupValues[1]
+            .replace("\\/", "/")
+
+        val language = match.groupValues[2]
+            .replace("\\/", "/")
+
+        val subtitleUrl = match.groupValues[3]
+            .replace("\\/", "/")
+
+        if (subtitleUrl.isNotBlank()) {
+            subtitleCallback.invoke(
+                newSubtitleFile(
+                    lang = label.ifBlank { language },
+                    url = fixUrl(subtitleUrl, mainUrl)
+                )
+            )
+        }
+    }
+
+    // ── Stream Callback ─────────────────────────────────────────
     callback.invoke(
         newExtractorLink(
             name = "Anizone 2",
             source = "Anizone 2 Multi Audio 🌐",
-            url = fixUrl(streamUrl, mainUrl),
+            url = finalUrl,
             type = ExtractorLinkType.M3U8
         ) {
-            this.headers = headers
+            this.headers = mapOf(
+                "Referer" to "$mainUrl/",
+                "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/127.0.0.0 Mobile Safari/537.36"
+            )
             this.quality = Qualities.P1080.value
         }
     )
