@@ -4961,7 +4961,7 @@ suspend fun invokeAnizone2(
 ) {
     if (title.isNullOrEmpty()) return
 
-    val mainUrl = "https://anizone.to"
+    val mainUrl = anizoneAPI
     val searchUrl = "$mainUrl/anime?search=$title"
 
     val searchDocument = app.get(searchUrl).document
