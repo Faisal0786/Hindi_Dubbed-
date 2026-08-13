@@ -4954,64 +4954,62 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
 
 
 suspend fun invokeAnizone2(
-    title: String? = null,
-    episode: Int? = null,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
+ title: String? = null,
+ episode: Int? = null,
+ subtitleCallback: (SubtitleFile) -> Unit,
+ callback: (ExtractorLink) -> Unit
 ) {
-    if (title.isNullOrEmpty()) return
+ if (title.isNullOrEmpty()) return
 
-    val mainUrl = anizoneAPI
-    val searchUrl = "$mainUrl/anime?search=$title"
+val mainUrl = anizoneAPI
+val searchUrl = "$mainUrl/anime?search=$title"
 
-    val searchDocument = app.get(searchUrl).document
-    val animeLink = searchDocument
-        .select("div.truncate > a")
-        .firstOrNull()
-        ?.attr("href") ?: return
+val searchDocument = app.get(searchUrl).document
+val animeLink = searchDocument
+    .select("div.truncate > a")
+    .firstOrNull()
+    ?.attr("href") ?: return
 
-    val episodeUrl = "${animeLink.trimEnd('/')}/${episode ?: 1}"
-    val episodeDocument = app.get(episodeUrl).document
+val episodeUrl = "${animeLink.trimEnd('/')}/${episode ?: 1}"
+val episodeDocument = app.get(episodeUrl).document
 
-    episodeDocument.select("track").forEach { track ->
-        val subUrl = track.attr("src")
-        val label = track.attr("label")
-        
-        if (subUrl.isNotBlank()) {
-            subtitleCallback.invoke(
-                newSubtitleFile(
-                    lang = if (label.isNotBlank()) label else "Unknown",
-                    url = fixUrl(subUrl)
-                )
+episodeDocument.select("track").forEach { track ->
+    val subUrl = track.attr("src")
+    val label = track.attr("label")
+
+    if (subUrl.isNotBlank()) {
+        subtitleCallback.invoke(
+            newSubtitleFile(
+                lang = if (label.isNotBlank()) label else "Unknown",
+                url = fixUrl(subUrl, mainUrl)
             )
-        }
-    }
-
-    val streamUrl = episodeDocument.select("video > source").attr("src").ifEmpty {
-        episodeDocument.select("media-player").attr("src")
-    }
-
-    if (streamUrl.isNotBlank()) {
-        val headers = mapOf(
-            "Referer" to "https://anizone.to/",
-            "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36"
-        )
-
-        callback.invoke(
-            newExtractorLink(
-                name = "Anizone 2",
-                source = "Anizone 2 Multi Audio 🌐",
-                url = fixUrl(streamUrl),
-                type = ExtractorLinkType.M3U8
-            ) {
-                this.headers = headers
-                this.quality = Qualities.P1080.value
-            }
         )
     }
 }
 
+val streamUrl = episodeDocument.select("video > source").attr("src").ifEmpty {
+    episodeDocument.select("media-player").attr("src")
+}
 
+if (streamUrl.isNotBlank()) {
+    val headers = mapOf(
+        "Referer" to "https://anizone.to/",
+        "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36"
+    )
+
+    callback.invoke(
+        newExtractorLink(
+            name = "Anizone 2",
+            source = "Anizone 2 Multi Audio 🌐",
+            url = fixUrl(streamUrl, mainUrl),
+            type = ExtractorLinkType.M3U8
+        ) {
+            this.headers = headers
+            this.quality = Qualities.P1080.value
+        }
+    )
+}
+}
     suspend fun invokeAnikoto(
         title: String? = null,
         year: Int? = null,
