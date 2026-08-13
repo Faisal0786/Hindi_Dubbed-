@@ -312,7 +312,6 @@ object SourceRegistry {
 
         SourceProviderDef(
             key = "p_anizone2", displayName = "Anizone 2",
-domain = "https://anizone.to",
 
             executeAnime = { res, subCb, cb -> invokeAnizone2(res.originalTitle ?: res.title, res.episode, subCb, cb) },
             executeMalSync = { data, subCb, cb -> if (data.origin == "imdb") invokeAnizone2(data.title, data.episode, subCb, cb) }
