@@ -4979,7 +4979,7 @@ suspend fun invokeAnizone2(
         
         if (subUrl.isNotBlank()) {
             subtitleCallback.invoke(
-                SubtitleFile(
+                newSubtitleFile(
                     lang = if (label.isNotBlank()) label else "Unknown",
                     url = fixUrl(subUrl)
                 )
