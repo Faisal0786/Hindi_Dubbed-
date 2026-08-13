@@ -309,6 +309,13 @@ object SourceRegistry {
             executeAnime = { res, subCb, cb -> invokeTokyoInsider(res.originalTitle ?: res.title, res.episode, subCb, cb) },
             executeMalSync = { data, subCb, cb -> if (data.origin == "imdb") invokeTokyoInsider(data.title, data.episode, subCb, cb) }
         ),
+
+        SourceProviderDef(
+            key = "p_anizone2", displayName = "Anizone 2",
+            executeAnime = { res, subCb, cb -> invokeAnizone2(res.originalTitle ?: res.title, res.episode, subCb, cb) },
+            executeMalSync = { data, subCb, cb -> if (data.origin == "imdb") invokeAnizone2(data.title, data.episode, subCb, cb) }
+        ),
+
         SourceProviderDef(
             key = "p_anizone", displayName = "Anizone",
             executeAnime = { res, subCb, cb -> invokeAnizone(res.originalTitle ?: res.title, res.episode, subCb, cb) },
