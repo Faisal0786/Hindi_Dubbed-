@@ -73,6 +73,7 @@ data class NexFlixiaEpisode(
 
     val released: String? = null,
     val firstAired: String? = null,
+val runtime: String? = null,
 
     @SerialName("imdb_id")
     val imdbId: String? = null,
@@ -112,6 +113,7 @@ data class NexFlixiaLoadData(
     val episode: Int? = null,
 
     val firstAired: String? = null,
+val episodeRuntime: Int? = null,
 
     val imdbSeason: Int? = null,
     val imdbEpisode: Int? = null,
