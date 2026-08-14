@@ -1,4 +1,4 @@
-package com.hindi.providers.newproviders
+package com.hindi.providers.NewProviders
 
 import com.hindi.providers.ProviderCategory
 import com.hindi.providers.SourceProviderDef
