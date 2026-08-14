@@ -1,11 +1,11 @@
 package com.multi.nexflixia
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.serialization.json.Json
 
 open class NexFlixiaProvider : MainAPI() {
 
@@ -32,6 +32,10 @@ open class NexFlixiaProvider : MainAPI() {
         NexFlixiaMetadata(api)
     }
 
+    private val json = Json {
+        ignoreUnknownKeys = true
+    }
+
     override suspend fun search(
         query: String
     ): List<SearchResponse> = coroutineScope {
@@ -40,14 +44,14 @@ open class NexFlixiaProvider : MainAPI() {
             return@coroutineScope emptyList()
         }
 
-        val encodedQuery = query.trim()
+        val searchQuery = query.trim()
 
         val endpoints = listOf(
-            "/catalog/movie/top/search=$encodedQuery.json",
-            "/catalog/series/top/search=$encodedQuery.json"
+            "/catalog/movie/top/search=$searchQuery.json",
+            "/catalog/series/top/search=$searchQuery.json"
         )
 
-        val results = endpoints
+        endpoints
             .map { endpoint ->
                 async {
                     fetchSearchResults(endpoint)
@@ -55,8 +59,6 @@ open class NexFlixiaProvider : MainAPI() {
             }
             .awaitAll()
             .flatten()
-
-        results
             .distinctBy { "${it.url}|${it.name}" }
     }
 
@@ -64,11 +66,12 @@ open class NexFlixiaProvider : MainAPI() {
         endpoint: String
     ): List<SearchResponse> {
 
-        val json = api.get(endpoint)
+        val response = api.get(endpoint)
             ?: return emptyList()
 
-        val result = tryParseJson<NexFlixiaSearchResult>(json)
-            ?: return emptyList()
+        val result = runCatching {
+            json.decodeFromString<NexFlixiaSearchResult>(response)
+        }.getOrNull() ?: return emptyList()
 
         return result.metas.mapNotNull { item ->
 
@@ -80,9 +83,8 @@ open class NexFlixiaProvider : MainAPI() {
 
             val type = when (item.type.lowercase()) {
                 "movie" -> TvType.Movie
-                "series" -> TvType.TvSeries
-                "tv" -> TvType.TvSeries
-                else -> TvType.Movie
+                "series", "tv" -> TvType.TvSeries
+                else -> return@mapNotNull null
             }
 
             newMovieSearchResponse(
@@ -103,9 +105,4 @@ open class NexFlixiaProvider : MainAPI() {
             }
         }
     }
-
-    data class NexFlixiaSearchData(
-        val id: String,
-        val type: String
-    )
 }
