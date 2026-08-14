@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.api.Log
 import org.json.JSONObject
+import com.hindi.providers.Settings
 
 suspend fun SourceProviders.invokeCinemaos(
         title: String? = null,
