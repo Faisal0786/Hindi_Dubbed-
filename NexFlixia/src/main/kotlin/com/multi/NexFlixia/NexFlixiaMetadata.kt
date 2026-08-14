@@ -10,14 +10,13 @@ class NexFlixiaMetadata(
         type: String,
         id: String
     ): NexFlixiaMeta? {
-        return runCatching {
-            val json = api.get(
-                "/meta/$type/$id.json"
-            )
 
-            tryParseJson<NexFlixiaMetaResponse>(json)
-                ?.meta
-        }.getOrNull()
+        val json = api.get(
+            "/meta/$type/$id.json"
+        ) ?: return null
+
+        return tryParseJson<NexFlixiaMetaResponse>(json)
+            ?.meta
     }
 
     fun extractIds(
