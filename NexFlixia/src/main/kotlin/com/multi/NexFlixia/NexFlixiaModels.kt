@@ -1,11 +1,14 @@
 package com.multi.nexflixia
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class NexFlixiaSearchResult(
     val metas: List<NexFlixiaSearchItem> = emptyList()
 )
 
+@Serializable
 data class NexFlixiaSearchItem(
     val id: String,
     val type: String,
@@ -15,10 +18,12 @@ data class NexFlixiaSearchItem(
     val aliases: List<String>? = null
 )
 
+@Serializable
 data class NexFlixiaMetaResponse(
     val meta: NexFlixiaMeta? = null
 )
 
+@Serializable
 data class NexFlixiaMeta(
     val id: String? = null,
     val type: String? = null,
@@ -35,10 +40,10 @@ data class NexFlixiaMeta(
     val year: String? = null,
     val releaseInfo: String? = null,
 
-    @SerializedName("imdb_id")
+    @SerialName("imdb_id")
     val imdbId: String? = null,
 
-    @SerializedName("moviedb_id")
+    @SerialName("moviedb_id")
     val tmdbId: Int? = null,
 
     val imdbRating: String? = null,
@@ -51,6 +56,7 @@ data class NexFlixiaMeta(
     val videos: List<NexFlixiaEpisode>? = null
 )
 
+@Serializable
 data class NexFlixiaEpisode(
     val id: String? = null,
 
@@ -68,19 +74,26 @@ data class NexFlixiaEpisode(
     val released: String? = null,
     val firstAired: String? = null,
 
-    @SerializedName("imdb_id")
+    @SerialName("imdb_id")
     val imdbId: String? = null,
 
     val imdbSeason: Int? = null,
     val imdbEpisode: Int? = null,
 
-    @SerializedName("moviedb_id")
+    @SerialName("moviedb_id")
     val tmdbId: Int? = null
 )
 
+@Serializable
 data class NexFlixiaIds(
     val imdbId: String? = null,
     val tmdbId: Int? = null,
     val aniListId: Int? = null,
     val malId: Int? = null
+)
+
+@Serializable
+data class NexFlixiaSearchData(
+    val id: String,
+    val type: String
 )
