@@ -1,22 +1,28 @@
 package com.multi.nexflixia
 
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import kotlinx.serialization.json.Json
 
 class NexFlixiaMetadata(
     private val api: NexFlixiaApi
 ) {
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+    }
 
     suspend fun getMetadata(
         type: String,
         id: String
     ): NexFlixiaMeta? {
 
-        val json = api.get(
+        val response = api.get(
             "/meta/$type/$id.json"
         ) ?: return null
 
-        return tryParseJson<NexFlixiaMetaResponse>(json)
-            ?.meta
+        return runCatching {
+            json.decodeFromString<NexFlixiaMetaResponse>(response)
+                .meta
+        }.getOrNull()
     }
 
     fun extractIds(
