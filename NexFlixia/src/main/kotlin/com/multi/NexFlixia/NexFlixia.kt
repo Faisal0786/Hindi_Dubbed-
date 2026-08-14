@@ -7,6 +7,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 
+import java.net.URLEncoder
+
 open class NexFlixiaProvider : MainAPI() {
 
     override var mainUrl = "https://v3-cinemeta.strem.io"
@@ -37,73 +39,77 @@ open class NexFlixiaProvider : MainAPI() {
     }
 
     override suspend fun search(
-        query: String
-    ): List<SearchResponse> = coroutineScope {
+    query: String
+): List<SearchResponse> = coroutineScope {
 
-        if (query.isBlank()) {
-            return@coroutineScope emptyList()
-        }
+    val searchQuery = query
+        .trim()
+        .takeIf { it.isNotEmpty() }
+        ?: return@coroutineScope emptyList()
 
-        val searchQuery = query.trim()
+    val encodedQuery = URLEncoder
+        .encode(searchQuery, Charsets.UTF_8.name())
 
-        val endpoints = listOf(
-            "/catalog/movie/top/search=$searchQuery.json",
-            "/catalog/series/top/search=$searchQuery.json"
-        )
+    val endpoints = arrayOf(
+        "/catalog/movie/top/search=$encodedQuery.json",
+        "/catalog/series/top/search=$encodedQuery.json"
+    )
 
-        endpoints
-            .map { endpoint ->
-                async {
-                    fetchSearchResults(endpoint)
-                }
+    endpoints
+        .map { endpoint ->
+            async {
+                fetchSearchResults(endpoint)
             }
-            .awaitAll()
-            .flatten()
-            .distinctBy { "${it.url}|${it.name}" }
-    }
+        }
+        .awaitAll()
+        .flatten()
+}
 
     private suspend fun fetchSearchResults(
-        endpoint: String
-    ): List<SearchResponse> {
+    endpoint: String
+): List<SearchResponse> {
 
-        val response = api.get(endpoint)
-            ?: return emptyList()
+    val response = api.get(endpoint)
+        ?: return emptyList()
 
-        val result = runCatching {
-            json.decodeFromString<NexFlixiaSearchResult>(response)
-        }.getOrNull() ?: return emptyList()
+    val result = runCatching {
+        json.decodeFromString<NexFlixiaSearchResult>(response)
+    }.getOrNull()
+        ?: return emptyList()
 
-        return result.metas.mapNotNull { item ->
+    return result.metas.mapNotNull { item ->
 
-            val title = item.aliases
-                ?.firstOrNull()
-                ?.takeIf { it.isNotBlank() }
-                ?: item.name
-                ?: return@mapNotNull null
+        val title = item.name
+            ?.takeIf { it.isNotBlank() }
+            ?: item.aliases
+                ?.firstOrNull { it.isNotBlank() }
+            ?: return@mapNotNull null
 
-            val type = when (item.type.lowercase()) {
-                "movie" -> TvType.Movie
-                "series", "tv" -> TvType.TvSeries
-                else -> return@mapNotNull null
-            }
-
-            newMovieSearchResponse(
-                name = title,
-                url = NexFlixiaSearchData(
-                    id = item.id,
-                    type = item.type
-                ).toJson(),
-                type = type
-            ) {
-                posterUrl = item.poster
-
-                item.imdbRating
-                    ?.toDoubleOrNull()
-                    ?.let { rating ->
-                        score = Score.from10(rating)
-                    }
-            }
+        val type = when (item.type.lowercase()) {
+            "movie" -> TvType.Movie
+            "series", "tv" -> TvType.TvSeries
+            else -> return@mapNotNull null
         }
+
+        newMovieSearchResponse(
+            name = title,
+            url = NexFlixiaSearchData(
+                id = item.id,
+                type = item.type
+            ).toJson(),
+            type = type
+        ) {
+            posterUrl = item.poster
+
+            item.imdbRating
+                ?.toDoubleOrNull()
+                ?.takeIf { it > 0.0 }
+                ?.let { rating ->
+                    score = Score.from10(rating)
+                }
+        }
+    }
+}
   override suspend fun load(
     url: String
 ): LoadResponse? {
@@ -225,8 +231,10 @@ private fun buildSeriesResponse(
                 episode = episode.episode,
                 firstAired = episode.firstAired ?: episode.released,
                 imdbSeason = episode.imdbSeason,
-                imdbEpisode = episode.imdbEpisode,
-                isAnime = isAnime,
+imdbEpisode = episode.imdbEpisode,
+episodeRuntime = extractRuntime(episode.runtime),
+isAnime = isAnime,
+                
                 isBollywood = isBollywood,
                 isAsian = isAsian,
                 isCartoon = isCartoon
@@ -239,6 +247,8 @@ private fun buildSeriesResponse(
 
                 season = episode.season ?: 1
                 episode = episode.episode ?: 1
+
+duration = extractRuntime(episode.runtime)
 
                 posterUrl = episode.thumbnail
                 description = episode.overview
@@ -347,12 +357,20 @@ private fun extractRuntime(
     runtime: String?
 ): Int? {
 
-    if (runtime.isNullOrBlank()) return null
+    if (runtime.isNullOrBlank()) {
+        return null
+    }
 
-    return Regex("""\d+""")
-        .find(runtime)
-        ?.value
-        ?.toIntOrNull()
+    return runtime
+        .replace(",", "")
+        .trim()
+        .let { value ->
+            Regex("""(\d+)""")
+                .find(value)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.toIntOrNull()
+        }
 }
   
 
