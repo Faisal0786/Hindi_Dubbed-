@@ -97,3 +97,27 @@ data class NexFlixiaSearchData(
     val id: String,
     val type: String
 )
+
+@Serializable
+data class NexFlixiaLoadData(
+    val title: String,
+    val id: String,
+    val tmdbId: Int? = null,
+    val imdbId: String? = null,
+    val type: String,
+
+    val year: String? = null,
+
+    val season: Int? = null,
+    val episode: Int? = null,
+
+    val firstAired: String? = null,
+
+    val imdbSeason: Int? = null,
+    val imdbEpisode: Int? = null,
+
+    val isAnime: Boolean = false,
+    val isBollywood: Boolean = false,
+    val isAsian: Boolean = false,
+    val isCartoon: Boolean = false
+)
