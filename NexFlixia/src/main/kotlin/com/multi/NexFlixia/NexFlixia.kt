@@ -104,5 +104,258 @@ open class NexFlixiaProvider : MainAPI() {
                     }
             }
         }
+  override suspend fun load(
+    url: String
+): LoadResponse? {
+
+    val searchData = runCatching {
+        json.decodeFromString<NexFlixiaSearchData>(url)
+    }.getOrNull() ?: return null
+
+    val type = searchData.type.lowercase()
+
+    val meta = metadata.getMetadata(
+        type = type,
+        id = searchData.id
+    ) ?: return null
+
+    return when (type) {
+        "movie" -> buildMovieResponse(
+            meta = meta,
+            sourceUrl = url
+        )
+
+        "series",
+        "tv" -> buildSeriesResponse(
+            meta = meta,
+            sourceUrl = url
+        )
+
+        else -> null
     }
+}
+
+private fun buildMovieResponse(
+    meta: NexFlixiaMeta,
+    sourceUrl: String
+): LoadResponse? {
+
+    val title = meta.name?.takeIf { it.isNotBlank() }
+        ?: return null
+
+    val ids = metadata.extractIds(meta)
+
+    val isAnime = detectAnime(meta)
+    val isBollywood = detectBollywood(meta)
+    val isAsian = detectAsian(meta, isAnime)
+    val isCartoon = detectCartoon(meta, isAnime)
+
+    val data = NexFlixiaLoadData(
+        title = title,
+        id = meta.id ?: ids.imdbId ?: "",
+        tmdbId = ids.tmdbId,
+        imdbId = ids.imdbId,
+        type = "movie",
+        year = meta.year ?: meta.releaseInfo,
+        isAnime = isAnime,
+        isBollywood = isBollywood,
+        isAsian = isAsian,
+        isCartoon = isCartoon
+    ).toJson()
+
+    return newMovieLoadResponse(
+        name = title,
+        url = sourceUrl,
+        type = if (isAnime) TvType.AnimeMovie else TvType.Movie,
+        dataUrl = data
+    ) {
+
+        posterUrl = meta.poster
+        backgroundPosterUrl = meta.background
+        logoUrl = meta.logo
+
+        plot = meta.description
+        tags = meta.genres
+
+        score = meta.imdbRating
+            ?.toDoubleOrNull()
+            ?.let { Score.from10(it) }
+
+        year = extractYear(
+            meta.year ?: meta.releaseInfo
+        )
+
+        duration = extractRuntime(meta.runtime)
+
+        addImdbId(ids.imdbId)
+    }
+}
+private fun buildSeriesResponse(
+    meta: NexFlixiaMeta,
+    sourceUrl: String
+): LoadResponse? {
+
+    val title = meta.name?.takeIf { it.isNotBlank() }
+        ?: return null
+
+    val ids = metadata.extractIds(meta)
+
+    val isAnime = detectAnime(meta)
+    val isBollywood = detectBollywood(meta)
+    val isAsian = detectAsian(meta, isAnime)
+    val isCartoon = detectCartoon(meta, isAnime)
+
+    val episodes = meta.videos
+        .orEmpty()
+        .asSequence()
+        .filter { episode ->
+            (episode.season ?: 0) > 0 &&
+            (episode.episode ?: 0) > 0
+        }
+        .map { episode ->
+
+            val episodeData = NexFlixiaLoadData(
+                title = title,
+                id = meta.id ?: ids.imdbId ?: "",
+                tmdbId = episode.tmdbId ?: ids.tmdbId,
+                imdbId = episode.imdbId ?: ids.imdbId,
+                type = "series",
+                year = meta.year ?: meta.releaseInfo,
+                season = episode.season,
+                episode = episode.episode,
+                firstAired = episode.firstAired ?: episode.released,
+                imdbSeason = episode.imdbSeason,
+                imdbEpisode = episode.imdbEpisode,
+                isAnime = isAnime,
+                isBollywood = isBollywood,
+                isAsian = isAsian,
+                isCartoon = isCartoon
+            ).toJson()
+
+            newEpisode(
+                dataUrl = episodeData
+            ) {
+                name = episode.name ?: episode.title
+
+                season = episode.season ?: 1
+                episode = episode.episode ?: 1
+
+                posterUrl = episode.thumbnail
+                description = episode.overview
+
+                score = episode.rating
+                    ?.toDoubleOrNull()
+                    ?.let { Score.from10(it) }
+
+                addDate(
+                    episode.firstAired ?: episode.released
+                )
+            }
+        }
+        .toList()
+
+    return newTvSeriesLoadResponse(
+        name = title,
+        url = sourceUrl,
+        type = if (isAnime) TvType.Anime else TvType.TvSeries,
+        episodes = episodes
+    ) {
+
+        posterUrl = meta.poster
+        backgroundPosterUrl = meta.background
+        logoUrl = meta.logo
+
+        plot = meta.description
+        tags = meta.genres
+
+        score = meta.imdbRating
+            ?.toDoubleOrNull()
+            ?.let { Score.from10(it) }
+
+        year = extractYear(
+            meta.year ?: meta.releaseInfo
+        )
+
+        duration = extractRuntime(meta.runtime)
+
+        addImdbId(ids.imdbId)
+    }
+}
+private fun detectAnime(
+    meta: NexFlixiaMeta
+): Boolean {
+
+    val country = meta.country.orEmpty()
+    val genres = meta.genres.orEmpty()
+
+    val animation = genres.any {
+        it.contains("animation", ignoreCase = true)
+    }
+
+    val asianCountry = country.contains("Japan", true) ||
+        country.contains("China", true)
+
+    return animation && asianCountry
+}
+
+private fun detectCartoon(
+    meta: NexFlixiaMeta,
+    isAnime: Boolean
+): Boolean {
+
+    if (isAnime) return false
+
+    return meta.genres.orEmpty().any {
+        it.contains("animation", ignoreCase = true)
+    }
+}
+
+private fun detectBollywood(
+    meta: NexFlixiaMeta
+): Boolean {
+
+    return meta.country
+        ?.contains("India", ignoreCase = true)
+        == true
+}
+
+private fun detectAsian(
+    meta: NexFlixiaMeta,
+    isAnime: Boolean
+): Boolean {
+
+    if (isAnime) return false
+
+    val country = meta.country.orEmpty()
+
+    return country.contains("Korea", true) ||
+        country.contains("China", true)
+}
+
+private fun extractYear(
+    value: String?
+): Int? {
+
+    return value
+        ?.substringBefore("-")
+        ?.substringBefore("–")
+        ?.trim()
+        ?.toIntOrNull()
+}
+
+private fun extractRuntime(
+    runtime: String?
+): Int? {
+
+    if (runtime.isNullOrBlank()) return null
+
+    return Regex("""\d+""")
+        .find(runtime)
+        ?.value
+        ?.toIntOrNull()
+}
+  
+
+
+}
 }
