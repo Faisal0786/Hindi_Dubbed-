@@ -1,4 +1,14 @@
-suspend fun invokeAnizone2(
+package com.hindi.providers.newproviders
+
+import com.hindi.providers.SourceProviders
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
+import com.lagradost.api.Log
+import org.json.JSONObject
+
+
+
+suspend fun SourceProviders.invokeAnizone2(
     title: String? = null,
     episode: Int? = null,
     subtitleCallback: (SubtitleFile) -> Unit,
