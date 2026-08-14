@@ -295,17 +295,44 @@ private fun detectAnime(
     meta: NexFlixiaMeta
 ): Boolean {
 
-    val country = meta.country.orEmpty()
-    val genres = meta.genres.orEmpty()
+    val title = buildString {
+        append(meta.name.orEmpty())
+        append(" ")
+        append(meta.aliases.orEmpty().joinToString(" "))
+    }.lowercase()
 
-    val animation = genres.any {
-        it.contains("animation", ignoreCase = true)
+    val country = meta.country.orEmpty().lowercase()
+
+    val genres = meta.genres
+        .orEmpty()
+        .joinToString(" ")
+        .lowercase()
+
+    val isAnimation = genres.contains("animation")
+
+    val isJapanese = country.contains("japan")
+    val isChinese = country.contains("china")
+
+    if (isAnimation && (isJapanese || isChinese)) {
+        return true
     }
 
-    val asianCountry = country.contains("Japan", true) ||
-        country.contains("China", true)
+    /*
+     * Common anime metadata indicators.
+     * These are only hints; they don't trigger any API request.
+     */
+    val animeIndicators = listOf(
+        "anime",
+        "anime series",
+        "japanese animation",
+        "japanese anime"
+    )
 
-    return animation && asianCountry
+    if (animeIndicators.any { title.contains(it) || genres.contains(it) }) {
+        return true
+    }
+
+    return false
 }
 
 private fun detectCartoon(
@@ -313,11 +340,15 @@ private fun detectCartoon(
     isAnime: Boolean
 ): Boolean {
 
-    if (isAnime) return false
-
-    return meta.genres.orEmpty().any {
-        it.contains("animation", ignoreCase = true)
+    if (isAnime) {
+        return false
     }
+
+    return meta.genres
+        .orEmpty()
+        .any {
+            it.contains("animation", ignoreCase = true)
+        }
 }
 
 private fun detectBollywood(
@@ -334,12 +365,15 @@ private fun detectAsian(
     isAnime: Boolean
 ): Boolean {
 
-    if (isAnime) return false
+    if (isAnime) {
+        return false
+    }
 
     val country = meta.country.orEmpty()
 
     return country.contains("Korea", true) ||
-        country.contains("China", true)
+        country.contains("China", true) ||
+        country.contains("Japan", true)
 }
 
 private fun extractYear(
