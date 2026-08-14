@@ -7,7 +7,7 @@ import com.lagradost.api.Log
 import org.json.JSONObject
 import java.net.URLEncoder
 
-
+private const val anizoneAPI = "https://anizone.to"
 
 suspend fun SourceProviders.invokeAnizone2(
     title: String? = null,
@@ -24,13 +24,18 @@ suspend fun SourceProviders.invokeAnizone2(
     // ─────────────────────────────────────────────
     val searchUrl = "$mainUrl/anime?search=${URLEncoder.encode(title, "UTF-8")}"
 
-    val searchDocument = app.get(
-        searchUrl,
-        headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/127.0.0.0 Mobile Safari/537.36",
-            "Referer" to "$mainUrl/"
-        )
-    ).document
+    val searchDocument = try {
+        app.get(
+            searchUrl,
+            headers = mapOf(
+                "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/127.0.0.0 Mobile Safari/537.36",
+                "Referer" to "$mainUrl/"
+            )
+        ).document
+    } catch (e: Exception) {
+        Log.e("Anizone2", "Search error: ${e.message}")
+        return
+    }
 
     // ─────────────────────────────────────────────
     // 2. FIND ANIZONE SLUG
@@ -57,16 +62,20 @@ suspend fun SourceProviders.invokeAnizone2(
     // 3. EPISODE PAGE
     // ─────────────────────────────────────────────
     val episodeNumber = episode ?: 1
-
     val episodeUrl = "$animeLink/$episodeNumber"
 
-    val episodeDocument = app.get(
-        episodeUrl,
-        headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/127.0.0.0 Mobile Safari/537.36",
-            "Referer" to animeLink
-        )
-    ).document
+    val episodeDocument = try {
+        app.get(
+            episodeUrl,
+            headers = mapOf(
+                "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/127.0.0.0 Mobile Safari/537.36",
+                "Referer" to animeLink
+            )
+        ).document
+    } catch (e: Exception) {
+        Log.e("Anizone2", "Episode error: ${e.message}")
+        return
+    }
 
     // ─────────────────────────────────────────────
     // 4. FIND VIDSTACK PLAYER
@@ -106,7 +115,6 @@ suspend fun SourceProviders.invokeAnizone2(
     )
 
     subtitleRegex.findAll(playerData).forEach { match ->
-
         val titleText = match.groupValues[1]
             .replace("\\/", "/")
             .replace("\\u0026", "&")
@@ -135,8 +143,8 @@ suspend fun SourceProviders.invokeAnizone2(
     // ─────────────────────────────────────────────
     callback.invoke(
         newExtractorLink(
-            name = "Anizone 2",
-            source = "Anizone 2 Multi Audio 🌐",
+            source = "Anizone 2",
+            name = "Anizone 2 Multi Audio 🌐",
             url = streamUrl,
             type = ExtractorLinkType.M3U8
         ) {
