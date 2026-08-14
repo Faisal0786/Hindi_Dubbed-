@@ -1,5 +1,7 @@
 package com.multi.nexflixia
 
+import com.google.gson.annotations.SerializedName
+
 data class NexFlixiaSearchResult(
     val metas: List<NexFlixiaSearchItem> = emptyList()
 )
@@ -33,7 +35,10 @@ data class NexFlixiaMeta(
     val year: String? = null,
     val releaseInfo: String? = null,
 
+    @SerializedName("imdb_id")
     val imdbId: String? = null,
+
+    @SerializedName("moviedb_id")
     val tmdbId: Int? = null,
 
     val imdbRating: String? = null,
@@ -63,10 +68,13 @@ data class NexFlixiaEpisode(
     val released: String? = null,
     val firstAired: String? = null,
 
+    @SerializedName("imdb_id")
     val imdbId: String? = null,
+
     val imdbSeason: Int? = null,
     val imdbEpisode: Int? = null,
 
+    @SerializedName("moviedb_id")
     val tmdbId: Int? = null
 )
 
