@@ -1,7 +1,7 @@
 package com.hindi.providers.NewProviders
 
 
-import com.hindi.providers*
+import com.hindi.providers.*
 import com.hindi.providers.SourceProviders
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
