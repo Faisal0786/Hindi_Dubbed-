@@ -7,16 +7,14 @@ class NexFlixiaApi(
 ) {
 
     companion object {
-        private const val CINEMETA_BASE =
+        const val BASE_URL =
             "https://v3-cinemeta.strem.io"
     }
 
-    suspend fun get(
-        path: String
-    ): String? {
+    suspend fun get(path: String): String? {
         return runCatching {
             provider.app
-                .get("$CINEMETA_BASE$path")
+                .get("$BASE_URL$path")
                 .text
         }.getOrNull()
     }
