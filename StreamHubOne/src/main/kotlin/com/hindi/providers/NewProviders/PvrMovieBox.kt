@@ -1,4 +1,4 @@
-package com.hindi.providers.newproviders
+package com.hindi.providers.NewProviders
 
 import com.hindi.providers.SourceProviders
 import com.lagradost.cloudstream3.*
