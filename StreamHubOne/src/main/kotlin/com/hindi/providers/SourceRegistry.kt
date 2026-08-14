@@ -1,7 +1,6 @@
 package com.hindi.providers
 
-import com.hindi.providers.NewProviders.NewSourceRegistry.NewSourceRegistry
-
+import com.hindi.providers.NewProviders.NewSourceRegistry
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 
