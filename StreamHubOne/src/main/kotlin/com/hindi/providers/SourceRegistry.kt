@@ -1,5 +1,7 @@
 package com.hindi.providers
 
+import com.hindi.providers.NewProviders.NewSourceRegistry.NewSourceRegistry
+
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 
@@ -382,8 +384,8 @@ object SourceRegistry {
             key = "p_stremiosubs", displayName = "StremioSubs",
             executeStandard = { res, subCb, _ -> invokeStremioSubtitles(res.imdbId, res.season, res.episode, subCb) },
             executeAnime = { res, subCb, _ -> invokeStremioSubtitles(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb) }
-        )
-    )
+        ) 
+    ) + NewSourceRegistry.newProviders
 
     // Dynamically provided to Settings.kt
     val keys get() = builtInProviders.map { it.key }
