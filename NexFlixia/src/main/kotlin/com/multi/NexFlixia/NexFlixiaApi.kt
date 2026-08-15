@@ -1,4 +1,4 @@
-package com.multi.nexflixia
+package com.multi.NexFlixia
 
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.app
