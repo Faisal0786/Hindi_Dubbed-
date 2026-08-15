@@ -81,7 +81,7 @@ data class NexFlixiaCast(
 )
 
 
-@@Serializable
+@Serializable
 data class NexFlixiaEpisode(
     val id: String? = null,
 
