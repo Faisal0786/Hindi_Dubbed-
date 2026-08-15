@@ -27,9 +27,9 @@ open class NexFlixiaProvider : MainAPI() {
     )
 
     override val mainPage = mainPageOf(
-        "$mainUrl/catalog/movie/top/skip=###" to "Trending Movies",
-        "$mainUrl/catalog/series/top/skip=###" to "Trending Series"
-    )
+    "/catalog/movie/top/skip=###" to "Trending Movies",
+    "/catalog/series/top/skip=###" to "Trending Series"
+)
 
     private val api by lazy {
         NexFlixiaApi(this)
