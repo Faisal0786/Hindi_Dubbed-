@@ -269,37 +269,39 @@ malId = animeIds?.malId,
     ).toJson()
 
     return newMovieLoadResponse(
-        name = title,
-        url = sourceUrl,
-        type = if (isAnime) TvType.AnimeMovie else TvType.Movie,
-        dataUrl = data
-    ) {
+    name = title,
+    url = sourceUrl,
+    type = if (isAnime) TvType.AnimeMovie else TvType.Movie,
+    dataUrl = data
+) {
 
-        posterUrl = meta.poster
-        backgroundPosterUrl = meta.background
-        logoUrl = meta.logo
+    posterUrl = meta.poster
+    backgroundPosterUrl = meta.background
+    logoUrl = meta.logo
 
-        plot = meta.description
+    plot = meta.description
 
-tags = (meta.genres ?: meta.genre)
-    ?.filter { it.isNotBlank() }
-    ?.distinct()
+    tags = (meta.genres ?: meta.genre)
+        ?.filter { it.isNotBlank() }
+        ?.distinct()
 
-contentRating = meta.certification
+    score = meta.imdbRating
+        ?.toDoubleOrNull()
+        ?.takeIf { it > 0.0 }
+        ?.let { Score.from10(it) }
 
-        score = meta.imdbRating
-            ?.toDoubleOrNull()
-            ?.let { Score.from10(it) }
+    year = extractYear(
+        meta.year ?: meta.releaseInfo
+    )
 
-        year = extractYear(
-            meta.year ?: meta.releaseInfo
-        )
+    duration = extractRuntime(meta.runtime)
 
-        duration = extractRuntime(meta.runtime)
+    contentRating = meta.certification
 
-        addImdbId(ids.imdbId)
-    }
+    addImdbId(ids.imdbId)
 }
+}
+
 private suspend fun buildSeriesResponse(
     meta: NexFlixiaMeta,
     sourceUrl: String
@@ -381,36 +383,37 @@ duration = extractRuntime(episode.runtime)
         .toList()
 
     return newTvSeriesLoadResponse(
-        name = title,
-        url = sourceUrl,
-        type = if (isAnime) TvType.Anime else TvType.TvSeries,
-        episodes = episodes
-    ) {
+    name = title,
+    url = sourceUrl,
+    type = if (isAnime) TvType.Anime else TvType.TvSeries,
+    episodes = episodes
+) {
 
-        posterUrl = meta.poster
-        backgroundPosterUrl = meta.background
-        logoUrl = meta.logo
+    posterUrl = meta.poster
+    backgroundPosterUrl = meta.background
+    logoUrl = meta.logo
 
-        plot = meta.description
+    plot = meta.description
 
-tags = (meta.genres ?: meta.genre)
-    ?.filter { it.isNotBlank() }
-    ?.distinct()
+    tags = (meta.genres ?: meta.genre)
+        ?.filter { it.isNotBlank() }
+        ?.distinct()
 
-contentRating = meta.certification
+    score = meta.imdbRating
+        ?.toDoubleOrNull()
+        ?.takeIf { it > 0.0 }
+        ?.let { Score.from10(it) }
 
-        score = meta.imdbRating
-            ?.toDoubleOrNull()
-            ?.let { Score.from10(it) }
+    year = extractYear(
+        meta.year ?: meta.releaseInfo
+    )
 
-        year = extractYear(
-            meta.year ?: meta.releaseInfo
-        )
+    duration = extractRuntime(meta.runtime)
 
-        duration = extractRuntime(meta.runtime)
+    contentRating = meta.certification
 
-        addImdbId(ids.imdbId)
-    }
+    addImdbId(ids.imdbId)
+}
 }
 private fun detectAnime(
     meta: NexFlixiaMeta
