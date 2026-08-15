@@ -133,6 +133,9 @@ data class NexFlixiaLoadData(
     val imdbId: String? = null,
     val type: String,
 
+ val aniListId: Int? = null,
+    val malId: Int? = null,
+
     val year: String? = null,
 
     val season: Int? = null,
