@@ -13,13 +13,10 @@ data class NexFlixiaSearchItem(
     @SerialName("imdb_id")
     val id: String? = null,
 
-    val type: String? = null,
+    val type: String,
     val name: String? = null,
-
     val poster: String? = null,
-
     val imdbRating: String? = null,
-
     val aliases: List<String>? = null
 )
 
