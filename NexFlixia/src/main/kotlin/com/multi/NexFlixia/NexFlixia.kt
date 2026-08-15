@@ -450,7 +450,7 @@ open class NexFlixiaProvider : MainAPI() {
         return false
     }
 
-        private fun buildActors(
+            private fun buildActors(
         cast: List<NexFlixiaCast>?
     ): List<ActorData>? {
 
@@ -463,17 +463,16 @@ open class NexFlixiaProvider : MainAPI() {
                 ?: return@mapNotNull null
 
             ActorData(
-                Actor(
+                actor = Actor(
                     name = name,
                     image = person.photo
                 ),
-                role = person.character
+                roleString = person.character // 'role' ki jagah 'roleString' use hoga
             )
         }
 
         return actors.takeIf { it.isNotEmpty() }
     }
-
 
     private fun detectCartoon(
         meta: NexFlixiaMeta,
