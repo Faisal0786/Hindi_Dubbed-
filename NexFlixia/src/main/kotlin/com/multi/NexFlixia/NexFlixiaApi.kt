@@ -8,18 +8,20 @@ class NexFlixiaApi(
 ) {
 
     companion object {
-        const val CINEMETA_BASE_URL =
-            "https://v3-cinemeta.strem.io"
-
-        const val ANILIST_BASE_URL =
-            "https://graphql.anilist.co"
+        
+        const val CINEMETA_BASE_URL = "https://cinemeta-catalogs.strem.io"
+        const val CINEMETA_V3_URL = "https://v3-cinemeta.strem.io"
+        const val ANILIST_BASE_URL = "https://graphql.anilist.co"
     }
 
     suspend fun get(
         path: String
     ): String? {
         return runCatching {
-            app.get("$CINEMETA_BASE_URL$path").text
+            
+            val finalUrl = if (path.startsWith("http")) path else "$CINEMETA_BASE_URL$path"
+            val res = app.get(finalUrl)
+            if (res.code == 200) res.text else null
         }.getOrNull()
     }
 
@@ -32,7 +34,7 @@ class NexFlixiaApi(
             app.post(
                 url = url,
                 headers = headers,
-                data = mapOf() 
+                data = mapOf()
             ).text
         }.getOrNull()
     }
