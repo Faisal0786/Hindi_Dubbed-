@@ -60,20 +60,17 @@ class NexFlixiaAnimeResolver(
             put("variables", variables)
         }.toString()
 
-        val response = runCatching {
+                val response = runCatching {
             api.post(
-                ANILIST_API,
+                url = ANILIST_API,
                 headers = mapOf(
                     "Content-Type" to "application/json",
                     "Accept" to "application/json"
                 ),
-                data = body
-            ).text
+                body = body // 'data' ki jagah 'body'
+            ) 
         }.getOrNull() ?: return null
 
-        val result = runCatching {
-            json.decodeFromString<NexFlixiaAniListResponse>(response)
-        }.getOrNull() ?: return null
 
         val media = result.data
             ?.page
