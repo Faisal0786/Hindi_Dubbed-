@@ -23,6 +23,7 @@ data class NexFlixiaMetaResponse(
     val meta: NexFlixiaMeta? = null
 )
 
+
 @Serializable
 data class NexFlixiaMeta(
     val id: String? = null,
@@ -49,14 +50,38 @@ data class NexFlixiaMeta(
     val imdbRating: String? = null,
 
     val genres: List<String>? = null,
+    val genre: List<String>? = null,
+
     val country: String? = null,
+    val language: String? = null,
 
     val runtime: String? = null,
+
+    val status: String? = null,
+
+    val certification: String? = null,
+
+    val awards: String? = null,
+
+    val cast: List<NexFlixiaCast>? = null,
+
+    val directors: List<String>? = null,
+    val writers: List<String>? = null,
+
+    val trailer: String? = null,
 
     val videos: List<NexFlixiaEpisode>? = null
 )
 
 @Serializable
+data class NexFlixiaCast(
+    val name: String? = null,
+    val character: String? = null,
+    val photo: String? = null
+)
+
+
+@@Serializable
 data class NexFlixiaEpisode(
     val id: String? = null,
 
@@ -73,7 +98,8 @@ data class NexFlixiaEpisode(
 
     val released: String? = null,
     val firstAired: String? = null,
-val runtime: String? = null,
+
+    val runtime: String? = null,
 
     @SerialName("imdb_id")
     val imdbId: String? = null,
