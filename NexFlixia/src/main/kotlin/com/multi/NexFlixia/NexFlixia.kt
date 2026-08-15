@@ -1,4 +1,4 @@
-package com.multi.nexflixia
+package com.multi.NexFlixia
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
@@ -29,11 +29,9 @@ open class NexFlixiaProvider : MainAPI() {
     )
 
     override val mainPage = mainPageOf(
-        "$mainUrl/catalog/movie/top/skip=###" to "Trending Movies",
-        "$mainUrl/catalog/series/top/skip=###" to "Trending Series",
-        "$mainUrl/catalog/movie/popular/skip=###" to "Popular Movies",
-        "$mainUrl/catalog/series/popular/skip=###" to "Popular Series"
-    )
+    "$mainUrl/catalog/movie/top/skip=###" to "Trending Movies",
+    "$mainUrl/catalog/series/top/skip=###" to "Trending Series"
+)
 
     private val api by lazy {
         NexFlixiaApi(this)
