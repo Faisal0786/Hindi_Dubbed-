@@ -1,6 +1,6 @@
 package com.multi.NexFlixia
 
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson // Safe parser add kiya
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 
 class NexFlixiaMetadata(
     private val api: NexFlixiaApi
@@ -11,11 +11,16 @@ class NexFlixiaMetadata(
         id: String
     ): NexFlixiaMeta? {
 
-        val response = api.get(
-            "/meta/$type/$id.json"
-        ) ?: return null
+        // Primary Endpoint
+        var response = api.get("/meta/$type/$id.json")
 
-        // Strict kotlinx json parser ki jagah Cloudstream ka safe parser use kiya
+        // Fallback 
+        if (response.isNullOrBlank()) {
+            response = api.get("https://v3-cinemeta.strem.io/meta/$type/$id.json")
+        }
+
+        if (response.isNullOrBlank()) return null
+
         return tryParseJson<NexFlixiaMetaResponse>(response)?.meta
     }
 
