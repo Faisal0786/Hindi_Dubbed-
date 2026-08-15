@@ -1,7 +1,6 @@
 package com.multi.nexflixia
 
-import com.lagradost.cloudstream3.MainAPI
-import com.lagradost.cloudstream3.app
+
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -10,7 +9,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 class NexFlixiaAnimeResolver(
-    private val provider: MainAPI
+    private val api: NexFlixiaApi
 ) {
 
     companion object {
@@ -62,7 +61,7 @@ class NexFlixiaAnimeResolver(
         }.toString()
 
         val response = runCatching {
-            provider.app.post(
+            api.post(
                 ANILIST_API,
                 headers = mapOf(
                     "Content-Type" to "application/json",
