@@ -280,7 +280,12 @@ malId = animeIds?.malId,
         logoUrl = meta.logo
 
         plot = meta.description
-        tags = meta.genres
+
+tags = (meta.genres ?: meta.genre)
+    ?.filter { it.isNotBlank() }
+    ?.distinct()
+
+contentRating = meta.certification
 
         score = meta.imdbRating
             ?.toDoubleOrNull()
@@ -387,7 +392,12 @@ duration = extractRuntime(episode.runtime)
         logoUrl = meta.logo
 
         plot = meta.description
-        tags = meta.genres
+
+tags = (meta.genres ?: meta.genre)
+    ?.filter { it.isNotBlank() }
+    ?.distinct()
+
+contentRating = meta.certification
 
         score = meta.imdbRating
             ?.toDoubleOrNull()
