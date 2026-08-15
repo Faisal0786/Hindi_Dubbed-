@@ -88,17 +88,25 @@ open class NexFlixiaProvider : MainAPI() {
                     ?.firstOrNull { it.isNotBlank() }
                 ?: return@mapNotNull null
 
-            val type = when (item.type.lowercase()) {
-                "movie" -> TvType.Movie
-                "series", "tv" -> TvType.TvSeries
-                else -> return@mapNotNull null
-            }
+            val typeValue = item.type
+    ?.lowercase()
+    ?: return@mapNotNull null
+
+val typeValue = item.type
+    ?.lowercase()
+    ?: return@mapNotNull null
+
+val type = when (typeValue) {
+    "movie" -> TvType.Movie
+    "series", "tv" -> TvType.TvSeries
+    else -> return@mapNotNull null
+}
 
             newMovieSearchResponse(
                 name = title,
                 url = NexFlixiaSearchData(
                    id = item.id ?: return@mapNotNull null,
-                    type = item.type
+                    type = typeValue
                 ).toJson(),
                 type = type
             ) {
