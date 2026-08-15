@@ -10,7 +10,7 @@ data class NexFlixiaSearchResult(
 
 @Serializable
 data class NexFlixiaSearchItem(
-    @SerialName("imdb_id")
+   
     val id: String? = null,
 
     val type: String,
