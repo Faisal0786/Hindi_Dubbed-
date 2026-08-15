@@ -7,6 +7,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import com.lagradost.cloudstream3.ActorData
+import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 
 import java.net.URLEncoder
 
