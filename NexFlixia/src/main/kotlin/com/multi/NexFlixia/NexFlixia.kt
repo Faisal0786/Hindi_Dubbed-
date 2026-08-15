@@ -15,7 +15,7 @@ open class NexFlixiaProvider : MainAPI() {
     override var name = "NexFlixia"
     override var lang = "en"
 
-    override val hasMainPage = false
+    override val hasMainPage = true
     override val hasDownloadSupport = true
 
     override val supportedTypes = setOf(
@@ -25,6 +25,13 @@ open class NexFlixiaProvider : MainAPI() {
         TvType.AsianDrama,
         TvType.Torrent
     )
+
+override val mainPage = mainPageOf(
+    "$mainUrl/catalog/movie/top/skip=###" to "Trending Movies",
+    "$mainUrl/catalog/series/top/skip=###" to "Trending Series",
+    "$mainUrl/catalog/movie/popular/skip=###" to "Popular Movies",
+    "$mainUrl/catalog/series/popular/skip=###" to "Popular Series"
+)
 
     private val api by lazy {
         NexFlixiaApi(this)
@@ -41,6 +48,81 @@ private val animeResolver by lazy {
     private val json = Json {
         ignoreUnknownKeys = true
     }
+
+
+override suspend fun getMainPage(
+    page: Int,
+    request: MainPageRequest
+): HomePageResponse {
+
+    val skip = ((page - 1) * 100).coerceAtLeast(0)
+
+    val endpoint = request.data
+        .replace("###", skip.toString())
+
+    val response = api.get(
+        "$endpoint.json"
+    ) ?: return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = emptyList()
+        ),
+        hasNext = false
+    )
+
+    val result = runCatching {
+        json.decodeFromString<NexFlixiaSearchResult>(response)
+    }.getOrNull()
+        ?: return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = emptyList()
+            ),
+            hasNext = false
+        )
+
+    val items = result.metas.mapNotNull { item ->
+
+        val title = item.name
+            ?.takeIf { it.isNotBlank() }
+            ?: item.aliases
+                ?.firstOrNull { it.isNotBlank() }
+            ?: return@mapNotNull null
+
+        val type = when (item.type.lowercase()) {
+            "movie" -> TvType.Movie
+            "series", "tv" -> TvType.TvSeries
+            else -> return@mapNotNull null
+        }
+
+        newMovieSearchResponse(
+            name = title,
+            url = NexFlixiaSearchData(
+                id = item.id,
+                type = item.type
+            ).toJson(),
+            type = type
+        ) {
+            posterUrl = item.poster
+
+            item.imdbRating
+                ?.toDoubleOrNull()
+                ?.takeIf { it > 0.0 }
+                ?.let {
+                    score = Score.from10(it)
+                }
+        }
+    }
+
+    return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = items
+        ),
+        hasNext = items.isNotEmpty()
+    )
+}
+
 
     override suspend fun search(
     query: String
