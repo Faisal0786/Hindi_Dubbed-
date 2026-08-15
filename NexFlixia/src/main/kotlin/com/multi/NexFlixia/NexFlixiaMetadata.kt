@@ -1,14 +1,10 @@
 package com.multi.NexFlixia
 
-import kotlinx.serialization.json.Json
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson // Safe parser add kiya
 
 class NexFlixiaMetadata(
     private val api: NexFlixiaApi
 ) {
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-    }
 
     suspend fun getMetadata(
         type: String,
@@ -19,10 +15,8 @@ class NexFlixiaMetadata(
             "/meta/$type/$id.json"
         ) ?: return null
 
-        return runCatching {
-            json.decodeFromString<NexFlixiaMetaResponse>(response)
-                .meta
-        }.getOrNull()
+        // Strict kotlinx json parser ki jagah Cloudstream ka safe parser use kiya
+        return tryParseJson<NexFlixiaMetaResponse>(response)?.meta
     }
 
     fun extractIds(
