@@ -453,8 +453,8 @@ open class NexFlixiaProvider : MainAPI() {
         return false
     }
 
-    private fun buildActors(
-        cast: List<String>?
+        private fun buildActors(
+        cast: List<NexFlixiaCast>?
     ): List<ActorData>? {
 
         val actors = cast
@@ -477,6 +477,7 @@ open class NexFlixiaProvider : MainAPI() {
         return actors.takeIf { it.isNotEmpty() }
     }
 
+
     private fun detectCartoon(
         meta: NexFlixiaMeta,
         isAnime: Boolean
@@ -493,14 +494,12 @@ open class NexFlixiaProvider : MainAPI() {
             }
     }
 
-    private fun detectBollywood(
+        private fun detectBollywood(
         meta: NexFlixiaMeta
     ): Boolean {
-
-        return meta.country
-            ?.contains("India", ignoreCase = true)
-            == true
+        return meta.country?.contains("India", ignoreCase = true) == true
     }
+
 
     private fun detectAsian(
         meta: NexFlixiaMeta,
