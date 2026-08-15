@@ -34,6 +34,10 @@ open class NexFlixiaProvider : MainAPI() {
         NexFlixiaMetadata(api)
     }
 
+private val animeResolver by lazy {
+    NexFlixiaAnimeResolver(this)
+}
+
     private val json = Json {
         ignoreUnknownKeys = true
     }
@@ -141,7 +145,7 @@ open class NexFlixiaProvider : MainAPI() {
     }
 }
 
-private fun buildMovieResponse(
+private suspend fun buildMovieResponse(
     meta: NexFlixiaMeta,
     sourceUrl: String
 ): LoadResponse? {
@@ -152,6 +156,14 @@ private fun buildMovieResponse(
     val ids = metadata.extractIds(meta)
 
     val isAnime = detectAnime(meta)
+    val animeIds = if (isAnime) {
+    animeResolver.resolve(
+        title = title,
+        year = extractYear(meta.year ?: meta.releaseInfo)
+    )
+} else {
+    null
+}
     val isBollywood = detectBollywood(meta)
     val isAsian = detectAsian(meta, isAnime)
     val isCartoon = detectCartoon(meta, isAnime)
@@ -161,6 +173,11 @@ private fun buildMovieResponse(
         id = meta.id ?: ids.imdbId ?: "",
         tmdbId = ids.tmdbId,
         imdbId = ids.imdbId,
+
+aniListId = animeIds?.aniListId,
+malId = animeIds?.malId,
+
+
         type = "movie",
         year = meta.year ?: meta.releaseInfo,
         isAnime = isAnime,
@@ -196,7 +213,7 @@ private fun buildMovieResponse(
         addImdbId(ids.imdbId)
     }
 }
-private fun buildSeriesResponse(
+private suspend fun buildSeriesResponse(
     meta: NexFlixiaMeta,
     sourceUrl: String
 ): LoadResponse? {
@@ -207,6 +224,14 @@ private fun buildSeriesResponse(
     val ids = metadata.extractIds(meta)
 
     val isAnime = detectAnime(meta)
+val animeIds = if (isAnime) {
+    animeResolver.resolve(
+        title = title,
+        year = extractYear(meta.year ?: meta.releaseInfo)
+    )
+} else {
+    null
+}
     val isBollywood = detectBollywood(meta)
     val isAsian = detectAsian(meta, isAnime)
     val isCartoon = detectCartoon(meta, isAnime)
@@ -225,6 +250,10 @@ private fun buildSeriesResponse(
                 id = meta.id ?: ids.imdbId ?: "",
                 tmdbId = episode.tmdbId ?: ids.tmdbId,
                 imdbId = episode.imdbId ?: ids.imdbId,
+
+aniListId = animeIds?.aniListId,
+malId = animeIds?.malId,
+
                 type = "series",
                 year = meta.year ?: meta.releaseInfo,
                 season = episode.season,
