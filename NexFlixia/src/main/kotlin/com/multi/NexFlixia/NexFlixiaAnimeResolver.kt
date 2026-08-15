@@ -21,7 +21,7 @@ class NexFlixiaAnimeResolver(
         ignoreUnknownKeys = true
     }
 
-    suspend fun resolve(
+        suspend fun resolve(
         title: String,
         year: Int? = null
     ): NexFlixiaIds? {
@@ -60,17 +60,21 @@ class NexFlixiaAnimeResolver(
             put("variables", variables)
         }.toString()
 
-                val response = runCatching {
+        val response = runCatching {
             api.post(
                 url = ANILIST_API,
                 headers = mapOf(
                     "Content-Type" to "application/json",
                     "Accept" to "application/json"
                 ),
-                body = body // 'data' ki jagah 'body'
-            ) 
+                body = body
+            )
         }.getOrNull() ?: return null
 
+        
+        val result = runCatching {
+            json.decodeFromString<NexFlixiaAniListResponse>(response)
+        }.getOrNull() ?: return null
 
         val media = result.data
             ?.page
@@ -99,6 +103,7 @@ class NexFlixiaAnimeResolver(
             malId = media.idMal
         )
     }
+
 
     private fun calculateMatchScore(
         searchTitle: String,
