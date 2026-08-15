@@ -1,14 +1,12 @@
 package com.multi.NexFlixia
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
-import com.lagradost.cloudstream3.ActorData
-import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
-
 import java.net.URLEncoder
 
 open class NexFlixiaProvider : MainAPI() {
@@ -29,9 +27,9 @@ open class NexFlixiaProvider : MainAPI() {
     )
 
     override val mainPage = mainPageOf(
-    "$mainUrl/catalog/movie/top/skip=###" to "Trending Movies",
-    "$mainUrl/catalog/series/top/skip=###" to "Trending Series"
-)
+        "$mainUrl/catalog/movie/top/skip=###" to "Trending Movies",
+        "$mainUrl/catalog/series/top/skip=###" to "Trending Series"
+    )
 
     private val api by lazy {
         NexFlixiaApi(this)
@@ -42,8 +40,8 @@ open class NexFlixiaProvider : MainAPI() {
     }
 
     private val animeResolver by lazy {
-    NexFlixiaAnimeResolver(api)
-}
+        NexFlixiaAnimeResolver(api)
+    }
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -88,28 +86,30 @@ open class NexFlixiaProvider : MainAPI() {
                     ?.firstOrNull { it.isNotBlank() }
                 ?: return@mapNotNull null
 
-            
-val type = when (typeValue) {
-    "movie" -> TvType.Movie
-    "series", "tv" -> TvType.TvSeries
-    else -> return@mapNotNull null
-}
+            val type = when (item.type.lowercase()) {
+                "movie" -> TvType.Movie
+                "series", "tv" -> TvType.TvSeries
+                else -> return@mapNotNull null
+            }
+
+            val id = item.id
+                ?: return@mapNotNull null
 
             newMovieSearchResponse(
                 name = title,
                 url = NexFlixiaSearchData(
-                   id = item.id ?: return@mapNotNull null,
+                    id = id,
                     type = item.type
                 ).toJson(),
-                
+                type = type
             ) {
                 posterUrl = item.poster
 
                 item.imdbRating
                     ?.toDoubleOrNull()
                     ?.takeIf { it > 0.0 }
-                    ?.let {
-                        score = Score.from10(it)
+                    ?.let { rating ->
+                        score = Score.from10(rating)
                     }
             }
         }
@@ -132,8 +132,10 @@ val type = when (typeValue) {
             .takeIf { it.isNotEmpty() }
             ?: return@coroutineScope emptyList()
 
-        val encodedQuery = URLEncoder
-            .encode(searchQuery, Charsets.UTF_8.name())
+        val encodedQuery = URLEncoder.encode(
+            searchQuery,
+            Charsets.UTF_8.name()
+        )
 
         val endpoints = arrayOf(
             "/catalog/movie/top/search=$encodedQuery.json",
@@ -148,6 +150,7 @@ val type = when (typeValue) {
             }
             .awaitAll()
             .flatten()
+            .distinctBy { it.url }
     }
 
     private suspend fun fetchSearchResults(
@@ -176,10 +179,13 @@ val type = when (typeValue) {
                 else -> return@mapNotNull null
             }
 
+            val id = item.id
+                ?: return@mapNotNull null
+
             newMovieSearchResponse(
                 name = title,
                 url = NexFlixiaSearchData(
-                    id = item.id ?: return@mapNotNull null,
+                    id = id,
                     type = item.type
                 ).toJson(),
                 type = type
@@ -212,6 +218,7 @@ val type = when (typeValue) {
         ) ?: return null
 
         return when (type) {
+
             "movie" -> buildMovieResponse(
                 meta = meta,
                 sourceUrl = url
@@ -232,20 +239,25 @@ val type = when (typeValue) {
         sourceUrl: String
     ): LoadResponse? {
 
-        val title = meta.name?.takeIf { it.isNotBlank() }
+        val title = meta.name
+            ?.takeIf { it.isNotBlank() }
             ?: return null
 
         val ids = metadata.extractIds(meta)
 
         val isAnime = detectAnime(meta)
+
         val animeIds = if (isAnime) {
             animeResolver.resolve(
                 title = title,
-                year = extractYear(meta.year ?: meta.releaseInfo)
+                year = extractYear(
+                    meta.year ?: meta.releaseInfo
+                )
             )
         } else {
             null
         }
+
         val isBollywood = detectBollywood(meta)
         val isAsian = detectAsian(meta, isAnime)
         val isCartoon = detectCartoon(meta, isAnime)
@@ -268,7 +280,11 @@ val type = when (typeValue) {
         return newMovieLoadResponse(
             name = title,
             url = sourceUrl,
-            type = if (isAnime) TvType.AnimeMovie else TvType.Movie,
+            type = if (isAnime) {
+                TvType.AnimeMovie
+            } else {
+                TvType.Movie
+            },
             dataUrl = data
         ) {
 
@@ -292,6 +308,7 @@ val type = when (typeValue) {
             )
 
             duration = extractRuntime(meta.runtime)
+
             actors = buildActors(meta.cast)
 
             contentRating = meta.certification
@@ -305,25 +322,30 @@ val type = when (typeValue) {
         sourceUrl: String
     ): LoadResponse? {
 
-        val title = meta.name?.takeIf { it.isNotBlank() }
+        val title = meta.name
+            ?.takeIf { it.isNotBlank() }
             ?: return null
 
         val ids = metadata.extractIds(meta)
 
         val isAnime = detectAnime(meta)
+
         val animeIds = if (isAnime) {
             animeResolver.resolve(
                 title = title,
-                year = extractYear(meta.year ?: meta.releaseInfo)
+                year = extractYear(
+                    meta.year ?: meta.releaseInfo
+                )
             )
         } else {
             null
         }
+
         val isBollywood = detectBollywood(meta)
         val isAsian = detectAsian(meta, isAnime)
         val isCartoon = detectCartoon(meta, isAnime)
 
-                val episodes = meta.videos
+        val episodes = meta.videos
             .orEmpty()
             .asSequence()
             .filter { ep ->
@@ -344,27 +366,29 @@ val type = when (typeValue) {
                     season = ep.season,
                     episode = ep.episode,
                     firstAired = ep.firstAired ?: ep.released,
+                    episodeRuntime = extractRuntime(ep.runtime),
                     imdbSeason = ep.imdbSeason,
                     imdbEpisode = ep.imdbEpisode,
-                    episodeRuntime = extractRuntime(ep.runtime),
                     isAnime = isAnime,
                     isBollywood = isBollywood,
                     isAsian = isAsian,
                     isCartoon = isCartoon
                 ).toJson()
 
-                newEpisode(episodeData) {
+                newEpisode(
+                    episodeData
+                ) {
                     name = ep.name ?: ep.title
 
-                    season = ep.season ?: 1
-                    episode = ep.episode ?: 1
+                    this.season = ep.season ?: 1
+                    this.episode = ep.episode ?: 1
 
-                    // duration aur actors Cloudstream episode me directly map nahi hote
                     posterUrl = ep.thumbnail
                     description = ep.overview
 
                     score = ep.rating
                         ?.toDoubleOrNull()
+                        ?.takeIf { it > 0.0 }
                         ?.let { Score.from10(it) }
 
                     addDate(
@@ -374,11 +398,14 @@ val type = when (typeValue) {
             }
             .toList()
 
-
         return newTvSeriesLoadResponse(
             name = title,
             url = sourceUrl,
-            type = if (isAnime) TvType.Anime else TvType.TvSeries,
+            type = if (isAnime) {
+                TvType.Anime
+            } else {
+                TvType.TvSeries
+            },
             episodes = episodes
         ) {
 
@@ -416,10 +443,16 @@ val type = when (typeValue) {
         val title = buildString {
             append(meta.name.orEmpty())
             append(" ")
-            append(meta.aliases.orEmpty().joinToString(" "))
+            append(
+                meta.aliases
+                    .orEmpty()
+                    .joinToString(" ")
+            )
         }.lowercase()
 
-        val country = meta.country.orEmpty().lowercase()
+        val country = meta.country
+            .orEmpty()
+            .lowercase()
 
         val genres = meta.genres
             .orEmpty()
@@ -442,14 +475,12 @@ val type = when (typeValue) {
             "japanese anime"
         )
 
-        if (animeIndicators.any { title.contains(it) || genres.contains(it) }) {
-            return true
+        return animeIndicators.any {
+            title.contains(it) || genres.contains(it)
         }
-
-        return false
     }
 
-            private fun buildActors(
+    private fun buildActors(
         cast: List<NexFlixiaCast>?
     ): List<ActorData>? {
 
@@ -457,20 +488,22 @@ val type = when (typeValue) {
             .orEmpty()
             .mapNotNull { person ->
 
-            val name = person.name
-                ?.takeIf { it.isNotBlank() }
-                ?: return@mapNotNull null
+                val name = person.name
+                    ?.takeIf { it.isNotBlank() }
+                    ?: return@mapNotNull null
 
-            ActorData(
-                actor = Actor(
-                    name = name,
-                    image = person.photo
-                ),
-                roleString = person.character // 'role' ki jagah 'roleString' use hoga
-            )
+                ActorData(
+                    actor = Actor(
+                        name = name,
+                        image = person.photo
+                    ),
+                    roleString = person.character
+                )
+            }
+
+        return actors.takeIf {
+            it.isNotEmpty()
         }
-
-        return actors.takeIf { it.isNotEmpty() }
     }
 
     private fun detectCartoon(
@@ -485,16 +518,23 @@ val type = when (typeValue) {
         return meta.genres
             .orEmpty()
             .any {
-                it.contains("animation", ignoreCase = true)
+                it.contains(
+                    "animation",
+                    ignoreCase = true
+                )
             }
     }
 
-        private fun detectBollywood(
+    private fun detectBollywood(
         meta: NexFlixiaMeta
     ): Boolean {
-        return meta.country?.contains("India", ignoreCase = true) == true
-    }
 
+        return meta.country
+            ?.contains(
+                "India",
+                ignoreCase = true
+            ) == true
+    }
 
     private fun detectAsian(
         meta: NexFlixiaMeta,
@@ -531,15 +571,9 @@ val type = when (typeValue) {
             return null
         }
 
-        return runtime
-            .replace(",", "")
-            .trim()
-            .let { value ->
-                Regex("""(\d+)""")
-                    .find(value)
-                    ?.groupValues
-                    ?.getOrNull(1)
-                    ?.toIntOrNull()
-            }
+        return Regex("""\d+""")
+            .find(runtime)
+            ?.value
+            ?.toIntOrNull()
     }
 }
