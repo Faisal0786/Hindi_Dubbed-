@@ -1,4 +1,4 @@
-package com.multi.nexflixia
+package com.multi.NexFlixia
 
 import android.content.Context
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
