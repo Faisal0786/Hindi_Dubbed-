@@ -11,7 +11,7 @@ import java.net.URLEncoder
 
 open class NexFlixiaProvider : MainAPI() {
 
-    override var mainUrl = "https://v3-cinemeta.strem.io"
+    override var mainUrl = "https://cinemeta-catalogs.strem.io"
     override var name = "NexFlixia"
     override var lang = "en"
 
