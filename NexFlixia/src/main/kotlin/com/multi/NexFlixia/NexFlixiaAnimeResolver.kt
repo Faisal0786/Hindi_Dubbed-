@@ -1,6 +1,8 @@
 package com.multi.nexflixia
 
 import com.lagradost.cloudstream3.MainAPI
+import com.lagradost.cloudstream3.app
+
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
