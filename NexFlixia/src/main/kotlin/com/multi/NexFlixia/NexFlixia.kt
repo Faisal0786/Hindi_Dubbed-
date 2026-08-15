@@ -355,8 +355,8 @@ open class NexFlixiaProvider : MainAPI() {
                 ).toJson()
 
                 newEpisode(
-                    dataUrl = episodeData
-                ) {
+    episodeData
+) {
                     name = episode.name ?: episode.title
 
                     season = episode.season ?: 1
@@ -454,7 +454,7 @@ open class NexFlixiaProvider : MainAPI() {
     }
 
     private fun buildActors(
-        cast: List<NexFlixiaCast>?
+        cast: List<String>?
     ): List<ActorData>? {
 
         val actors = cast
