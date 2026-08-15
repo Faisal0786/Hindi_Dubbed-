@@ -12,7 +12,8 @@ class NexFlixiaAnimeResolver(
 ) {
 
     companion object {
-        private const val ANILIST_API = "https://graphql.anilist.co"
+        private const val ANILIST_API =
+            "https://graphql.anilist.co"
     }
 
     private val json = Json {
@@ -24,20 +25,21 @@ class NexFlixiaAnimeResolver(
         year: Int? = null
     ): NexFlixiaIds? {
 
-        if (title.isBlank()) {
-            return null
-        }
+        val cleanTitle = title
+            .trim()
+            .takeIf { it.isNotEmpty() }
+            ?: return null
 
         val query = """
-            query (${"$"}search: String, ${"$"}seasonYear: Int) {
-                Page(page: 1, perPage: 5) {
+            query (${"$"}search: String) {
+                Page(page: 1, perPage: 8) {
                     media(
                         search: ${"$"}search,
-                        type: ANIME,
-                        seasonYear: ${"$"}seasonYear
+                        type: ANIME
                     ) {
                         id
                         idMal
+                        seasonYear
                         title {
                             romaji
                             english
@@ -49,11 +51,7 @@ class NexFlixiaAnimeResolver(
         """.trimIndent()
 
         val variables = buildJsonObject {
-            put("search", title)
-
-            if (year != null) {
-                put("seasonYear", year)
-            }
+            put("search", cleanTitle)
         }
 
         val body = buildJsonObject {
@@ -79,13 +77,81 @@ class NexFlixiaAnimeResolver(
         val media = result.data
             ?.page
             ?.media
-            ?.firstOrNull()
+            ?.maxByOrNull { anime ->
+                calculateMatchScore(
+                    searchTitle = cleanTitle,
+                    anime = anime,
+                    year = year
+                )
+            }
             ?: return null
+
+        val score = calculateMatchScore(
+            searchTitle = cleanTitle,
+            anime = media,
+            year = year
+        )
+
+        if (score < 50) {
+            return null
+        }
 
         return NexFlixiaIds(
             aniListId = media.id,
             malId = media.idMal
         )
+    }
+
+    private fun calculateMatchScore(
+        searchTitle: String,
+        anime: NexFlixiaAniListMedia,
+        year: Int?
+    ): Int {
+
+        val normalizedSearch = normalizeTitle(searchTitle)
+
+        val titles = listOfNotNull(
+            anime.title?.romaji,
+            anime.title?.english,
+            anime.title?.native
+        )
+
+        var score = 0
+
+        for (title in titles) {
+
+            val normalizedTitle = normalizeTitle(title)
+
+            if (normalizedTitle == normalizedSearch) {
+                score = maxOf(score, 100)
+            } else if (
+                normalizedTitle.contains(normalizedSearch) ||
+                normalizedSearch.contains(normalizedTitle)
+            ) {
+                score = maxOf(score, 70)
+            }
+        }
+
+        if (
+            year != null &&
+            anime.seasonYear != null &&
+            anime.seasonYear == year
+        ) {
+            score += 25
+        }
+
+        return score
+    }
+
+    private fun normalizeTitle(
+        title: String
+    ): String {
+
+        return title
+            .lowercase()
+            .replace(Regex("[^a-z0-9 ]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
     }
 }
 
@@ -96,7 +162,8 @@ private data class NexFlixiaAniListResponse(
 
 @Serializable
 private data class NexFlixiaAniListData(
-    val Page: NexFlixiaAniListPage? = null
+    @SerialName("Page")
+    val page: NexFlixiaAniListPage? = null
 )
 
 @Serializable
@@ -110,6 +177,8 @@ private data class NexFlixiaAniListMedia(
 
     @SerialName("idMal")
     val idMal: Int? = null,
+
+    val seasonYear: Int? = null,
 
     val title: NexFlixiaAniListTitle? = null
 )
