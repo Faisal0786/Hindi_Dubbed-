@@ -324,60 +324,57 @@ open class NexFlixiaProvider : MainAPI() {
         val isAsian = detectAsian(meta, isAnime)
         val isCartoon = detectCartoon(meta, isAnime)
 
-        val episodes = meta.videos
+                val episodes = meta.videos
             .orEmpty()
             .asSequence()
-            .filter { episode ->
-                (episode.season ?: 0) > 0 &&
-                (episode.episode ?: 0) > 0
+            .filter { ep ->
+                (ep.season ?: 0) > 0 &&
+                (ep.episode ?: 0) > 0
             }
-            .map { episode ->
+            .map { ep ->
 
                 val episodeData = NexFlixiaLoadData(
                     title = title,
                     id = meta.id ?: ids.imdbId ?: "",
-                    tmdbId = episode.tmdbId ?: ids.tmdbId,
-                    imdbId = episode.imdbId ?: ids.imdbId,
+                    tmdbId = ep.tmdbId ?: ids.tmdbId,
+                    imdbId = ep.imdbId ?: ids.imdbId,
                     aniListId = animeIds?.aniListId,
                     malId = animeIds?.malId,
                     type = "series",
                     year = meta.year ?: meta.releaseInfo,
-                    season = episode.season,
-                    episode = episode.episode,
-                    firstAired = episode.firstAired ?: episode.released,
-                    imdbSeason = episode.imdbSeason,
-                    imdbEpisode = episode.imdbEpisode,
-                    episodeRuntime = extractRuntime(episode.runtime),
+                    season = ep.season,
+                    episode = ep.episode,
+                    firstAired = ep.firstAired ?: ep.released,
+                    imdbSeason = ep.imdbSeason,
+                    imdbEpisode = ep.imdbEpisode,
+                    episodeRuntime = extractRuntime(ep.runtime),
                     isAnime = isAnime,
                     isBollywood = isBollywood,
                     isAsian = isAsian,
                     isCartoon = isCartoon
                 ).toJson()
 
-                newEpisode(
-    episodeData
-) {
-                    name = episode.name ?: episode.title
+                newEpisode(episodeData) {
+                    name = ep.name ?: ep.title
 
-                    season = episode.season ?: 1
-                    episode = episode.episode ?: 1
+                    season = ep.season ?: 1
+                    episode = ep.episode ?: 1
 
-                    duration = extractRuntime(episode.runtime)
+                    // duration aur actors Cloudstream episode me directly map nahi hote
+                    posterUrl = ep.thumbnail
+                    description = ep.overview
 
-                    posterUrl = episode.thumbnail
-                    description = episode.overview
-                    actors = buildActors(meta.cast)
-
-                    score = episode.rating
+                    score = ep.rating
                         ?.toDoubleOrNull()
                         ?.let { Score.from10(it) }
 
                     addDate(
-                        episode.firstAired ?: episode.released
+                        ep.firstAired ?: ep.released
                     )
                 }
             }
             .toList()
+
 
         return newTvSeriesLoadResponse(
             name = title,
