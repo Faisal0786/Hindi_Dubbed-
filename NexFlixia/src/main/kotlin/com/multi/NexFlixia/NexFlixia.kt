@@ -97,7 +97,7 @@ open class NexFlixiaProvider : MainAPI() {
             newMovieSearchResponse(
                 name = title,
                 url = NexFlixiaSearchData(
-                    id = item.id,
+                   id = item.id ?: return@mapNotNull null,
                     type = item.type
                 ).toJson(),
                 type = type
@@ -178,7 +178,7 @@ open class NexFlixiaProvider : MainAPI() {
             newMovieSearchResponse(
                 name = title,
                 url = NexFlixiaSearchData(
-                    id = item.id,
+                    id = item.id ?: return@mapNotNull null,
                     type = item.type
                 ).toJson(),
                 type = type
