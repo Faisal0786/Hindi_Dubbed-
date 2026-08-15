@@ -44,8 +44,8 @@ open class NexFlixiaProvider : MainAPI() {
     }
 
     private val animeResolver by lazy {
-        NexFlixiaAnimeResolver(this)
-    }
+    NexFlixiaAnimeResolver(api)
+}
 
     private val json = Json {
         ignoreUnknownKeys = true
