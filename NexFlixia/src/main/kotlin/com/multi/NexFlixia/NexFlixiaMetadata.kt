@@ -1,4 +1,4 @@
-package com.multi.nexflixia
+package com.multi.NexFlixia
 
 import kotlinx.serialization.json.Json
 
