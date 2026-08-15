@@ -19,9 +19,7 @@ class NexFlixiaApi(
         path: String
     ): String? {
         return runCatching {
-            provider.app
-                .get("$CINEMETA_BASE_URL$path")
-                .text
+            app.get("$CINEMETA_BASE_URL$path").text
         }.getOrNull()
     }
 
@@ -31,13 +29,11 @@ class NexFlixiaApi(
         headers: Map<String, String> = emptyMap()
     ): String? {
         return runCatching {
-            provider.app
-                .post(
-                    url = url,
-                    headers = headers,
-                    data = body
-                )
-                .text
+            app.post(
+                url = url,
+                headers = headers,
+                data = mapOf() 
+            ).text
         }.getOrNull()
     }
 }
