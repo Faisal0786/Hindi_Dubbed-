@@ -6,6 +6,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
+import com.lagradost.cloudstream3.ActorData
 
 import java.net.URLEncoder
 
@@ -295,6 +296,7 @@ malId = animeIds?.malId,
     )
 
     duration = extractRuntime(meta.runtime)
+actors = buildActors(meta.cast)
 
     contentRating = meta.certification
 
@@ -370,6 +372,7 @@ duration = extractRuntime(episode.runtime)
 
                 posterUrl = episode.thumbnail
                 description = episode.overview
+actors = buildActors(meta.cast)
 
                 score = episode.rating
                     ?.toDoubleOrNull()
@@ -457,6 +460,30 @@ private fun detectAnime(
     }
 
     return false
+}
+
+private fun buildActors(
+    cast: List<NexFlixiaCast>?
+): List<ActorData>? {
+
+    val actors = cast
+        .orEmpty()
+        .mapNotNull { person ->
+
+            val name = person.name
+                ?.takeIf { it.isNotBlank() }
+                ?: return@mapNotNull null
+
+            ActorData(
+                Actor(
+                    name = name,
+                    image = person.photo
+                ),
+                role = person.character
+            )
+        }
+
+    return actors.takeIf { it.isNotEmpty() }
 }
 
 private fun detectCartoon(
