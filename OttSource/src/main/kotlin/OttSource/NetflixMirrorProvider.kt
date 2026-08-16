@@ -1,19 +1,16 @@
 package OttSource
 
 import OttSource.entities.*
-import android.content.Context
-import OttSource.entities.EpisodesData
-import OttSource.entities.PostData
-import OttSource.entities.SearchData
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import okhttp3.Headers
 import okhttp3.Interceptor
 import okhttp3.Response
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.APIHolder.unixTime
+
+class NetflixMirrorProvider : MainAPI() {
 
     override val supportedTypes = setOf(
         TvType.Movie,
@@ -28,7 +25,6 @@ import com.lagradost.cloudstream3.APIHolder.unixTime
 
     override val hasMainPage = true
     
-    // Unified cookie string for all requests
     private var cookieString = ""
 
     private val baseHeaders = mapOf(
@@ -295,7 +291,6 @@ import com.lagradost.cloudstream3.APIHolder.unixTime
         return true
     }
 
-    @Suppress("ObjectLiteralToLambda")
     override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
         return object : Interceptor {
             override fun intercept(chain: Interceptor.Chain): Response {
