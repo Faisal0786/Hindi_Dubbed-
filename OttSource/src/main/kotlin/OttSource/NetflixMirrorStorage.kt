@@ -1,4 +1,4 @@
-package OttSource
+package OttSource // Apna package name match kar lena
 
 import android.content.Context
 import android.content.SharedPreferences
