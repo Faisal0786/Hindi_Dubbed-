@@ -11,16 +11,7 @@ class NexFlixiaMetadata(
         id: String
     ): NexFlixiaMeta? {
 
-        // Primary Endpoint
-        var response = api.get("/meta/$type/$id.json")
-
-        // Fallback 
-        if (response.isNullOrBlank()) {
-            response = api.get("https://v3-cinemeta.strem.io/meta/$type/$id.json")
-        }
-
-        if (response.isNullOrBlank()) return null
-
+        val response = api.get("/meta/$type/$id.json") ?: return null
         return tryParseJson<NexFlixiaMetaResponse>(response)?.meta
     }
 
