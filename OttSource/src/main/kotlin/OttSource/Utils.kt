@@ -1,6 +1,8 @@
 package OttSource
 
 import com.lagradost.cloudstream3.*
+import okhttp3.HttpUrl.Companion.toHttpUrl
+
 import com.lagradost.cloudstream3.utils.*
 import com.fasterxml.jackson.core.json.JsonReadFeature
 import com.fasterxml.jackson.databind.DeserializationFeature
