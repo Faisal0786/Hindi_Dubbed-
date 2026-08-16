@@ -147,18 +147,37 @@ open class NexFlixiaProvider : MainAPI() {
         }
     }
 
-    override suspend fun load(url: String): LoadResponse? {
-        // Use parseJson for safety
-        val searchData = runCatching { parseJson<NexFlixiaSearchData>(url) }.getOrNull() ?: return null
+        override suspend fun load(
+        url: String
+    ): LoadResponse? {
+
+        val searchData = runCatching {
+            tryParseJson<NexFlixiaSearchData>(url)
+        }.getOrNull() ?: return null
+
         val type = searchData.type.lowercase()
-        val meta = metadata.getMetadata(type = type, id = searchData.id) ?: return null
+
+        val meta = metadata.getMetadata(
+            type = type,
+            id = searchData.id
+        ) ?: return null
 
         return when (type) {
-            "movie" -> buildMovieResponse(meta, url)
-            "series", "tv" -> buildSeriesResponse(meta, url)
+            "movie" -> buildMovieResponse(
+                meta = meta,
+                sourceUrl = url
+            )
+
+            "series",
+            "tv" -> buildSeriesResponse(
+                meta = meta,
+                sourceUrl = url
+            )
+
             else -> null
         }
     }
+
 
     private suspend fun buildMovieResponse(meta: NexFlixiaMeta, sourceUrl: String): LoadResponse? {
         val title = meta.name?.takeIf { it.isNotBlank() } ?: return null
