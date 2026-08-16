@@ -1,5 +1,5 @@
 package OttSource
-
+import OttSource.Entities
 import android.content.Context
 import OttSource.entities.EpisodesData
 import OttSource.entities.PostData
