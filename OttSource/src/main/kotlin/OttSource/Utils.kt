@@ -82,68 +82,39 @@ fun convertRuntimeToMinutes(runtime: String): Int {
 }
 
 suspend fun bypass(mainUrl: String): String {
-    // Check persistent storage first
-    val (savedCookie, savedTimestamp) = NetflixMirrorStorage.getCookie()
+    // 1. Storage check karo (120,000 ms = 2 minutes expiry)
+    val (savedCookie, timestamp) = NetflixMirrorStorage.getCookie()
+    val currentTime = System.currentTimeMillis()
 
-    // Return cached cookie if valid (≤15 hours old)
-    if (!savedCookie.isNullOrEmpty() && System.currentTimeMillis() - savedTimestamp < 54_000_000) {
+    if (!savedCookie.isNullOrEmpty() && (currentTime - timestamp) < 120_000) {
         return savedCookie
     }
 
-    val newCookie = try {
-        val headers = mapOf(
-            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "Accept-Encoding" to "gzip, deflate, br, zstd",
-            "Accept-Language" to "en-US,en;q=0.9",
-            "Cache-Control" to "max-age=0",
-            "Connection" to "keep-alive",
-            "Content-Type" to "application/x-www-form-urlencoded",
-            "Origin" to "https://net52.cc",
-            "Referer" to "https://net52.cc/verify2",
-            "sec-ch-ua" to "\"Google Chrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
-            "sec-ch-ua-mobile" to "?0",
-            "sec-ch-ua-platform" to "\"Windows\"",
-            "Sec-Fetch-Dest" to "document",
-            "Sec-Fetch-Mode" to "navigate",
-            "Sec-Fetch-Site" to "same-origin",
-            "Sec-Fetch-User" to "?1",
-            "Upgrade-Insecure-Requests" to "1",
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
-        )
-        val formBody = FormBody.Builder()
-            .add("g-recaptcha-response", UUID.randomUUID().toString())
-            .build()
-        val client = app.baseClient.newBuilder()
-            .followRedirects(false)
-            .followSslRedirects(false)
-            .build()
-        val request = Request.Builder()
-            .url("https://net72.cc/verify.php")
-            .post(formBody)
-            .apply {
-                headers.forEach { (key, value) ->
-                    addHeader(key, value)
-                }
-            }
-            .build()
-        client.newCall(request).execute().use { response ->
-            response.headers("Set-Cookie")
-                .firstOrNull { it.startsWith("t_hash_t=") }
-                ?.substringAfter("t_hash_t=")
-                ?.substringBefore(";")
-                .orEmpty()
-        }
-    } catch (e: Exception) {
-        // Clear invalid cookie on failure
-        NetflixMirrorStorage.clearCookie()
-        throw e
+    // 2. Agar cookie nahi hai ya expire ho gayi hai, toh site load karo 
+    // (CloudStream yahan zaroorat padne par Cloudflare popup dikhayega)
+    app.get(mainUrl)
+    
+    val httpUrl = mainUrl.toHttpUrl()
+    val cookies = app.baseClient.cookieJar.loadForRequest(httpUrl)
+    
+    val cookieMap = mutableMapOf<String, String>()
+    cookies.forEach { cookie ->
+        cookieMap[cookie.name] = cookie.value
     }
-
-    // Persist the new cookie
-    if (newCookie.isNotEmpty()) {
-        NetflixMirrorStorage.saveCookie(newCookie)
+    
+    // Required default site cookies add karo
+    cookieMap["hd"] = "on"
+    cookieMap["ott"] = "nf"
+    
+    // 3. ExoPlayer aur APIs ke liye single string banao
+    val cookieString = cookieMap.entries.joinToString("; ") { "${it.key}=${it.value}" }
+    
+    // 4. Agar t_hash_p mil gaya toh storage mein save kar lo
+    if (cookieString.contains("t_hash_p")) {
+        NetflixMirrorStorage.saveCookie(cookieString)
     }
-    return newCookie
+    
+    return cookieString
 }
 
 val newTvBaseHeaders = mapOf(
