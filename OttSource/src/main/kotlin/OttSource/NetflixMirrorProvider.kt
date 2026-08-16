@@ -15,13 +15,6 @@ import okhttp3.Response
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.APIHolder.unixTime
 
-class NetflixMirrorProvider : MainAPI() {
-    
-    // Storage initialization to prevent crash
-    init {
-        NetflixMirrorStorage.init(app.context)
-    }
-
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
