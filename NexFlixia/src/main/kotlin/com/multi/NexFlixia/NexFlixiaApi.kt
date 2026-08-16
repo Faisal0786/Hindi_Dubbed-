@@ -9,8 +9,7 @@ class NexFlixiaApi(
 
     companion object {
         
-        const val CINEMETA_BASE_URL = "https://cinemeta-catalogs.strem.io"
-        const val CINEMETA_V3_URL = "https://v3-cinemeta.strem.io"
+        const val CINEMETA_BASE_URL = "https://v3-cinemeta.strem.io"
         const val ANILIST_BASE_URL = "https://graphql.anilist.co"
     }
 
