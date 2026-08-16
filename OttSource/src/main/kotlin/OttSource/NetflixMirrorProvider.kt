@@ -220,27 +220,99 @@ class NetflixMirrorProvider : MainAPI() {
     }
     
 
+        // File ke top par ye variable hona chahiye
+    private var cookieString = ""
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val apiBase = resolveApiUrl()
-        val id = parseJson<LoadData>(data).id
-        val response = app.get(
-            "$apiBase/newtv/player.php?id=$id",
-            headers = buildNewTvHeaders("nf", mapOf("Usertoken" to ""))
-        ).parsed<NewTvPlayerResponse>()
+        val loadData = parseJson<LoadData>(data)
+        val id = loadData.id
+        val title = loadData.title
 
-        if (response.status != "ok" || response.video_link.isNullOrBlank()) return false
+        // Naya bypass call
+        if (cookieString.isEmpty()) {
+            cookieString = bypass(mainUrl)
+        }
 
-        callback.invoke(
-            newExtractorLink(name, name, response.video_link, type = ExtractorLinkType.M3U8) {
-                this.referer = response.referer ?: apiBase
+        // play.php
+        val playResponseText = app.post(
+            url = "$mainUrl/play.php",
+            headers = mapOf(
+                "Accept" to "*/*",
+                "X-Requested-With" to "XMLHttpRequest",
+                "Origin" to mainUrl,
+                "Referer" to "$mainUrl/home",
+                "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
+                "Cookie" to cookieString
+            ),
+            data = mapOf("id" to id)
+        ).text
+
+        val playResponse = tryParseJson<Map<String, String>>(playResponseText)
+        val hashValue = playResponse?.get("h") ?: return false
+        val actualToken = hashValue.removePrefix("in=")
+
+        // playlist.php
+        val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
+        val timestamp = APIHolder.unixTime
+        val playlistUrl = "$mainUrl/playlist.php?id=$id&t=$encodedTitle&tm=$timestamp&h=$actualToken"
+
+        val playlistText = app.get(
+            url = playlistUrl,
+            headers = mapOf(
+                "Accept" to "*/*",
+                "Referer" to "$mainUrl/play.php?id=$id&in=$hashValue",
+                "Cookie" to cookieString
+            )
+        ).text
+
+        val playlistList = tryParseJson<List<PlaylistItem>>(playlistText)
+        val playlistData = playlistList?.firstOrNull() ?: return false
+
+        // Extract Links
+        playlistData.sources?.forEach { source ->
+            val fileUrl = source.file
+            if (!fileUrl.isNullOrEmpty()) {
+                val finalVideoUrl = if (fileUrl.startsWith("/")) "$mainUrl$fileUrl" else fileUrl
+                val qualityName = source.label ?: "HD"
+
+                callback.invoke(
+                    ExtractorLink(
+                        source = name,
+                        name = "$name - $qualityName",
+                        url = finalVideoUrl,
+                        referer = "$mainUrl/",
+                        quality = getQualityFromName(qualityName),
+                        type = ExtractorLinkType.M3U8,
+                        headers = mapOf(
+                            "Origin" to mainUrl, 
+                            "Referer" to "$mainUrl/", 
+                            "Cookie" to cookieString 
+                        )
+                    )
+                )
             }
-        )
+        }
 
+        // Extract Subtitles
+        playlistData.tracks?.forEach { track ->
+            if (track.kind == "captions" && !track.file.isNullOrEmpty()) {
+                var subUrl = track.file
+                if (subUrl.startsWith("//")) {
+                    subUrl = "https:$subUrl"
+                }
+                subtitleCallback.invoke(
+                    SubtitleFile(
+                        lang = track.language ?: track.label ?: "English",
+                        url = subUrl
+                    )
+                )
+            }
+        }
         return true
     }
 
@@ -249,9 +321,11 @@ class NetflixMirrorProvider : MainAPI() {
         return object : Interceptor {
             override fun intercept(chain: Interceptor.Chain): Response {
                 val request = chain.request()
-                if (request.url.toString().contains(".m3u8")) {
+                if (request.url.toString().contains(".m3u8") || request.url.toString().contains(".ts")) {
                     val newRequest = request.newBuilder()
-                        .header("Cookie", "hd=on")
+                        .header("Origin", mainUrl) 
+                        .header("Referer", "$mainUrl/") 
+                        .header("Cookie", cookieString) 
                         .build()
                     return chain.proceed(newRequest)
                 }
@@ -259,12 +333,3 @@ class NetflixMirrorProvider : MainAPI() {
             }
         }
     }
-
-    data class Id(
-        val id: String
-    )
-
-    data class LoadData(
-        val title: String, val id: String
-    )
-}
