@@ -1,10 +1,12 @@
 package OttSource
 
 import android.content.Context
+import android.webkit.CookieManager
 import OttSource.entities.EpisodesData
 import OttSource.entities.PostData
 import OttSource.entities.SearchData
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.network.CloudflareInterceptor
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -17,7 +19,6 @@ import com.lagradost.cloudstream3.APIHolder.unixTime
 class NetflixMirrorProvider : MainAPI() {
     companion object {
         var context: Context? = null
-   
     }
 
     override val supportedTypes = setOf(
@@ -51,7 +52,6 @@ class NetflixMirrorProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
-        
         cookie_value = if(cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
         val cookies = mapOf(
             "t_hash_t" to cookie_value,
@@ -80,9 +80,6 @@ class NetflixMirrorProvider : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val id = selectFirst("a")?.attr("data-post") ?: attr("data-post")
-        // val posterUrl =
-        //     fixUrlNull(selectFirst(".card-img-container img, .top10-img img")?.attr("data-src"))
-
         return newAnimeSearchResponse("", Id(id).toJson()) {
             this.posterUrl = "https://imgcdn.kim/poster/v/$id.jpg"
             posterHeaders = mapOf("Referer" to "$mainUrl/home")
@@ -90,7 +87,6 @@ class NetflixMirrorProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-
         cookie_value = if(cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
         val cookies = mapOf(
             "t_hash_t" to cookie_value,
@@ -128,13 +124,9 @@ class NetflixMirrorProvider : MainAPI() {
         val title = data.title
         val castList = data.cast?.split(",")?.map { it.trim() } ?: emptyList()
         val cast = castList.map {
-            ActorData(
-                Actor(it),
-            )
+            ActorData(Actor(it))
         }
-        val genre = data.genre?.split(",")
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
+        val genre = data.genre?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
 
         val rating = data.match?.replace("IMDb ", "")
         val runTime = convertRuntimeToMinutes(data.runtime.toString())
@@ -180,7 +172,7 @@ class NetflixMirrorProvider : MainAPI() {
             year = data.year.toIntOrNull()
             tags = genre
             actors = cast
-            this.score =  Score.from10(rating)
+            this.score = Score.from10(rating)
             this.duration = runTime
             this.contentRating = data.ua
             this.recommendations = suggest
@@ -218,154 +210,78 @@ class NetflixMirrorProvider : MainAPI() {
         }
         return episodes
     }
-    
 
     override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-
-    Log.d("NetflixLinks", "========== loadLinks START ==========")
-    Log.d("NetflixLinks", "data = $data")
-    Log.d("NetflixLinks", "isCasting = $isCasting")
-
-    return try {
-        // -------------------------
-        // Parse episode ID
-        // -------------------------
-        val loadData = parseJson<LoadData>(data)
-        val id = loadData.id
-
-        Log.d("NetflixLinks", "Parsed ID = $id")
-
-        // -------------------------
-        // Resolve API
-        // -------------------------
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
         val apiBase = resolveApiUrl()
-
-        Log.d("NetflixLinks", "Resolved API Base = $apiBase")
-
+        val id = parseJson<LoadData>(data).id
         val playerUrl = "$apiBase/newtv/player.php?id=$id"
 
-        Log.d("NetflixLinks", "Player URL = $playerUrl")
+        // 1. Android ke CookieManager se current cookies nikalo (isme cf_clearance ho sakti hai)
+        val cookieManager = CookieManager.getInstance()
+        val currentCookies = cookieManager.getCookie(apiBase) ?: ""
 
-        // -------------------------
-        // Headers
-        // -------------------------
-        val headers = buildNewTvHeaders(
-            ott = "nf",
-            extra = mapOf(
-                "Usertoken" to ""
-            )
-        )
-
-        Log.d("NetflixLinks", "Headers = $headers")
-
-        // -------------------------
-        // Request player endpoint
-        // -------------------------
-        Log.d("NetflixLinks", "Requesting player endpoint...")
-
-        val response = app.get(
+        // 2. CloudflareInterceptor attach karke request maaro
+        // Agar CF block karta hai, toh CloudStream automatically in-app WebView popup khol dega!
+        val responseText = app.get(
             playerUrl,
-            headers = headers,
-            referer = mainUrl
-        ).parsed<NewTvPlayerResponse>()
+            headers = buildNewTvHeaders("nf", mapOf(
+                "Usertoken" to "",
+                "Cookie" to currentCookies // Purani ya nayi jo bhi cookie ho attach kardo
+            )),
+            interceptor = CloudflareInterceptor() // The Magic happens here
+        ).text
 
-        Log.d("NetflixLinks", "Player response = $response")
+        // 3. Response ko JSON me parse karo (kyunki agar challenge bypass ho gaya hoga toh ab valid JSON aayega)
+        val response = tryParseJson<NewTvPlayerResponse>(responseText)
 
-        // -------------------------
-        // Status
-        // -------------------------
-        Log.d("NetflixLinks", "Response status = ${response.status}")
-        Log.d("NetflixLinks", "Response video_link = ${response.video_link}")
-        Log.d("NetflixLinks", "Response referer = ${response.referer}")
-
-        if (response.status != "ok") {
-            Log.e(
-                "NetflixLinks",
-                "Player request failed: status=${response.status}"
-            )
+        if (response == null || response.status != "ok" || response.video_link.isNullOrBlank()) {
             return false
         }
 
-        // -------------------------
-        // Video URL
-        // -------------------------
-        val videoUrl = response.video_link
-
-        if (videoUrl.isNullOrBlank()) {
-            Log.e(
-                "NetflixLinks",
-                "video_link is NULL or EMPTY"
+        // 4. M3U8 link extract karo
+        callback.invoke(
+            ExtractorLink(
+                source = name,
+                name = name,
+                url = response.video_link,
+                referer = response.referer ?: apiBase,
+                quality = Qualities.Unknown.value,
+                type = ExtractorLinkType.M3U8
             )
-            return false
-        }
-
-        Log.d("NetflixLinks", "FINAL VIDEO URL = $videoUrl")
-
-        val finalReferer = response.referer ?: mainUrl
-
-        Log.d(
-            "NetflixLinks",
-            "FINAL REFERER = $finalReferer"
         )
 
-        // -------------------------
-        // Send to CloudStream
-        // -------------------------
-        val extractorLink = newExtractorLink(
-            source = name,
-            name = name,
-            url = videoUrl,
-            type = ExtractorLinkType.M3U8
-        ) {
-            referer = finalReferer
-        }
-
-        Log.d(
-            "NetflixLinks",
-            "ExtractorLink created: $extractorLink"
-        )
-
-        callback.invoke(extractorLink)
-
-        Log.d(
-            "NetflixLinks",
-            "ExtractorLink callback invoked successfully"
-        )
-
-        Log.d("NetflixLinks", "========== loadLinks END : SUCCESS ==========")
-
-        true
-
-    } catch (e: Exception) {
-
-        Log.e(
-            "NetflixLinks",
-            "========== loadLinks ERROR ==========",
-            e
-        )
-
-        false
+        return true
     }
-}
 
     @Suppress("ObjectLiteralToLambda")
     override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
-        return object : Interceptor {
-            override fun intercept(chain: Interceptor.Chain): Response {
-                val request = chain.request()
-                if (request.url.toString().contains(".m3u8")) {
-                    val newRequest = request.newBuilder()
-                        .header("Cookie", "hd=on")
-                        .build()
-                    return chain.proceed(newRequest)
-                }
-                return chain.proceed(request)
+        return Interceptor { chain ->
+            val request = chain.request()
+            
+            // Jab player M3U8 ya TS segments request kare, tab bhi proper cookies aur referer bhejni hai
+            if (request.url.toString().contains(".m3u8") || request.url.toString().contains(".ts")) {
+                val host = request.url.host
+                val cookieManager = CookieManager.getInstance()
+                
+                // CDN ya main domain ki saari active cookies fetch karo (like cf_clearance, user_token)
+                val hostCookies = cookieManager.getCookie("https://$host") ?: ""
+                val mainCookies = cookieManager.getCookie(mainUrl) ?: ""
+                
+                val combinedCookies = "hd=on; $mainCookies; $hostCookies"
+                
+                val newRequest = request.newBuilder()
+                    .header("Cookie", combinedCookies)
+                    .header("Referer", extractorLink.referer)
+                    .build()
+                    
+                return@Interceptor chain.proceed(newRequest)
             }
+            chain.proceed(request)
         }
     }
 
