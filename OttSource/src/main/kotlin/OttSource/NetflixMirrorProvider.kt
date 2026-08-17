@@ -6,7 +6,7 @@ import OttSource.entities.EpisodesData
 import OttSource.entities.PostData
 import OttSource.entities.SearchData
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.network.CloudflareInterceptor
+import import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -211,7 +211,7 @@ class NetflixMirrorProvider : MainAPI() {
         return episodes
     }
 
-    override suspend fun loadLinks(
+        override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -221,22 +221,22 @@ class NetflixMirrorProvider : MainAPI() {
         val id = parseJson<LoadData>(data).id
         val playerUrl = "$apiBase/newtv/player.php?id=$id"
 
-        // 1. Android ke CookieManager se current cookies nikalo (isme cf_clearance ho sakti hai)
+        // 1. Android ke CookieManager se current cookies nikalo
         val cookieManager = CookieManager.getInstance()
         val currentCookies = cookieManager.getCookie(apiBase) ?: ""
 
-        // 2. CloudflareInterceptor attach karke request maaro
-        // Agar CF block karta hai, toh CloudStream automatically in-app WebView popup khol dega!
+        // 2. WebViewResolver attach karke request maaro
+        // Yeh "player.php" wale URL par automatically In-App WebView trigger karega agar zaroorat padi
         val responseText = app.get(
             playerUrl,
             headers = buildNewTvHeaders("nf", mapOf(
                 "Usertoken" to "",
-                "Cookie" to currentCookies // Purani ya nayi jo bhi cookie ho attach kardo
+                "Cookie" to currentCookies 
             )),
-            interceptor = CloudflareInterceptor() // The Magic happens here
+            interceptor = WebViewResolver(Regex("""player\.php""")) // Corrected Class
         ).text
 
-        // 3. Response ko JSON me parse karo (kyunki agar challenge bypass ho gaya hoga toh ab valid JSON aayega)
+        // 3. Response ko JSON me parse karo
         val response = tryParseJson<NewTvPlayerResponse>(responseText)
 
         if (response == null || response.status != "ok" || response.video_link.isNullOrBlank()) {
