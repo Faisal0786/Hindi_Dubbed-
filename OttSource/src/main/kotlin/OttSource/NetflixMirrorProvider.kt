@@ -16,7 +16,6 @@ import okhttp3.Response
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.APIHolder.unixTime
 
-
 class NetflixMirrorProvider : MainAPI() {
     companion object {
         var context: Context? = null
@@ -121,14 +120,10 @@ class NetflixMirrorProvider : MainAPI() {
         ).parsed<PostData>()
 
         val episodes = arrayListOf<Episode>()
-
         val title = data.title
         val castList = data.cast?.split(",")?.map { it.trim() } ?: emptyList()
-        val cast = castList.map {
-            ActorData(Actor(it))
-        }
+        val cast = castList.map { ActorData(Actor(it)) }
         val genre = data.genre?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
-
         val rating = data.match?.replace("IMDb ", "")
         val runTime = convertRuntimeToMinutes(data.runtime.toString())
 
@@ -212,7 +207,7 @@ class NetflixMirrorProvider : MainAPI() {
         return episodes
     }
 
-        override suspend fun loadLinks(
+    override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -222,29 +217,54 @@ class NetflixMirrorProvider : MainAPI() {
         val id = parseJson<LoadData>(data).id
         val playerUrl = "$apiBase/newtv/player.php?id=$id"
 
-        // 1. Android ke CookieManager se current cookies nikalo
-        val cookieManager = CookieManager.getInstance()
-        val currentCookies = cookieManager.getCookie(apiBase) ?: ""
+        // Sabse zaroori: Android WebView ka User-Agent use karna
+        val webViewUserAgent = "Mozilla/5.0 (Linux; Android 13; Pixel 5 Build/TQ3A.230901.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/144.0.7559.132 Safari/537.36"
+        var currentCookies = CookieManager.getInstance().getCookie(apiBase) ?: ""
 
-        // 2. WebViewResolver attach karke request maaro
-        // Yeh "player.php" wale URL par automatically In-App WebView trigger karega agar zaroorat padi
-        val responseText = app.get(
+        // Step 1: Chupke se API fetch try karo
+        val silentResponseText = app.get(
             playerUrl,
             headers = buildNewTvHeaders("nf", mapOf(
                 "Usertoken" to "",
-                "Cookie" to currentCookies 
-            )),
-            interceptor = WebViewResolver(Regex("""player\.php""")) // Corrected Class
+                "Cookie" to currentCookies,
+                "User-Agent" to webViewUserAgent
+            ))
         ).text
 
-        // 3. Response ko JSON me parse karo
-        val response = tryParseJson<NewTvPlayerResponse>(responseText)
+        var response = tryParseJson<NewTvPlayerResponse>(silentResponseText)
 
+        // Step 2: Agar 403 (ya error) aya, tab hum FORCE karenge In-App WebView ko root domain pe khulne ke liye
+        if (response == null || response.status != "ok") {
+            
+            // YAHAN MAGIC HOGA: Ye actual ROOT domain par browser kholega, taaki 100% Cloudflare page aaye aur 18ms me close na ho.
+            app.get(
+                apiBase, // Sirf 'https://tv.imgcdn.kim', player.php nahi.
+                headers = mapOf("User-Agent" to webViewUserAgent),
+                interceptor = WebViewResolver(Regex(".*"))
+            )
+
+            // Popup solve hone ke baad nayi cookies nikaalo
+            currentCookies = CookieManager.getInstance().getCookie(apiBase) ?: ""
+
+            // Step 3: Nayi cookies (cf_clearance) ke saath API dobara hit karo
+            val retryResponseText = app.get(
+                playerUrl,
+                headers = buildNewTvHeaders("nf", mapOf(
+                    "Usertoken" to "",
+                    "Cookie" to currentCookies,
+                    "User-Agent" to webViewUserAgent
+                ))
+            ).text
+
+            response = tryParseJson<NewTvPlayerResponse>(retryResponseText)
+        }
+
+        // Final check
         if (response == null || response.status != "ok" || response.video_link.isNullOrBlank()) {
             return false
         }
 
-        // 4. M3U8 link extract karo
+        // M3U8 link extract ho gaya!
         callback.invoke(
             ExtractorLink(
                 source = name,
@@ -264,12 +284,11 @@ class NetflixMirrorProvider : MainAPI() {
         return Interceptor { chain ->
             val request = chain.request()
             
-            // Jab player M3U8 ya TS segments request kare, tab bhi proper cookies aur referer bhejni hai
+            // Player M3U8 or TS segments par cookies pass karna zaroori hai
             if (request.url.toString().contains(".m3u8") || request.url.toString().contains(".ts")) {
                 val host = request.url.host
                 val cookieManager = CookieManager.getInstance()
                 
-                // CDN ya main domain ki saari active cookies fetch karo (like cf_clearance, user_token)
                 val hostCookies = cookieManager.getCookie("https://$host") ?: ""
                 val mainCookies = cookieManager.getCookie(mainUrl) ?: ""
                 
@@ -286,11 +305,7 @@ class NetflixMirrorProvider : MainAPI() {
         }
     }
 
-    data class Id(
-        val id: String
-    )
+    data class Id(val id: String)
 
-    data class LoadData(
-        val title: String, val id: String
-    )
+    data class LoadData(val title: String, val id: String)
 }
