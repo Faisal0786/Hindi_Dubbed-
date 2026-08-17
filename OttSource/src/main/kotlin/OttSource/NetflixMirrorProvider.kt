@@ -1,6 +1,13 @@
 package OttSource
 
-import OttSource.entities.*
+import OttSource.entities.Id
+import OttSource.entities.LoadData
+import OttSource.entities.PlaylistItem
+import OttSource.entities.EpisodesData
+import OttSource.entities.PostData
+import OttSource.entities.SearchData
+import OttSource.entities.Episode as OttEpisode
+
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
@@ -109,7 +116,8 @@ class NetflixMirrorProvider : MainAPI() {
             referer = "$mainUrl/home"
         ).parsed<PostData>()
 
-        val episodes = arrayListOf<Episode>()
+        val episodes = arrayListOf<com.lagradost.cloudstream3.Episode>()
+
 
         val title = data.title
         val castList = data.cast?.split(",")?.map { it.trim() } ?: emptyList()
