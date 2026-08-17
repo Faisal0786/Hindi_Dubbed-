@@ -2,7 +2,7 @@ package OttSource
 
 import OttSource.entities.Id
 import OttSource.entities.LoadData
-import OttSource.entities.PlaylistItem
+import OttSource.entities.PlayListItem as PlaylistItem
 import OttSource.entities.EpisodesData
 import OttSource.entities.PostData
 import OttSource.entities.SearchData
