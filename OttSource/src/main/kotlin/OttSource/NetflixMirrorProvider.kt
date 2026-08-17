@@ -221,28 +221,137 @@ class NetflixMirrorProvider : MainAPI() {
     
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+
+    Log.d("NetflixLinks", "========== loadLinks START ==========")
+    Log.d("NetflixLinks", "data = $data")
+    Log.d("NetflixLinks", "isCasting = $isCasting")
+
+    return try {
+        // -------------------------
+        // Parse episode ID
+        // -------------------------
+        val loadData = parseJson<LoadData>(data)
+        val id = loadData.id
+
+        Log.d("NetflixLinks", "Parsed ID = $id")
+
+        // -------------------------
+        // Resolve API
+        // -------------------------
         val apiBase = resolveApiUrl()
-        val id = parseJson<LoadData>(data).id
-        val response = app.get(
-            "$apiBase/newtv/player.php?id=$id",
-            headers = buildNewTvHeaders("nf", mapOf("Usertoken" to ""))
-        ).parsed<NewTvPlayerResponse>()
 
-        if (response.status != "ok" || response.video_link.isNullOrBlank()) return false
+        Log.d("NetflixLinks", "Resolved API Base = $apiBase")
 
-        callback.invoke(
-            newExtractorLink(name, name, response.video_link, type = ExtractorLinkType.M3U8) {
-                this.referer = response.referer ?: apiBase
-            }
+        val playerUrl = "$apiBase/newtv/player.php?id=$id"
+
+        Log.d("NetflixLinks", "Player URL = $playerUrl")
+
+        // -------------------------
+        // Headers
+        // -------------------------
+        val headers = buildNewTvHeaders(
+            ott = "nf",
+            extra = mapOf(
+                "Usertoken" to ""
+            )
         )
 
-        return true
+        Log.d("NetflixLinks", "Headers = $headers")
+
+        // -------------------------
+        // Request player endpoint
+        // -------------------------
+        Log.d("NetflixLinks", "Requesting player endpoint...")
+
+        val response = app.get(
+            playerUrl,
+            headers = headers,
+            referer = mainUrl
+        ).parsed<NewTvPlayerResponse>()
+
+        Log.d("NetflixLinks", "Player response = $response")
+
+        // -------------------------
+        // Status
+        // -------------------------
+        Log.d("NetflixLinks", "Response status = ${response.status}")
+        Log.d("NetflixLinks", "Response video_link = ${response.video_link}")
+        Log.d("NetflixLinks", "Response referer = ${response.referer}")
+
+        if (response.status != "ok") {
+            Log.e(
+                "NetflixLinks",
+                "Player request failed: status=${response.status}"
+            )
+            return false
+        }
+
+        // -------------------------
+        // Video URL
+        // -------------------------
+        val videoUrl = response.video_link
+
+        if (videoUrl.isNullOrBlank()) {
+            Log.e(
+                "NetflixLinks",
+                "video_link is NULL or EMPTY"
+            )
+            return false
+        }
+
+        Log.d("NetflixLinks", "FINAL VIDEO URL = $videoUrl")
+
+        val finalReferer = response.referer ?: mainUrl
+
+        Log.d(
+            "NetflixLinks",
+            "FINAL REFERER = $finalReferer"
+        )
+
+        // -------------------------
+        // Send to CloudStream
+        // -------------------------
+        val extractorLink = newExtractorLink(
+            source = name,
+            name = name,
+            url = videoUrl,
+            type = ExtractorLinkType.M3U8
+        ) {
+            referer = finalReferer
+        }
+
+        Log.d(
+            "NetflixLinks",
+            "ExtractorLink created: $extractorLink"
+        )
+
+        callback.invoke(extractorLink)
+
+        Log.d(
+            "NetflixLinks",
+            "ExtractorLink callback invoked successfully"
+        )
+
+        Log.d("NetflixLinks", "========== loadLinks END : SUCCESS ==========")
+
+        true
+
+    } catch (e: Exception) {
+
+        Log.e(
+            "NetflixLinks",
+            "========== loadLinks ERROR ==========",
+            e
+        )
+
+        false
     }
+}
 
     @Suppress("ObjectLiteralToLambda")
     override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
