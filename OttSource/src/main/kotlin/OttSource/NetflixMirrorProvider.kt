@@ -6,7 +6,7 @@ import OttSource.entities.EpisodesData
 import OttSource.entities.PostData
 import OttSource.entities.SearchData
 import com.lagradost.cloudstream3.*
-import import com.lagradost.cloudstream3.network.WebViewResolver
+import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -15,6 +15,7 @@ import okhttp3.Interceptor
 import okhttp3.Response
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.APIHolder.unixTime
+
 
 class NetflixMirrorProvider : MainAPI() {
     companion object {
