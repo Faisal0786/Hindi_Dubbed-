@@ -5,7 +5,10 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.api.Log
 
-suspend fun SourceProviders.invokeAniStream(
+//suspend fun 
+//SourceProviders.invokeAniStream
+
+suspend fun invokeAniStream(
     aniId: Int? = null,
     episode: Int? = null,
     subtitleCallback: (SubtitleFile) -> Unit,
