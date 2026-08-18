@@ -19,7 +19,6 @@ class AniStreamProvider : MainAPI() {
 
     private var isSessionReady = false
 
-    // Automatic Session / Cookie Initialization
     private suspend fun initSession() {
         if (!isSessionReady) {
             try {
@@ -32,7 +31,7 @@ class AniStreamProvider : MainAPI() {
                 )
                 isSessionReady = true
             } catch (e: Exception) {
-                // Ignore initialization errors
+                // Ignore initialization failures
             }
         }
     }
@@ -71,7 +70,6 @@ class AniStreamProvider : MainAPI() {
         @JsonProperty("titles") val titles: EpisodeTitles?,
         @JsonProperty("img") val img: String?,
         @JsonProperty("description") val description: String?,
-        @JsonProperty("rating") val rating: String?,
         @JsonProperty("isFiller") val isFiller: Boolean?
     )
 
@@ -241,7 +239,6 @@ class AniStreamProvider : MainAPI() {
 
         val anilistId = url.substringAfterLast("/").substringAfterLast("-").toIntOrNull()
 
-        // 1. Fetch Details from GraphQL
         val gqlBody = """
             query AnimeDetailBase(${'$'}anilistId: Int) {
                 anime(anilistId: ${'$'}anilistId) {
@@ -271,7 +268,6 @@ class AniStreamProvider : MainAPI() {
         val isMovie = animeInfo?.format?.equals("MOVIE", ignoreCase = true) == true
         val type = if (isMovie) TvType.AnimeMovie else TvType.Anime
 
-        // 2. Fetch Structured Episodes from Rest API
         val epRes = app.get(
             "$restApi/episodes?id=$animeInternalId",
             headers = mapOf(
@@ -293,7 +289,6 @@ class AniStreamProvider : MainAPI() {
             )
         }
 
-        // Fallback for Movies
         if (episodes.isEmpty() && isMovie) {
             episodes.add(
                 newEpisode(PassEpData(animeId = animeInternalId, epNum = 1).toJson()) {
@@ -330,7 +325,6 @@ class AniStreamProvider : MainAPI() {
 
         val epData = tryParseJson<PassEpData>(data) ?: return false
 
-        // Fetch Server List
         val serversRes = app.get(
             "$restApi/servers?id=${epData.animeId}&epNum=${epData.epNum}",
             headers = mapOf(
@@ -344,7 +338,6 @@ class AniStreamProvider : MainAPI() {
         serversRes.subProviders?.forEach { taskList.add(Pair(it.id, "sub")) }
         serversRes.dubProviders?.forEach { taskList.add(Pair(it.id, "dub")) }
 
-        // Fetch All Servers Asynchronously using amap
         taskList.amap { (providerId, streamType) ->
             try {
                 val sourceUrl = "$restApi/sources?id=${epData.animeId}&epNum=${epData.epNum}&type=$streamType&providerId=$providerId"
@@ -359,7 +352,6 @@ class AniStreamProvider : MainAPI() {
 
                 val refererHeader = sourceRes.headers?.get("Referer") ?: "$mainUrl/"
 
-                // Subtitle Extractor
                 sourceRes.tracks?.forEach { track ->
                     val file = track.url ?: track.file ?: track.src
                     if (!file.isNullOrEmpty() && track.kind != "thumbnails") {
@@ -372,7 +364,6 @@ class AniStreamProvider : MainAPI() {
                     }
                 }
 
-                // Video Streams Extractor
                 sourceRes.sources?.forEach { src ->
                     val streamUrl = src.url ?: return@forEach
 
@@ -399,7 +390,7 @@ class AniStreamProvider : MainAPI() {
                     }
                 }
             } catch (e: Exception) {
-                // Ignore individual server timeout
+                // Ignore individual server failure
             }
         }
 
