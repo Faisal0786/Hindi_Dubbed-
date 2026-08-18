@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.konan.properties.Properties
 
-version = 3
+version = 4
 
 android {
     defaultConfig {
@@ -26,11 +26,6 @@ android {
             "CC_COOKIE",
             "\"${properties.getProperty("CC_COOKIE")}\""
         )
-
-        
-        
-
-        
     }
 }
 
@@ -55,4 +50,9 @@ cloudstream {
     )
 
     iconUrl = ""
+}
+
+//Bridge
+dependencies {
+    implementation(project(":StreamHubOne"))
 }
