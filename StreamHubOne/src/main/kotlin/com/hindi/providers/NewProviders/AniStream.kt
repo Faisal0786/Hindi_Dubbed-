@@ -1,7 +1,6 @@
 package com.hindi.providers.NewProviders
 
 import com.hindi.providers.*
-import com.hindi.providers.SourceProviders
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.api.Log
@@ -27,9 +26,6 @@ suspend fun SourceProviders.invokeAniStream(
     )
 
     try {
-        // ─────────────────────────────────────────────
-        // 1. GET ANISTREAM INTERNAL ID (FROM ANILIST ID)
-        // ─────────────────────────────────────────────
         val gqlBody = """
             query AnimeDetailBase(${'$'}anilistId: Int) {
                 anime(anilistId: ${'$'}anilistId) { id }
@@ -42,16 +38,8 @@ suspend fun SourceProviders.invokeAniStream(
             headers = headers
         ).text
 
-        val internalId = Regex(""""id"\s*:\s*"([^"]+)"""").find(gqlResponse)?.groupValues?.get(1)
-        
-        if (internalId == null) {
-            Log.d("AniStream", "Anime not found in AniStream Database")
-            return
-        }
+        val internalId = Regex(""""id"\s*:\s*"([^"]+)"""").find(gqlResponse)?.groupValues?.get(1) ?: return
 
-        // ─────────────────────────────────────────────
-        // 2. FETCH SERVERS FOR THE EPISODE
-        // ─────────────────────────────────────────────
         val serversRes = app.get("$restApi/servers?id=$internalId&epNum=$episode", headers = headers).text
 
         val subProvidersStr = Regex(""""subProviders"\s*:\s*\[(.*?)\]""").find(serversRes)?.groupValues?.get(1) ?: ""
@@ -64,15 +52,11 @@ suspend fun SourceProviders.invokeAniStream(
         subIds.forEach { taskList.add(Pair(it, "sub")) }
         dubIds.forEach { taskList.add(Pair(it, "dub")) }
 
-        // ─────────────────────────────────────────────
-        // 3. EXTRACT LINKS & SUBS CONCURRENTLY
-        // ─────────────────────────────────────────────
         taskList.amap { (providerId, streamType) ->
             try {
                 val sourceUrl = "$restApi/sources?id=$internalId&epNum=$episode&type=$streamType&providerId=$providerId"
                 val sourceResText = app.get(sourceUrl, headers = headers).text
 
-                // EXTRACT SUBTITLES
                 val trackMatches = Regex("""\{"url":"([^"]+)".*?"label":"([^"]+)"""").findAll(sourceResText)
                 trackMatches.forEach { match ->
                     val subUrl = match.groupValues[1].replace("\\/", "/")
@@ -87,7 +71,6 @@ suspend fun SourceProviders.invokeAniStream(
                     }
                 }
 
-                // EXTRACT VIDEO STREAMS
                 val sourceMatches = Regex("""\{"url":"([^"]+)"(.*?)"quality":"([^"]+)"""").findAll(sourceResText)
                 sourceMatches.forEach { match ->
                     val streamUrl = match.groupValues[1].replace("\\/", "/")
@@ -106,10 +89,11 @@ suspend fun SourceProviders.invokeAniStream(
                                 source = serverName,
                                 name = serverName,
                                 url = streamUrl,
-                                referer = mainUrl,
-                                quality = Qualities.P1080.value,
-                                isM3u8 = false
-                            )
+                                type = ExtractorLinkType.VIDEO
+                            ) {
+                                this.referer = mainUrl
+                                this.quality = Qualities.P1080.value
+                            }
                         )
                     }
                 }
