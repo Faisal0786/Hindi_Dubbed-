@@ -11,10 +11,14 @@ import kotlinx.coroutines.coroutineScope
 import java.net.URLEncoder
 
 // Naye aur Purane Providers ko invoke karne ke liye Universal imports
+import com.hindi.providers.SourceProviders
 import com.hindi.providers.SourceProviders.invokeAllSources
 import com.hindi.providers.SourceProviders.invokeAllAnimeSources
 import com.hindi.providers.NewProviders.invokeAniStream
 import com.hindi.providers.AllLoadLinksData
+import com.hindi.providers.convertImdbToAnimeId
+import com.hindi.providers.convertTmdbToAnimeId
+import com.hindi.providers.NewProviders.NewSourceRegistry
 
 open class NexFlixiaProvider : MainAPI() {
 
