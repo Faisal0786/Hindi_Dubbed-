@@ -87,9 +87,8 @@ object NewSourceRegistry {
             key = "p_anistream",
             displayName = "AniStream",
             executeAnime = { res, subCb, cb ->
-                invokeAniStream2(
-                    anilistId = res.anilistId,
-                    title = res.title,
+                invokeAniStream(
+                    aniId = res.anilistId,
                     episode = res.episode,
                     subtitleCallback = subCb,
                     callback = cb
