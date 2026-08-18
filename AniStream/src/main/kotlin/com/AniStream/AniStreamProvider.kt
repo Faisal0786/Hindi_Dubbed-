@@ -367,7 +367,7 @@ class AniStreamProvider : MainAPI() {
                 sourceRes.sources?.forEach { src ->
                     val streamUrl = src.url ?: return@forEach
 
-                    if (streamUrl.contains(".m3u8") || streamUrl.contains("/master")) {
+                    if (streamUrl.contains(".m3u8") || streamUrl.contains("/master") || streamUrl.contains(".txt")) {
                         M3u8Helper.generateM3u8(
                             source = "$name [${providerId.uppercase()}] [${streamType.uppercase()}]",
                             streamUrl = streamUrl,
@@ -383,9 +383,11 @@ class AniStreamProvider : MainAPI() {
                                 source = "$name [${providerId.uppercase()}] [${streamType.uppercase()}]",
                                 name = "$name [${providerId.uppercase()}]",
                                 url = streamUrl,
-                                referer = refererHeader,
-                                quality = Qualities.P1080.value
-                            )
+                                type = ExtractorLinkType.VIDEO
+                            ) {
+                                this.referer = refererHeader
+                                this.quality = Qualities.P1080.value
+                            }
                         )
                     }
                 }
