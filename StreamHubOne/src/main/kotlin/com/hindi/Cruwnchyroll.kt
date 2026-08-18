@@ -18,6 +18,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 
 import com.hindi.providers.SourceProviders.invokeAllSources
 import com.hindi.providers.SourceProviders.invokeAllAnimeSources
+import com.hindi.providers.NewProviders.invokeAniStream
 import com.hindi.providers.SourceProviders.invokeAnimes
 import com.hindi.providers.AllLoadLinksData
 import com.hindi.providers.convertImdbToAnimeId
@@ -1232,6 +1233,8 @@ return newHomePageResponse(
                             }
 
                             invokeAnimes(malId, aniId, res.episode, seasonYear, animeSource, subtitleCallback, callback)
+invokeAniStream(aniId, res.episode, subtitleCallback, callback)
+
                         }
                     }
                 )
