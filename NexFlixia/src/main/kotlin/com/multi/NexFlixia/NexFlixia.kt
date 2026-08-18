@@ -298,58 +298,60 @@ open class NexFlixiaProvider : MainAPI() {
         if (res.isAnime) {
             val animeId = if (res.kitsuId != null) "kitsu:${res.kitsuId}" else res.imdbId
             invokeAllAnimeSources(
-                AllLoadLinksData(
-                    title = res.title,
-                    id = animeId,
-                    tmdbId = res.tmdbId,
-                    anilistId = res.aniListId,
-                    malId = res.malId,
-                    kitsuId = res.kitsuId,
-                    year = yearInt,
-                    seasonYear = seasonYear,
-                    season = res.season,
-                    episode = res.episode,
-                    isAnime = true,
-                    isBollywood = res.isBollywood,
-                    isAsian = res.isAsian,
-                    isCartoon = res.isCartoon,
-                    orgTitle = null,
-                    imdbTitle = null,
-                    imdbSeason = res.imdbSeason,
-                    imdbEpisode = res.imdbEpisode,
-                    airedYear = yearInt
-                ),
-                subtitleCallback, callback
-            )
+    AllLoadLinksData(
+        title = res.title,
+        imdbId = animeId,
+        tmdbId = res.tmdbId,
+        anilistId = res.aniListId,
+        malId = res.malId,
+        kitsuId = res.kitsuId,
+        year = yearInt,
+        airedYear = seasonYear,
+        season = res.season,
+        episode = res.episode,
+        isAnime = true,
+        isBollywood = res.isBollywood,
+        isAsian = res.isAsian,
+        isCartoon = res.isCartoon,
+        originalTitle = null,
+        imdbTitle = null,
+        imdbSeason = res.imdbSeason,
+        imdbEpisode = res.imdbEpisode,
+        imdbYear = yearInt
+    ),
+    subtitleCallback,
+    callback
+)
             // Parallel call for AniStream if needed
             if(res.aniListId != null) {
                 invokeAniStream(res.aniListId, res.episode, subtitleCallback, callback)
             }
         } else {
             invokeAllSources(
-                AllLoadLinksData(
-                    title = res.title,
-                    id = res.imdbId,
-                    tmdbId = res.tmdbId,
-                    anilistId = null,
-                    malId = null,
-                    kitsuId = null,
-                    year = yearInt,
-                    seasonYear = seasonYear,
-                    season = res.season,
-                    episode = res.episode,
-                    isAnime = false,
-                    isBollywood = res.isBollywood,
-                    isAsian = res.isAsian,
-                    isCartoon = res.isCartoon,
-                    orgTitle = null,
-                    imdbTitle = null,
-                    imdbSeason = res.imdbSeason,
-                    imdbEpisode = res.imdbEpisode,
-                    airedYear = yearInt
-                ),
-                subtitleCallback, callback
-            )
+    AllLoadLinksData(
+        title = res.title,
+        imdbId = res.imdbId,
+        tmdbId = res.tmdbId,
+        anilistId = null,
+        malId = null,
+        kitsuId = null,
+        year = yearInt,
+        airedYear = seasonYear,
+        season = res.season,
+        episode = res.episode,
+        isAnime = false,
+        isBollywood = res.isBollywood,
+        isAsian = res.isAsian,
+        isCartoon = res.isCartoon,
+        originalTitle = null,
+        imdbTitle = null,
+        imdbSeason = res.imdbSeason,
+        imdbEpisode = res.imdbEpisode,
+        imdbYear = yearInt
+    ),
+    subtitleCallback,
+    callback
+)
         }
         return true
     }
