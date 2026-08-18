@@ -4,11 +4,17 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson // <-- Added for safe parsing
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import java.net.URLEncoder
+
+// Naye aur Purane Providers ko invoke karne ke liye Universal imports
+import com.hindi.providers.SourceProviders.invokeAllSources
+import com.hindi.providers.SourceProviders.invokeAllAnimeSources
+import com.hindi.providers.NewProviders.invokeAniStream
+import com.hindi.providers.AllLoadLinksData
 
 open class NexFlixiaProvider : MainAPI() {
 
@@ -19,9 +25,6 @@ open class NexFlixiaProvider : MainAPI() {
     override val hasMainPage = true
     override val hasDownloadSupport = true
 
-    // FIX 1: Proper Pagination Tracking (Working code jaisa)
-    private val skipMap: MutableMap<String, Int> = mutableMapOf()
-
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
@@ -30,9 +33,48 @@ open class NexFlixiaProvider : MainAPI() {
         TvType.Torrent
     )
 
-    override val mainPage = mainPageOf(
-        "/catalog/movie/top/skip=###" to "Trending Movies",
-        "/catalog/series/top/skip=###" to "Trending Series"
+        override val mainPage = mainPageOf(
+        // Trending & Popular
+        "/catalog/movie/top/skip=###" to "🔥 Global Blockbusters",
+        "/catalog/series/top/skip=###" to "🍿 Binge-Worthy Masterpieces",
+        
+        // Modernized Action & Adventure
+        "/catalog/movie/top/genre=Action/skip=###" to "⚡ Adrenaline Rush & Explosions",
+        "/catalog/movie/top/genre=Adventure/skip=###" to "🏔️ Epic Expeditions & Survival",
+        "/catalog/series/top/genre=Action/skip=###" to "💥 High-Octane TV Series",
+        
+        // Thriller, Mystery & Crime
+        "/catalog/movie/top/genre=Thriller/skip=###" to "🔪 Edge-of-Your-Seat Thrills",
+        "/catalog/series/top/genre=Mystery/skip=###" to "🕵️ Mind-Bending Whodunits",
+        "/catalog/movie/top/genre=Crime/skip=###" to "🕶️ Underworld Chronicles & Cartels",
+        
+        // Sci-Fi & Fantasy
+        "/catalog/movie/top/genre=Sci-Fi/skip=###" to "🚀 Beyond the Cosmos",
+        "/catalog/series/top/genre=Fantasy/skip=###" to "🐉 Realms of Magic & Myth",
+        
+        // Horror
+        "/catalog/movie/top/genre=Horror/skip=###" to "🌑 Midnight Terrors & Nightmares",
+        
+        // Comedy & Romance
+        "/catalog/series/top/genre=Comedy/skip=###" to "😂 Pure Comedy Gold",
+        "/catalog/movie/top/genre=Romance/skip=###" to "💖 Heartstrings & Hopeless Romantics",
+        
+        // Drama & Emotional
+        "/catalog/series/top/genre=Drama/skip=###" to "🎭 Deep Dive & Critically Acclaimed",
+        
+        // Art, Animation & Family
+        "/catalog/movie/top/genre=Animation/skip=###" to "🎨 Visually Stunning Animation",
+        "/catalog/movie/top/genre=Family/skip=###" to "👨‍👩‍👧‍👦 Wholesome Movie Night",
+        
+        // Real Life, History & Documentaries
+        "/catalog/movie/top/genre=Biography/skip=###" to "📖 Incredible True Stories",
+        "/catalog/series/top/genre=History/skip=###" to "🏛️ Echoes of the Past",
+        "/catalog/movie/top/genre=Documentary/skip=###" to "🎥 Uncovering the Truth",
+        
+        // Action/Niche
+        "/catalog/movie/top/genre=War/skip=###" to "⚔️ Battlefield Epics",
+        "/catalog/movie/top/genre=Sport/skip=###" to "🏆 Gridiron, Glory & Sports",
+        "/catalog/movie/top/genre=Music/skip=###" to "🎵 Rhythm, Beats & Musicals"
     )
 
     private val api by lazy { NexFlixiaApi(this) }
@@ -44,10 +86,8 @@ open class NexFlixiaProvider : MainAPI() {
         request: MainPageRequest
     ): HomePageResponse {
 
-        // FIX 1 (Continued): skipMap implementation
-        if (page == 1) skipMap.clear()
-        val skip = skipMap[request.name] ?: 0
-
+        // BUG FIX: Removed skipMap. Math based pagination is 100% crash proof.
+        val skip = (page - 1) * 50
         val endpoint = request.data.replace("###", skip.toString())
 
         val response = api.get("$endpoint.json") ?: return newHomePageResponse(
@@ -55,19 +95,13 @@ open class NexFlixiaProvider : MainAPI() {
             hasNext = false
         )
 
-        // FIX 2: Using Cloudstream's tryParseJson instead of strict kotlinx.serialization
         val result = tryParseJson<NexFlixiaSearchResult>(response)
             ?: return newHomePageResponse(
                 list = HomePageList(name = request.name, list = emptyList()),
                 hasNext = false
             )
 
-        // Update Skip count for next page
-        val itemsCount = result.metas.size
-        skipMap[request.name] = skip + itemsCount
-
         val items = result.metas.mapNotNull { item ->
-
             val title = item.name?.takeIf { it.isNotBlank() }
                 ?: item.aliases?.firstOrNull { it.isNotBlank() }
                 ?: return@mapNotNull null
@@ -86,8 +120,6 @@ open class NexFlixiaProvider : MainAPI() {
                 type = type
             ) {
                 posterUrl = item.poster
-                
-                // Safe casting for rating
                 item.imdbRating?.toString()?.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { rating ->
                     score = Score.from10(rating)
                 }
@@ -116,8 +148,6 @@ open class NexFlixiaProvider : MainAPI() {
 
     private suspend fun fetchSearchResults(endpoint: String): List<SearchResponse> {
         val response = api.get(endpoint) ?: return emptyList()
-
-        // FIX 2 (Continued): Use tryParseJson for search as well
         val result = tryParseJson<NexFlixiaSearchResult>(response) ?: return emptyList()
 
         return result.metas.mapNotNull { item ->
@@ -139,7 +169,6 @@ open class NexFlixiaProvider : MainAPI() {
                 type = type
             ) {
                 posterUrl = item.poster
-
                 item.imdbRating?.toString()?.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { rating ->
                     score = Score.from10(rating)
                 }
@@ -147,37 +176,18 @@ open class NexFlixiaProvider : MainAPI() {
         }
     }
 
-        override suspend fun load(
-        url: String
-    ): LoadResponse? {
-
-        val searchData = runCatching {
-            tryParseJson<NexFlixiaSearchData>(url)
-        }.getOrNull() ?: return null
-
+    override suspend fun load(url: String): LoadResponse? {
+        val searchData = runCatching { tryParseJson<NexFlixiaSearchData>(url) }.getOrNull() ?: return null
         val type = searchData.type.lowercase()
 
-        val meta = metadata.getMetadata(
-            type = type,
-            id = searchData.id
-        ) ?: return null
+        val meta = metadata.getMetadata(type = type, id = searchData.id) ?: return null
 
         return when (type) {
-            "movie" -> buildMovieResponse(
-                meta = meta,
-                sourceUrl = url
-            )
-
-            "series",
-            "tv" -> buildSeriesResponse(
-                meta = meta,
-                sourceUrl = url
-            )
-
+            "movie" -> buildMovieResponse(meta = meta, sourceUrl = url)
+            "series", "tv" -> buildSeriesResponse(meta = meta, sourceUrl = url)
             else -> null
         }
     }
-
 
     private suspend fun buildMovieResponse(meta: NexFlixiaMeta, sourceUrl: String): LoadResponse? {
         val title = meta.name?.takeIf { it.isNotBlank() } ?: return null
@@ -266,6 +276,77 @@ open class NexFlixiaProvider : MainAPI() {
             contentRating = meta.certification
             addImdbId(ids.imdbId)
         }
+    }
+
+    // MISSING FEATURE ADDED: Universal loadLinks routing
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val res = tryParseJson<NexFlixiaLoadData>(data) ?: return false
+
+        val yearInt = res.year?.substringBefore("-")?.toIntOrNull()
+        val seasonYear = res.firstAired?.substringBefore("-")?.toIntOrNull() ?: yearInt
+
+        if (res.isAnime) {
+            val animeId = if (res.kitsuId != null) "kitsu:${res.kitsuId}" else res.imdbId
+            invokeAllAnimeSources(
+                AllLoadLinksData(
+                    title = res.title,
+                    id = animeId,
+                    tmdbId = res.tmdbId,
+                    anilistId = res.aniListId,
+                    malId = res.malId,
+                    kitsuId = res.kitsuId,
+                    year = yearInt,
+                    seasonYear = seasonYear,
+                    season = res.season,
+                    episode = res.episode,
+                    isAnime = true,
+                    isBollywood = res.isBollywood,
+                    isAsian = res.isAsian,
+                    isCartoon = res.isCartoon,
+                    orgTitle = null,
+                    imdbTitle = null,
+                    imdbSeason = res.imdbSeason,
+                    imdbEpisode = res.imdbEpisode,
+                    airedYear = yearInt
+                ),
+                subtitleCallback, callback
+            )
+            // Parallel call for AniStream if needed
+            if(res.aniListId != null) {
+                invokeAniStream(res.aniListId, res.episode, subtitleCallback, callback)
+            }
+        } else {
+            invokeAllSources(
+                AllLoadLinksData(
+                    title = res.title,
+                    id = res.imdbId,
+                    tmdbId = res.tmdbId,
+                    anilistId = null,
+                    malId = null,
+                    kitsuId = null,
+                    year = yearInt,
+                    seasonYear = seasonYear,
+                    season = res.season,
+                    episode = res.episode,
+                    isAnime = false,
+                    isBollywood = res.isBollywood,
+                    isAsian = res.isAsian,
+                    isCartoon = res.isCartoon,
+                    orgTitle = null,
+                    imdbTitle = null,
+                    imdbSeason = res.imdbSeason,
+                    imdbEpisode = res.imdbEpisode,
+                    airedYear = yearInt
+                ),
+                subtitleCallback, callback
+            )
+        }
+        return true
     }
 
     private fun detectAnime(meta: NexFlixiaMeta): Boolean {
