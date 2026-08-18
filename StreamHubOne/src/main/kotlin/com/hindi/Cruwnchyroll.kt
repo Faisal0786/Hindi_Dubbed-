@@ -16,6 +16,8 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 
+import com.hindi.providers.SourceProviders
+
 import com.hindi.providers.SourceProviders.invokeAllSources
 import com.hindi.providers.SourceProviders.invokeAllAnimeSources
 import com.hindi.providers.NewProviders.invokeAniStream
