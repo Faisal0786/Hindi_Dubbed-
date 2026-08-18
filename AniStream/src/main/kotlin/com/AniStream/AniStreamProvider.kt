@@ -41,7 +41,7 @@ class AniStreamProvider : MainAPI() {
 
     data class GqlQuery(val query: String, val variables: Map<String, Any?> = emptyMap())
 
-    // AniList Public API Models (For Home & Search)
+    // AniList Home Models
     data class AniSearchResponse(@JsonProperty("data") val data: AniSearchData?)
     data class AniSearchData(@JsonProperty("Page") val page: AniPage?)
     data class AniPage(@JsonProperty("media") val media: List<AniMedia>?)
@@ -59,29 +59,6 @@ class AniStreamProvider : MainAPI() {
         @JsonProperty("extraLarge") val extraLarge: String?,
         @JsonProperty("large") val large: String?
     )
-
-    // AniStream Internal API Models
-    data class GqlAnimeDetailResponse(@JsonProperty("data") val data: GqlAnimeData?)
-    data class GqlAnimeData(@JsonProperty("anime") val anime: AnimeDetail?)
-    data class AnimeDetail(
-        @JsonProperty("id") val id: String?,
-        @JsonProperty("titleRomaji") val titleRomaji: String?,
-        @JsonProperty("titleEnglish") val titleEnglish: String?,
-        @JsonProperty("bannerImage") val bannerImage: String?,
-        @JsonProperty("description") val description: String?,
-        @JsonProperty("format") val format: String?,
-        @JsonProperty("genres") val genres: List<String>?,
-        @JsonProperty("seasonYear") val seasonYear: Int?,
-        @JsonProperty("status") val status: String?
-    )
-
-    data class EpisodeItem(
-        @JsonProperty("number") val number: Int,
-        @JsonProperty("titles") val titles: EpisodeTitles?,
-        @JsonProperty("img") val img: String?,
-        @JsonProperty("description") val description: String?
-    )
-    data class EpisodeTitles(@JsonProperty("en") val en: String?)
 
     data class ServerList(
         @JsonProperty("subProviders") val subProviders: List<ProviderItem>?,
@@ -103,7 +80,10 @@ class AniStreamProvider : MainAPI() {
         @JsonProperty("kind") val kind: String?
     )
 
-    data class PassEpData(val animeId: String, val epNum: Int)
+    data class PassEpData(
+        @JsonProperty("animeId") val animeId: String,
+        @JsonProperty("epNum") val epNum: Int
+    )
 
     // ================= 1. MAIN PAGE =================
 
@@ -128,10 +108,7 @@ class AniStreamProvider : MainAPI() {
 
         val variables = mapOf("page" to page, "sort" to listOf(request.data))
 
-        val response = app.post(
-            anilistApi,
-            json = GqlQuery(query, variables)
-        ).parsedSafe<AniSearchResponse>()
+        val response = app.post(anilistApi, json = GqlQuery(query, variables)).parsedSafe<AniSearchResponse>()
 
         val items = response?.data?.page?.media?.mapNotNull { media ->
             val title = media.title?.english ?: media.title?.romaji ?: media.title?.userPreferred ?: return@mapNotNull null
@@ -163,12 +140,7 @@ class AniStreamProvider : MainAPI() {
             }
         """.trimIndent()
 
-        val variables = mapOf("search" to query)
-
-        val response = app.post(
-            anilistApi,
-            json = GqlQuery(searchQuery, variables)
-        ).parsedSafe<AniSearchResponse>()
+        val response = app.post(anilistApi, json = GqlQuery(searchQuery, mapOf("search" to query))).parsedSafe<AniSearchResponse>()
 
         return response?.data?.page?.media?.mapNotNull { media ->
             val title = media.title?.english ?: media.title?.romaji ?: media.title?.userPreferred ?: return@mapNotNull null
@@ -185,9 +157,9 @@ class AniStreamProvider : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         initSession()
 
-        val anilistId = url.substringAfterLast("/").substringAfterLast("-").toIntOrNull() ?: return throw ErrorLoadingException("Invalid ID")
+        val anilistId = url.substringAfterLast("/").substringAfterLast("-").toIntOrNull()
+            ?: throw ErrorLoadingException("Invalid Anime ID")
 
-        // Map AniList ID to AniStream's internal Database ID
         val gqlBody = """
             query AnimeDetailBase(${'$'}anilistId: Int) {
                 anime(anilistId: ${'$'}anilistId) {
@@ -197,60 +169,74 @@ class AniStreamProvider : MainAPI() {
                     bannerImage
                     description
                     format
-                    genres
                     seasonYear
                     status
                 }
             }
         """.trimIndent()
 
-        val gqlRes = app.post(
+        // Fetch GQL and parse as pure String to avoid any Jackson Model Mismatch Crashes
+        val gqlResponse = app.post(
             graphqlApi,
             json = GqlQuery(gqlBody, mapOf("anilistId" to anilistId)),
-            headers = mapOf("Referer" to "$mainUrl/")
-        ).parsedSafe<GqlAnimeDetailResponse>()
+            headers = mapOf("Accept" to "application/json", "Origin" to mainUrl, "Referer" to "$mainUrl/")
+        ).text
 
-        val animeInfo = gqlRes?.data?.anime
-        val animeInternalId = animeInfo?.id ?: return throw ErrorLoadingException("Anime not found in AniStream DB")
-        
-        val title = animeInfo.titleEnglish ?: animeInfo.titleRomaji ?: "Anime"
-        val isMovie = animeInfo.format?.equals("MOVIE", ignoreCase = true) == true
+        val internalId = Regex(""""id"\s*:\s*"([^"]+)"""").find(gqlResponse)?.groupValues?.get(1)
+            ?: throw ErrorLoadingException("Anime API Internal ID Not Found")
+
+        val titleEng = Regex(""""titleEnglish"\s*:\s*"([^"]+)"""").find(gqlResponse)?.groupValues?.get(1)
+        val titleRom = Regex(""""titleRomaji"\s*:\s*"([^"]+)"""").find(gqlResponse)?.groupValues?.get(1)
+        val title = titleEng ?: titleRom ?: "Anime"
+
+        val banner = Regex(""""bannerImage"\s*:\s*"([^"]+)"""").find(gqlResponse)?.groupValues?.get(1)
+        val desc = Regex(""""description"\s*:\s*"([^"]+)"""").find(gqlResponse)?.groupValues?.get(1)?.replace("\\n", "\n")?.replace(Regex("<.*?>"), "")
+        val format = Regex(""""format"\s*:\s*"([^"]+)"""").find(gqlResponse)?.groupValues?.get(1)
+        val year = Regex(""""seasonYear"\s*:\s*(\d+)""").find(gqlResponse)?.groupValues?.get(1)?.toIntOrNull()
+        val statusStr = Regex(""""status"\s*:\s*"([^"]+)"""").find(gqlResponse)?.groupValues?.get(1)
+
+        val isMovie = format?.equals("MOVIE", ignoreCase = true) == true
         val type = if (isMovie) TvType.AnimeMovie else TvType.Anime
 
-        // Fetch Episodes
-        val epRes = app.get(
-            "$restApi/episodes?id=$animeInternalId",
-            headers = mapOf("Referer" to "$mainUrl/", "User-Agent" to defaultUserAgent)
-        ).parsedSafe<List<EpisodeItem>>()
+        // Fetch Episodes JSON
+        val epJson = app.get(
+            "$restApi/episodes?id=$internalId",
+            headers = mapOf("Accept" to "application/json", "Origin" to mainUrl, "Referer" to "$mainUrl/")
+        ).text
 
         val episodes = mutableListOf<Episode>()
-        epRes?.forEach { ep ->
+
+        // Regex parsing to prevent Episode array parsing crashes
+        val epNumbers = Regex(""""number"\s*:\s*(\d+)""").findAll(epJson).map { it.groupValues[1].toInt() }.toList()
+        val epTitles = Regex(""""en"\s*:\s*"([^"]+)"""").findAll(epJson).map { it.groupValues[1] }.toList()
+        val epImages = Regex(""""img"\s*:\s*"([^"]+)"""").findAll(epJson).map { it.groupValues[1] }.toList()
+
+        epNumbers.distinct().forEachIndexed { index, epNum ->
             episodes.add(
-                newEpisode(PassEpData(animeId = animeInternalId, epNum = ep.number).toJson()) {
-                    this.name = ep.titles?.en ?: "Episode ${ep.number}"
-                    this.episode = ep.number
-                    this.posterUrl = ep.img
-                    this.description = ep.description
+                newEpisode(PassEpData(animeId = internalId, epNum = epNum).toJson()) {
+                    this.name = epTitles.getOrNull(index) ?: "Episode $epNum"
+                    this.episode = epNum
+                    this.posterUrl = epImages.getOrNull(index)
                 }
             )
         }
 
-        if (episodes.isEmpty() && isMovie) {
+        // Fallback if 0 episodes found
+        if (episodes.isEmpty()) {
             episodes.add(
-                newEpisode(PassEpData(animeId = animeInternalId, epNum = 1).toJson()) {
-                    this.name = "Full Movie"
+                newEpisode(PassEpData(animeId = internalId, epNum = 1).toJson()) {
+                    this.name = if (isMovie) "Full Movie" else "Episode 1"
                     this.episode = 1
                 }
             )
         }
 
         return newAnimeLoadResponse(title, url, type) {
-            this.posterUrl = animeInfo.bannerImage ?: "https://img.anili.st/media/$anilistId"
-            this.backgroundPosterUrl = animeInfo.bannerImage
-            this.plot = animeInfo.description?.replace("<br>", "\n")?.replace(Regex("<.*?>"), "")
-            this.tags = animeInfo.genres
-            this.year = animeInfo.seasonYear
-            this.showStatus = when (animeInfo.status?.uppercase()) {
+            this.posterUrl = banner ?: "https://img.anili.st/media/$anilistId"
+            this.backgroundPosterUrl = banner
+            this.plot = desc
+            this.year = year
+            this.showStatus = when (statusStr?.uppercase()) {
                 "FINISHED" -> ShowStatus.Completed
                 "RELEASING" -> ShowStatus.Ongoing
                 else -> null
