@@ -19,7 +19,7 @@ class AniStreamProvider : MainAPI() {
 
     private var isSessionReady = false
 
-    // Automatic Cookie Initialization
+    // Automatic Session / Cookie Initialization
     private suspend fun initSession() {
         if (!isSessionReady) {
             try {
@@ -32,7 +32,7 @@ class AniStreamProvider : MainAPI() {
                 )
                 isSessionReady = true
             } catch (e: Exception) {
-                // Ignore initialization errors, app will retry on request
+                // Ignore initialization errors
             }
         }
     }
@@ -241,7 +241,7 @@ class AniStreamProvider : MainAPI() {
 
         val anilistId = url.substringAfterLast("/").substringAfterLast("-").toIntOrNull()
 
-        // 1. Fetch Anime Metadata from GraphQL
+        // 1. Fetch Details from GraphQL
         val gqlBody = """
             query AnimeDetailBase(${'$'}anilistId: Int) {
                 anime(anilistId: ${'$'}anilistId) {
@@ -271,7 +271,7 @@ class AniStreamProvider : MainAPI() {
         val isMovie = animeInfo?.format?.equals("MOVIE", ignoreCase = true) == true
         val type = if (isMovie) TvType.AnimeMovie else TvType.Anime
 
-        // 2. Fetch Structured Episodes List from Rest API
+        // 2. Fetch Structured Episodes from Rest API
         val epRes = app.get(
             "$restApi/episodes?id=$animeInternalId",
             headers = mapOf(
@@ -289,12 +289,11 @@ class AniStreamProvider : MainAPI() {
                     this.episode = ep.number
                     this.posterUrl = ep.img
                     this.description = ep.description
-                    this.rating = ep.rating?.toFloatOrNull()?.toInt()
                 }
             )
         }
 
-        // Fallback for Single Movies if episode array is empty
+        // Fallback for Movies
         if (episodes.isEmpty() && isMovie) {
             episodes.add(
                 newEpisode(PassEpData(animeId = animeInternalId, epNum = 1).toJson()) {
@@ -315,7 +314,7 @@ class AniStreamProvider : MainAPI() {
                 "RELEASING" -> ShowStatus.Ongoing
                 else -> null
             }
-            this.episodes = episodes.sortedBy { it.episode }
+            addEpisodes(DubStatus.Subbed, episodes.sortedBy { it.episode })
         }
     }
 
@@ -345,8 +344,8 @@ class AniStreamProvider : MainAPI() {
         serversRes.subProviders?.forEach { taskList.add(Pair(it.id, "sub")) }
         serversRes.dubProviders?.forEach { taskList.add(Pair(it.id, "dub")) }
 
-        // Fetch All Servers in Parallel
-        taskList.apmap { (providerId, streamType) ->
+        // Fetch All Servers Asynchronously using amap
+        taskList.amap { (providerId, streamType) ->
             try {
                 val sourceUrl = "$restApi/sources?id=${epData.animeId}&epNum=${epData.epNum}&type=$streamType&providerId=$providerId"
                 val sourceRes = app.get(
@@ -356,7 +355,7 @@ class AniStreamProvider : MainAPI() {
                         "Origin" to mainUrl,
                         "User-Agent" to defaultUserAgent
                     )
-                ).parsedSafe<SourceResponse>() ?: return@apmap
+                ).parsedSafe<SourceResponse>() ?: return@amap
 
                 val refererHeader = sourceRes.headers?.get("Referer") ?: "$mainUrl/"
 
@@ -365,7 +364,7 @@ class AniStreamProvider : MainAPI() {
                     val file = track.url ?: track.file ?: track.src
                     if (!file.isNullOrEmpty() && track.kind != "thumbnails") {
                         subtitleCallback(
-                            SubtitleFile(
+                            newSubtitleFile(
                                 lang = track.label ?: "Unknown",
                                 url = file
                             )
@@ -389,13 +388,12 @@ class AniStreamProvider : MainAPI() {
                         ).forEach(callback)
                     } else {
                         callback(
-                            ExtractorLink(
+                            newExtractorLink(
                                 source = "$name [${providerId.uppercase()}] [${streamType.uppercase()}]",
                                 name = "$name [${providerId.uppercase()}]",
                                 url = streamUrl,
                                 referer = refererHeader,
-                                quality = Qualities.P1080.value,
-                                isM3u8 = false
+                                quality = Qualities.P1080.value
                             )
                         )
                     }
