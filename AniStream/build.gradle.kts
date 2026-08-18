@@ -2,7 +2,6 @@ import org.jetbrains.kotlin.konan.properties.Properties
 
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
     id("com.lagradost.cloudstream3.gradle")
 }
 
@@ -58,8 +57,4 @@ cloudstream {
     )
 
     iconUrl = "https://anistream.one/og.png"
-}
-
-dependencies {
-    // Cloudstream core APIs gradle plugin ke through inject hoti hain
 }
