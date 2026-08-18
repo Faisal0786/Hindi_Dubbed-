@@ -14,6 +14,7 @@ class AniStreamProvider : MainAPI() {
     override val hasMainPage = true
 
     private val graphqlApi = "https://graphql.animex.one/graphql"
+    private val anilistApi = "https://graphql.anilist.co"
     private val restApi = "https://api.anistream.one/rest/api"
     private val defaultUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36"
 
@@ -31,30 +32,39 @@ class AniStreamProvider : MainAPI() {
                 )
                 isSessionReady = true
             } catch (e: Exception) {
-                // Ignore initialization failures
+                // Ignore
             }
         }
     }
 
     // ================= DATA CLASSES =================
 
-    data class GqlQuery(
-        val query: String,
-        val variables: Map<String, Any?> = emptyMap()
+    data class GqlQuery(val query: String, val variables: Map<String, Any?> = emptyMap())
+
+    // AniList Public API Models (For Home & Search)
+    data class AniSearchResponse(@JsonProperty("data") val data: AniSearchData?)
+    data class AniSearchData(@JsonProperty("Page") val page: AniPage?)
+    data class AniPage(@JsonProperty("media") val media: List<AniMedia>?)
+    data class AniMedia(
+        @JsonProperty("id") val id: Int?,
+        @JsonProperty("title") val title: AniTitle?,
+        @JsonProperty("coverImage") val coverImage: AniCoverImage?
+    )
+    data class AniTitle(
+        @JsonProperty("english") val english: String?,
+        @JsonProperty("romaji") val romaji: String?,
+        @JsonProperty("userPreferred") val userPreferred: String?
+    )
+    data class AniCoverImage(
+        @JsonProperty("extraLarge") val extraLarge: String?,
+        @JsonProperty("large") val large: String?
     )
 
-    data class GqlAnimeDetailResponse(
-        @JsonProperty("data") val data: GqlAnimeData?
-    )
-
-    data class GqlAnimeData(
-        @JsonProperty("anime") val anime: AnimeDetail?
-    )
-
+    // AniStream Internal API Models
+    data class GqlAnimeDetailResponse(@JsonProperty("data") val data: GqlAnimeData?)
+    data class GqlAnimeData(@JsonProperty("anime") val anime: AnimeDetail?)
     data class AnimeDetail(
         @JsonProperty("id") val id: String?,
-        @JsonProperty("anilistId") val anilistId: Int?,
-        @JsonProperty("malId") val malId: Int?,
         @JsonProperty("titleRomaji") val titleRomaji: String?,
         @JsonProperty("titleEnglish") val titleEnglish: String?,
         @JsonProperty("bannerImage") val bannerImage: String?,
@@ -69,34 +79,22 @@ class AniStreamProvider : MainAPI() {
         @JsonProperty("number") val number: Int,
         @JsonProperty("titles") val titles: EpisodeTitles?,
         @JsonProperty("img") val img: String?,
-        @JsonProperty("description") val description: String?,
-        @JsonProperty("isFiller") val isFiller: Boolean?
+        @JsonProperty("description") val description: String?
     )
-
-    data class EpisodeTitles(
-        @JsonProperty("en") val en: String?
-    )
+    data class EpisodeTitles(@JsonProperty("en") val en: String?)
 
     data class ServerList(
         @JsonProperty("subProviders") val subProviders: List<ProviderItem>?,
         @JsonProperty("dubProviders") val dubProviders: List<ProviderItem>?
     )
-
-    data class ProviderItem(
-        @JsonProperty("id") val id: String
-    )
+    data class ProviderItem(@JsonProperty("id") val id: String)
 
     data class SourceResponse(
         @JsonProperty("sources") val sources: List<MediaSource>?,
         @JsonProperty("tracks") val tracks: List<TrackSource>?,
         @JsonProperty("headers") val headers: Map<String, String>?
     )
-
-    data class MediaSource(
-        @JsonProperty("url") val url: String?,
-        @JsonProperty("quality") val quality: String?
-    )
-
+    data class MediaSource(@JsonProperty("url") val url: String?, @JsonProperty("quality") val quality: String?)
     data class TrackSource(
         @JsonProperty("url") val url: String?,
         @JsonProperty("file") val file: String?,
@@ -105,91 +103,21 @@ class AniStreamProvider : MainAPI() {
         @JsonProperty("kind") val kind: String?
     )
 
-    data class PassEpData(
-        val animeId: String,
-        val epNum: Int
-    )
+    data class PassEpData(val animeId: String, val epNum: Int)
 
     // ================= 1. MAIN PAGE =================
 
     override val mainPage = mainPageOf(
         "TRENDING_DESC" to "Trending Now",
         "POPULARITY_DESC" to "All-Time Popular",
-        "FAVOURITES_DESC" to "Top Rated"
+        "SCORE_DESC" to "Top Rated"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        initSession()
-
         val query = """
-            query {
-                Page(page: $page, perPage: 20) {
-                    media(type: ANIME, sort: [${request.data}]) {
-                        id
-                        title {
-                            english
-                            romaji
-                            userPreferred
-                        }
-                        coverImage {
-                            extraLarge
-                            large
-                        }
-                    }
-                }
-            }
-        """.trimIndent()
-
-        val items = mutableListOf<SearchResponse>()
-        try {
-            val response = app.post(
-                graphqlApi,
-                json = GqlQuery(query),
-                headers = mapOf(
-                    "Referer" to "$mainUrl/",
-                    "Origin" to mainUrl,
-                    "User-Agent" to defaultUserAgent
-                )
-            ).text
-
-            val anilistIds = Regex(""""id":\s*(\d+)""").findAll(response).map { it.groupValues[1] }.toList()
-            val titles = Regex(""""(?:english|romaji|userPreferred)":\s*"([^"]+)"""").findAll(response).map { it.groupValues[1] }.toList()
-            val posters = Regex(""""(?:extraLarge|large)":\s*"([^"]+)"""").findAll(response).map { it.groupValues[1] }.toList()
-
-            for (i in anilistIds.indices) {
-                val aId = anilistIds.getOrNull(i) ?: continue
-                val title = titles.getOrNull(i) ?: "Anime $aId"
-                val poster = posters.getOrNull(i)
-
-                items.add(
-                    newAnimeSearchResponse(title, "$mainUrl/anime/$aId", TvType.Anime) {
-                        this.posterUrl = poster
-                    }
-                )
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        return newHomePageResponse(
-            HomePageList(
-                name = request.name,
-                list = items.distinctBy { it.url },
-                isHorizontalImages = false
-            ),
-            hasNext = true
-        )
-    }
-
-    // ================= 2. SEARCH =================
-
-    override suspend fun search(query: String): List<SearchResponse> {
-        initSession()
-
-        val searchQuery = """
-            query SearchAnime(${'$'}search: String) {
-                Page(page: 1, perPage: 20) {
-                    media(search: ${'$'}search, type: ANIME) {
+            query(${'$'}page: Int, ${'$'}sort: [MediaSort]) {
+                Page(page: ${'$'}page, perPage: 20) {
+                    media(type: ANIME, sort: ${'$'}sort, isAdult: false) {
                         id
                         title { english romaji userPreferred }
                         coverImage { extraLarge large }
@@ -198,38 +126,58 @@ class AniStreamProvider : MainAPI() {
             }
         """.trimIndent()
 
-        val results = mutableListOf<SearchResponse>()
-        try {
-            val response = app.post(
-                graphqlApi,
-                json = GqlQuery(searchQuery, mapOf("search" to query)),
-                headers = mapOf(
-                    "Referer" to "$mainUrl/",
-                    "Origin" to mainUrl,
-                    "User-Agent" to defaultUserAgent
-                )
-            ).text
+        val variables = mapOf("page" to page, "sort" to listOf(request.data))
 
-            val ids = Regex(""""id":\s*(\d+)""").findAll(response).map { it.groupValues[1] }.toList()
-            val titles = Regex(""""(?:english|romaji|userPreferred)":\s*"([^"]+)"""").findAll(response).map { it.groupValues[1] }.toList()
-            val posters = Regex(""""(?:extraLarge|large)":\s*"([^"]+)"""").findAll(response).map { it.groupValues[1] }.toList()
+        val response = app.post(
+            anilistApi,
+            json = GqlQuery(query, variables)
+        ).parsedSafe<AniSearchResponse>()
 
-            for (i in ids.indices) {
-                val aId = ids[i]
-                val title = titles.getOrNull(i) ?: "Anime"
-                val poster = posters.getOrNull(i)
-
-                results.add(
-                    newAnimeSearchResponse(title, "$mainUrl/anime/$aId", TvType.Anime) {
-                        this.posterUrl = poster
-                    }
-                )
+        val items = response?.data?.page?.media?.mapNotNull { media ->
+            val title = media.title?.english ?: media.title?.romaji ?: media.title?.userPreferred ?: return@mapNotNull null
+            val poster = media.coverImage?.extraLarge ?: media.coverImage?.large
+            
+            newAnimeSearchResponse(title, "$mainUrl/anime/${media.id}", TvType.Anime) {
+                this.posterUrl = poster
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } ?: emptyList()
 
-        return results.distinctBy { it.url }
+        return newHomePageResponse(
+            HomePageList(request.name, items, isHorizontalImages = false),
+            hasNext = items.isNotEmpty()
+        )
+    }
+
+    // ================= 2. SEARCH =================
+
+    override suspend fun search(query: String): List<SearchResponse> {
+        val searchQuery = """
+            query(${'$'}search: String) {
+                Page(page: 1, perPage: 20) {
+                    media(search: ${'$'}search, type: ANIME, isAdult: false) {
+                        id
+                        title { english romaji userPreferred }
+                        coverImage { extraLarge large }
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val variables = mapOf("search" to query)
+
+        val response = app.post(
+            anilistApi,
+            json = GqlQuery(searchQuery, variables)
+        ).parsedSafe<AniSearchResponse>()
+
+        return response?.data?.page?.media?.mapNotNull { media ->
+            val title = media.title?.english ?: media.title?.romaji ?: media.title?.userPreferred ?: return@mapNotNull null
+            val poster = media.coverImage?.extraLarge ?: media.coverImage?.large
+            
+            newAnimeSearchResponse(title, "$mainUrl/anime/${media.id}", TvType.Anime) {
+                this.posterUrl = poster
+            }
+        } ?: emptyList()
     }
 
     // ================= 3. LOAD DETAILS & EPISODES =================
@@ -237,13 +185,13 @@ class AniStreamProvider : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         initSession()
 
-        val anilistId = url.substringAfterLast("/").substringAfterLast("-").toIntOrNull()
+        val anilistId = url.substringAfterLast("/").substringAfterLast("-").toIntOrNull() ?: return throw ErrorLoadingException("Invalid ID")
 
+        // Map AniList ID to AniStream's internal Database ID
         val gqlBody = """
             query AnimeDetailBase(${'$'}anilistId: Int) {
                 anime(anilistId: ${'$'}anilistId) {
                     id
-                    anilistId
                     titleRomaji
                     titleEnglish
                     bannerImage
@@ -263,24 +211,22 @@ class AniStreamProvider : MainAPI() {
         ).parsedSafe<GqlAnimeDetailResponse>()
 
         val animeInfo = gqlRes?.data?.anime
-        val animeInternalId = animeInfo?.id ?: url.substringAfter("/anime/").substringBefore("/")
-        val title = animeInfo?.titleEnglish ?: animeInfo?.titleRomaji ?: "Anime"
-        val isMovie = animeInfo?.format?.equals("MOVIE", ignoreCase = true) == true
+        val animeInternalId = animeInfo?.id ?: return throw ErrorLoadingException("Anime not found in AniStream DB")
+        
+        val title = animeInfo.titleEnglish ?: animeInfo.titleRomaji ?: "Anime"
+        val isMovie = animeInfo.format?.equals("MOVIE", ignoreCase = true) == true
         val type = if (isMovie) TvType.AnimeMovie else TvType.Anime
 
+        // Fetch Episodes
         val epRes = app.get(
             "$restApi/episodes?id=$animeInternalId",
-            headers = mapOf(
-                "Referer" to "$mainUrl/",
-                "User-Agent" to defaultUserAgent
-            )
+            headers = mapOf("Referer" to "$mainUrl/", "User-Agent" to defaultUserAgent)
         ).parsedSafe<List<EpisodeItem>>()
 
         val episodes = mutableListOf<Episode>()
         epRes?.forEach { ep ->
-            val passData = PassEpData(animeId = animeInternalId, epNum = ep.number).toJson()
             episodes.add(
-                newEpisode(passData) {
+                newEpisode(PassEpData(animeId = animeInternalId, epNum = ep.number).toJson()) {
                     this.name = ep.titles?.en ?: "Episode ${ep.number}"
                     this.episode = ep.number
                     this.posterUrl = ep.img
@@ -299,12 +245,12 @@ class AniStreamProvider : MainAPI() {
         }
 
         return newAnimeLoadResponse(title, url, type) {
-            this.posterUrl = animeInfo?.bannerImage ?: "https://img.anili.st/media/$anilistId"
-            this.backgroundPosterUrl = animeInfo?.bannerImage
-            this.plot = animeInfo?.description?.replace("<br>", "\n")?.replace(Regex("<.*?>"), "")
-            this.tags = animeInfo?.genres
-            this.year = animeInfo?.seasonYear
-            this.showStatus = when (animeInfo?.status?.uppercase()) {
+            this.posterUrl = animeInfo.bannerImage ?: "https://img.anili.st/media/$anilistId"
+            this.backgroundPosterUrl = animeInfo.bannerImage
+            this.plot = animeInfo.description?.replace("<br>", "\n")?.replace(Regex("<.*?>"), "")
+            this.tags = animeInfo.genres
+            this.year = animeInfo.seasonYear
+            this.showStatus = when (animeInfo.status?.uppercase()) {
                 "FINISHED" -> ShowStatus.Completed
                 "RELEASING" -> ShowStatus.Ongoing
                 else -> null
@@ -322,16 +268,11 @@ class AniStreamProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         initSession()
-
         val epData = tryParseJson<PassEpData>(data) ?: return false
 
         val serversRes = app.get(
             "$restApi/servers?id=${epData.animeId}&epNum=${epData.epNum}",
-            headers = mapOf(
-                "Referer" to "$mainUrl/",
-                "Origin" to mainUrl,
-                "User-Agent" to defaultUserAgent
-            )
+            headers = mapOf("Referer" to "$mainUrl/", "Origin" to mainUrl, "User-Agent" to defaultUserAgent)
         ).parsedSafe<ServerList>() ?: return false
 
         val taskList = mutableListOf<Pair<String, String>>()
@@ -343,11 +284,7 @@ class AniStreamProvider : MainAPI() {
                 val sourceUrl = "$restApi/sources?id=${epData.animeId}&epNum=${epData.epNum}&type=$streamType&providerId=$providerId"
                 val sourceRes = app.get(
                     sourceUrl,
-                    headers = mapOf(
-                        "Referer" to "$mainUrl/",
-                        "Origin" to mainUrl,
-                        "User-Agent" to defaultUserAgent
-                    )
+                    headers = mapOf("Referer" to "$mainUrl/", "Origin" to mainUrl, "User-Agent" to defaultUserAgent)
                 ).parsedSafe<SourceResponse>() ?: return@amap
 
                 val refererHeader = sourceRes.headers?.get("Referer") ?: "$mainUrl/"
@@ -355,12 +292,7 @@ class AniStreamProvider : MainAPI() {
                 sourceRes.tracks?.forEach { track ->
                     val file = track.url ?: track.file ?: track.src
                     if (!file.isNullOrEmpty() && track.kind != "thumbnails") {
-                        subtitleCallback(
-                            newSubtitleFile(
-                                lang = track.label ?: "Unknown",
-                                url = file
-                            )
-                        )
+                        subtitleCallback(newSubtitleFile(lang = track.label ?: "Unknown", url = file))
                     }
                 }
 
@@ -372,10 +304,7 @@ class AniStreamProvider : MainAPI() {
                             source = "$name [${providerId.uppercase()}] [${streamType.uppercase()}]",
                             streamUrl = streamUrl,
                             referer = refererHeader,
-                            headers = mapOf(
-                                "Referer" to refererHeader,
-                                "User-Agent" to defaultUserAgent
-                            )
+                            headers = mapOf("Referer" to refererHeader, "User-Agent" to defaultUserAgent)
                         ).forEach(callback)
                     } else {
                         callback(
@@ -392,10 +321,9 @@ class AniStreamProvider : MainAPI() {
                     }
                 }
             } catch (e: Exception) {
-                // Ignore individual server failure
+                // Skip failed server
             }
         }
-
         return true
     }
 }
