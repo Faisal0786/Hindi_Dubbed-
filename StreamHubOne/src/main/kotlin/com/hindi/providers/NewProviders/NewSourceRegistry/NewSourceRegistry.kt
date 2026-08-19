@@ -36,6 +36,23 @@ object NewSourceRegistry {
                 invokeAnizone2(res.originalTitle ?: res.title, res.episode, subCb, cb) 
             }
         ),
+
+        SourceProviderDef(
+            key = "p_reanime",
+            displayName = "Reanime",
+            executeAnime = { res, subCb, cb -> 
+                // isDub = false default rakha hai. Agar aapke 'res' object mein isDub ka option hai, 
+                // toh aap 'isDub = res.isDub' bhi use kar sakte hain.
+                invokeReanime(
+                    title = res.originalTitle ?: res.title, 
+                    episode = res.episode, 
+                    isDub = false, 
+                    subtitleCallback = subCb, 
+                    callback = cb
+                ) 
+            }
+        ),
+
         SourceProviderDef(
             key = "p_anistream",
             displayName = "AniStream",
