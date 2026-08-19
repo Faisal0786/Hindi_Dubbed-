@@ -23,7 +23,7 @@ import java.net.URLEncoder
 
 
 
-Suspend fun SourceProviders.invokeReanime(
+suspend fun SourceProviders.invokeReanime(
         title: String? = null,
         episode: Int? = null,
         isDub: Boolean = false,
