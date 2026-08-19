@@ -1,4 +1,17 @@
-Suspend fun invokeReanime(
+package com.hindi.providers.NewProviders
+
+
+import com.hindi.providers.*
+import com.hindi.providers.SourceProviders
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
+import com.lagradost.api.Log
+import org.json.JSONObject
+import java.net.URLEncoder
+
+
+
+Suspend fun SourceProviders.invokeReanime(
         title: String? = null,
         episode: Int? = null,
         isDub: Boolean = false,
