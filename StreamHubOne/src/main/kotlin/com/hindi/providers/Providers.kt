@@ -61,11 +61,11 @@ private fun allowQuality(link: ExtractorLink): Boolean {
 
 object SourceProviders {
     
-    private const val CF_LOG_TAG = "CineStreamCloudflare"
+     const val CF_LOG_TAG = "CineStreamCloudflare"
     // Must match WebView User-Agent for Cloudflare cookie validation
-    private const val CF_BYPASS_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.82 Mobile Safari/537.36"
-    private val cfMutexMap = ConcurrentHashMap<String, Mutex>()
-    private val cfKillerMap = ConcurrentHashMap<String, CloudflareKiller>()
+     const val CF_BYPASS_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.82 Mobile Safari/537.36"
+     val cfMutexMap = ConcurrentHashMap<String, Mutex>()
+     val cfKillerMap = ConcurrentHashMap<String, CloudflareKiller>()
 
         suspend fun invokeAllSources(
         res: AllLoadLinksData,
