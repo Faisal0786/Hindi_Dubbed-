@@ -1241,7 +1241,7 @@ return newHomePageResponse(
                             invokeAnimes(malId, aniId, res.episode, seasonYear, animeSource, subtitleCallback, callback)
 invokeAniStream(aniId, res.episode, subtitleCallback, callback)
 
-invokeReanime(
+SourceProviders.invokeReanime(
     title = res.title, 
     episode = res.episode, 
     anilistId = aniId, 
