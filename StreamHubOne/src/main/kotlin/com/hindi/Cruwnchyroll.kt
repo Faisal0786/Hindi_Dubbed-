@@ -23,7 +23,7 @@ import com.hindi.providers.SourceProviders.invokeAllAnimeSources
 
 //ghdyvcg
 import com.hindi.providers.NewProviders.invokeAniStream
-import com.hindi.providers.NewProviders.invokeReanimeB
+import com.hindi.providers.NewProviders.invokeReanime
 
 import com.hindi.providers.SourceProviders.invokeAnimes
 import com.hindi.providers.AllLoadLinksData
@@ -1241,7 +1241,7 @@ return newHomePageResponse(
                             invokeAnimes(malId, aniId, res.episode, seasonYear, animeSource, subtitleCallback, callback)
 invokeAniStream(aniId, res.episode, subtitleCallback, callback)
 
-SourceProviders.invokeReanimeB(
+SourceProviders.invokeReanime(
     title = res.title, 
     episode = res.episode, 
     anilistId = aniId, 
