@@ -23,7 +23,7 @@ import com.hindi.providers.SourceProviders.invokeAllAnimeSources
 
 //ghdyvcg
 import com.hindi.providers.NewProviders.invokeAniStream
-import com.hindi.providers.NewProviders.invokeReanime
+import com.hindi.providers.NewProviders.invokeReanimeB
 
 import com.hindi.providers.SourceProviders.invokeAnimes
 import com.hindi.providers.AllLoadLinksData
