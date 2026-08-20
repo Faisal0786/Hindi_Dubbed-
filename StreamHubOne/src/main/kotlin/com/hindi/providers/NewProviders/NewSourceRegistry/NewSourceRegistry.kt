@@ -38,8 +38,8 @@ object NewSourceRegistry {
         ),
 
         SourceProviderDef(
-    key = "p_reanimeB",
-    displayName = "ReanimeB",
+    key = "p_reanime",
+    displayName = "Reanime",
     executeAnime = { res, subCb, cb ->
 
         // Sub
