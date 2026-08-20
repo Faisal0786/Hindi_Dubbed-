@@ -30,6 +30,7 @@ suspend fun SourceProviders.invokeReanime(
         val lang = if (isDub) "dub" else "sub"
         val encodedTitle = URLEncoder.encode(title, "UTF-8")
 
+        // Phase 1: Search API (Finding the Anime)
         val searchUrl = "https://reanime.to/api/v1/search?limit=3&q=$encodedTitle"
         val searchRes = cfGet(searchUrl).text
         if (searchRes.isBlank()) return
@@ -44,6 +45,7 @@ suspend fun SourceProviders.invokeReanime(
 
         if (anilistId == null || slug.isEmpty()) return
 
+        // Phase 2: Episode API
         val watchReferer = "https://reanime.to/watch/$slug?ep=$episode&lang=$lang"
         val epApiUrl = "https://reanime.to/api/flix/$anilistId/$episode"
 
@@ -52,35 +54,49 @@ suspend fun SourceProviders.invokeReanime(
 
         val epJson = try { JSONObject(epRes) } catch (e: Exception) { return }
 
-        val videoId = epJson.optString("video_id")
-        val embedId = epJson.optString("embed_id").ifEmpty { videoId }
+        // 👈 NAYA LOGIC: JSON ke 'servers' array se links nikalna
+        val servers = epJson.optJSONArray("servers") ?: return
 
-        if (videoId.isEmpty()) return
+        for (i in 0 until servers.length()) {
+            val server = servers.getJSONObject(i)
+            val dataLink = server.optString("dataLink") // Ex: https://flixcloud.cc/e/4k8su720j2ri?v=1
+            val dataType = server.optString("dataType") // "sub" or "dub"
+            val serverName = server.optString("serverName")
 
-        val flixReferer = "https://flixcloud.cc/e/$embedId?v=2&autoPlay=true"
-        val m3u8ApiUrl = "https://flixcloud.cc/api/m3u8/$videoId"
+            // Agar dub chahiye toh sub filter kar do, and vice versa
+            if (isDub && dataType != "dub") continue
+            if (!isDub && dataType != "sub") continue
 
-        val m3u8Res = cfGet(m3u8ApiUrl, headers = mapOf("Referer" to flixReferer)).text
-        if (m3u8Res.isBlank()) return
+            if (dataLink.isEmpty() || !dataLink.contains("/e/")) continue
 
-        val m3u8Json = try { JSONObject(m3u8Res) } catch (e: Exception) { return }
-        val masterM3u8Url = m3u8Json.optString("file")
-        val streamType = m3u8Json.optString("type")
+            // dataLink se FlixCloud ka Video ID extract karna (ex: "4k8su720j2ri")
+            val videoId = dataLink.substringAfter("/e/").substringBefore("?")
+            if (videoId.isEmpty()) continue
 
-        if (masterM3u8Url.isEmpty()) return
+            // Phase 3: FlixCloud M3U8 API
+            val m3u8ApiUrl = "https://flixcloud.cc/api/m3u8/$videoId"
+            val m3u8Res = cfGet(m3u8ApiUrl, headers = mapOf("Referer" to dataLink)).text
+            if (m3u8Res.isBlank()) continue
 
-        callback.invoke(
-            newExtractorLink(
-                "Reanime",
-                "Reanime ($lang)",
-                masterM3u8Url,
-                ExtractorLinkType.M3U8
-            ) {
-                this.headers = mapOf(
-                    "Origin" to "https://flixcloud.cc",
-                    "Referer" to "https://flixcloud.cc/",
-                    "User-Agent" to CF_BYPASS_USER_AGENT
-                )
-            }
-        )
+            val m3u8Json = try { JSONObject(m3u8Res) } catch (e: Exception) { continue }
+            val masterM3u8Url = m3u8Json.optString("file")
+
+            if (masterM3u8Url.isEmpty()) continue
+
+            // Phase 4: Stream Fetching
+            callback.invoke(
+                newExtractorLink(
+                    "Reanime",
+                    "Reanime $serverName ($dataType)",
+                    masterM3u8Url,
+                    ExtractorLinkType.M3U8
+                ) {
+                    this.headers = mapOf(
+                        "Origin" to "https://flixcloud.cc",
+                        "Referer" to "https://flixcloud.cc/",
+                        "User-Agent" to CF_BYPASS_USER_AGENT
+                    )
+                }
+            )
+        }
     }
