@@ -53,8 +53,6 @@ suspend fun SourceProviders.invokeReanime(
         if (epRes.isBlank()) return
 
         val epJson = try { JSONObject(epRes) } catch (e: Exception) { return }
-
-        // 👈 NAYA LOGIC: JSON ke 'servers' array se links nikalna
         val servers = epJson.optJSONArray("servers") ?: return
 
         for (i in 0 until servers.length()) {
@@ -63,19 +61,28 @@ suspend fun SourceProviders.invokeReanime(
             val dataType = server.optString("dataType") // "sub" or "dub"
             val serverName = server.optString("serverName")
 
-            // Agar dub chahiye toh sub filter kar do, and vice versa
             if (isDub && dataType != "dub") continue
             if (!isDub && dataType != "sub") continue
 
             if (dataLink.isEmpty() || !dataLink.contains("/e/")) continue
 
-            // dataLink se FlixCloud ka Video ID extract karna (ex: "4k8su720j2ri")
             val videoId = dataLink.substringAfter("/e/").substringBefore("?")
             if (videoId.isEmpty()) continue
 
             // Phase 3: FlixCloud M3U8 API
             val m3u8ApiUrl = "https://flixcloud.cc/api/m3u8/$videoId"
-            val m3u8Res = cfGet(m3u8ApiUrl, headers = mapOf("Referer" to dataLink)).text
+            
+            // FIX: Added proper Ajax headers and used app.get instead of cfGet to prevent timeouts
+            val m3u8Res = app.get(
+                m3u8ApiUrl, 
+                headers = mapOf(
+                    "Referer" to dataLink,
+                    "Accept" to "application/json",
+                    "X-Requested-With" to "XMLHttpRequest", // Flixcloud needs this!
+                    "User-Agent" to CF_BYPASS_USER_AGENT
+                )
+            ).text
+            
             if (m3u8Res.isBlank()) continue
 
             val m3u8Json = try { JSONObject(m3u8Res) } catch (e: Exception) { continue }
