@@ -17,7 +17,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLEncoder
 
-suspend fun SourceProviders.invokeReanime(
+suspend fun SourceProviders.invokeReanimeB(
         title: String? = null,
         episode: Int? = null,
         anilistId: Int? = null,
