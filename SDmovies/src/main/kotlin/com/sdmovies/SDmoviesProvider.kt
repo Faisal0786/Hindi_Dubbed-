@@ -149,7 +149,7 @@ class SDMoviesProvider : MainAPI() {
         }
     }
 
-    // 🎯 2. LOAD LINKS FUNCTION: Mediator Bypass + Next.js Stream Server Extraction
+    // 🎯 2. LOAD LINKS FUNCTION: Zero-POST Instant URL Stitching + Next.js Stream Extraction
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -165,20 +165,16 @@ class SDMoviesProvider : MainAPI() {
 
         if (payloadMap.isEmpty()) return false
 
-        // Step A: Submit hidden form tokens to host.pkpics.live to get the Dotflix URL
-        val actionUrl = "https://host.pkpics.live/take-me/"
-        val headers = mapOf(
-            "Origin" to "https://host.pkpics.live",
-            "Referer" to mainUrl,
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36",
-            "Content-Type" to "application/x-www-form-urlencoded"
-        )
+        // 🔥 INSTANT BYPASS: No POST request, directly stitching hidden inputs (id + filename)
+        val domainPart = payloadMap["id"]?.trim('/') ?: return false
+        val filePart = payloadMap["filename"]?.trim('/') ?: return false
 
-        val response = app.post(actionUrl, data = payloadMap, headers = headers)
-        val dotflixUrl = response.url // Final redirected Dotflix share URL
+        val baseUrl = if (!domainPart.startsWith("http")) "https://$domainPart" else domainPart
+        val dotflixUrl = "$baseUrl/$filePart"
 
         // Step B: Fetch Dotflix page HTML
-        val dotflixHtml = app.get(dotflixUrl, headers = mapOf("User-Agent" to headers["User-Agent"]!!)).text
+        val headers = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36")
+        val dotflixHtml = app.get(dotflixUrl, headers = headers).text
 
         // Step C: Extract all links from Next.js stream chunks (__next_f.push)
         val pushRegex = """self\.__next_f\.push\(\s*(\[.*?\])\s*\)""".toRegex(RegexOption.DOT_MATCHES_ALL)
@@ -198,9 +194,8 @@ class SDMoviesProvider : MainAPI() {
         }
 
         var foundLinks = false
-        val qualityText = "HD"
 
-        // Step D: Filter and push every server to Cloudstream UI with custom names
+        // Step D: Filter, Detect Quality (720p/1080p), and push to Cloudstream UI
         for (link in allExtractedLinks) {
             val lowerLink = link.lowercase()
 
@@ -214,7 +209,20 @@ class SDMoviesProvider : MainAPI() {
                 continue
             }
 
-            // 1. Direct CDN / .mkv / .mp4 links
+            // 🔍 Smart Quality Detection from URL/Filename
+            val qualityText = when {
+                lowerLink.contains("1080p") -> "1080p"
+                lowerLink.contains("720p") -> "720p"
+                lowerLink.contains("480p") -> "480p"
+                else -> "HD"
+            }
+            val qualityVal = when (qualityText) {
+                "1080p" -> Qualities.P1080.value
+                "720p" -> Qualities.P720.value
+                else -> Qualities.P720.value
+            }
+
+            // 1. Direct CDN / .mkv / .mp4 links (Googleusercontent or Cloudflare R2)
             if (lowerLink.contains("googleusercontent.com") || lowerLink.endsWith(".mkv") || lowerLink.endsWith(".mp4") || lowerLink.contains(".r2.dev")) {
                 foundLinks = true
                 callback.invoke(
@@ -223,7 +231,7 @@ class SDMoviesProvider : MainAPI() {
                         name = "SDMovies ($qualityText - Direct CDN)",
                         url = link,
                         referer = dotflixUrl,
-                        quality = Qualities.P720.value,
+                        quality = qualityVal,
                         isM3u8 = false
                     )
                 )
