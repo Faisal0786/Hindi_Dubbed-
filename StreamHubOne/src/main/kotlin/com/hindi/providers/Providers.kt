@@ -777,7 +777,7 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
                 )
             }
 
-
+}
 
     suspend fun invokeCinemacity(
         title: String? = null,
