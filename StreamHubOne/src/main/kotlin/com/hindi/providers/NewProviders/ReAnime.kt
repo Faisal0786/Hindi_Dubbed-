@@ -50,11 +50,11 @@ suspend fun SourceProviders.invokeReanime(
         val epApiUrl = "https://reanime.to/api/flix/$anilistId/$episode"
 
         val epRes = cfGet(epApiUrl, headers = mapOf(
-    "Referer" to watchReferer,
-    "Accept" to "application/json",
-    "X-Requested-With" to "XMLHttpRequest"
-)).text
-Log.d("ReAnime_Debug", "Phase 2 Response: ${epRes.take(500)}")
+            "Referer" to watchReferer,
+            "Accept" to "application/json",
+            "X-Requested-With" to "XMLHttpRequest"
+        )).text
+        Log.d("ReAnime_Debug", "Phase 2 Response: ${epRes.take(500)}")
 
         if (epRes.isBlank()) return
 
@@ -77,18 +77,25 @@ Log.d("ReAnime_Debug", "Phase 2 Response: ${epRes.take(500)}")
 
             // Phase 3: FlixCloud M3U8 API
             val m3u8ApiUrl = "https://flixcloud.cc/api/m3u8/$videoId"
-            
-            // FIX: Added proper Ajax headers and used app.get instead of cfGet to prevent timeouts
+
+            // 🔥 FIX: Background WebView se Flixcloud ki cookies nikalna
+            val flixCookies = CookieManager.getInstance().getCookie("https://flixcloud.cc") ?: ""
+
+            // app.get mein Cookie header inject karna
             val m3u8Res = app.get(
                 m3u8ApiUrl, 
                 headers = mapOf(
                     "Referer" to dataLink,
+                    "Cookie" to flixCookies, // <-- THE MAGIC KEY!
                     "Accept" to "application/json",
-                    "X-Requested-With" to "XMLHttpRequest", // Flixcloud needs this!
+                    "X-Requested-With" to "XMLHttpRequest",
                     "User-Agent" to CF_BYPASS_USER_AGENT
                 )
             ).text
-            
+
+            // Traking ke liye log
+            Log.d("ReAnime_Debug", "Phase 3 Flixcloud Response: ${m3u8Res.take(300)}")
+
             if (m3u8Res.isBlank()) continue
 
             val m3u8Json = try { JSONObject(m3u8Res) } catch (e: Exception) { continue }
@@ -107,6 +114,7 @@ Log.d("ReAnime_Debug", "Phase 2 Response: ${epRes.take(500)}")
                     this.headers = mapOf(
                         "Origin" to "https://flixcloud.cc",
                         "Referer" to "https://flixcloud.cc/",
+                        "Cookie" to flixCookies, // <-- Player ko block hone se bachane ke liye
                         "User-Agent" to CF_BYPASS_USER_AGENT
                     )
                 }
