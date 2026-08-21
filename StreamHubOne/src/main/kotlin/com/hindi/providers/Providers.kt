@@ -694,7 +694,7 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
             Log.e("Castle", "CRASHED: ${e.message}")
         }
     }
-        suspend fun invokeReanime(
+            suspend fun invokeReanime(
         aniId: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -714,50 +714,22 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
 
         response.servers.safeAmap { server ->
             val type = server.dataType.replaceFirstChar { it.uppercase() }
-            val dataLink = server.dataLink // e.g., https://flixcloud.cc/e/VIDEO_ID
+            val dataLink = server.dataLink
             
-            Log.d("Reanime", "Attempting WebView Bypass for: $dataLink")
+            Log.d("Reanime", "Sending to Extractor: $dataLink")
 
-            // 🔥 PLAN B: Use Cloudstream's WebView to load the iframe and intercept the M3U8
-            // We use 'app.post' or interceptors to let the WebView handle JS/Tokens internally
-            
-            // Cloudstream extractor logic to let webview sniff the m3u8
-            val webViewRes = app.get(
+            // 🔥 FIX: Directly calling Cloudstream's native "FlixCloud" extractor!
+            // dataLink = "https://flixcloud.cc/e/VIDEO_ID"
+            // Cloudstream will internally route this to the FlixCloudExtractor class
+            loadExtractor(
                 dataLink, 
-                interceptor = CloudflareKiller(), // Forces a real browser challenge
-                headers = mapOf(
-                    "Referer" to "https://reanime.to/",
-                    "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-                )
-            ).document
-
-            // Scrape the m3u8 from the loaded WebView HTML (if available in script tags after JS run)
-            val scriptTags = webViewRes.select("script").map { it.data() }.joinToString(" ")
-            
-            val masterM3u8Url = Regex("""(https?://[^"']+\.m3u8[^"']*)""").find(scriptTags)?.groupValues?.get(1)
-                ?: Regex("""file["']?\s*:\s*["'](https?://[^"']+\.m3u8[^"']*)["']""").find(scriptTags)?.groupValues?.get(1)
-
-            if (!masterM3u8Url.isNullOrEmpty()) {
-                Log.d("Reanime", "Found M3U8 via WebView: $masterM3u8Url")
-                callback.invoke(
-                    newExtractorLink(
-                        "Reanime",
-                        "Reanime $type",
-                        masterM3u8Url,
-                        ExtractorLinkType.M3U8
-                    ) {
-                        this.headers = mapOf(
-                            "Origin" to "https://flixcloud.cc",
-                            "Referer" to "https://flixcloud.cc/",
-                            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                        )
-                    }
-                )
-            } else {
-                 Log.d("Reanime", "WebView failed to intercept M3U8")
-            }
+                "https://reanime.to/", 
+                subtitleCallback, 
+                callback
+            )
         }
     }
+
 
     suspend fun invokeCinemacity(
         title: String? = null,
