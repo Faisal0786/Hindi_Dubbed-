@@ -694,33 +694,88 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
             Log.e("Castle", "CRASHED: ${e.message}")
         }
     }
-suspend fun invokeReanime(
+    suspend fun invokeReanime(
         aniId: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
+        // Aap yahan USER_AGENT ya CF_BYPASS_USER_AGENT use kar sakte hain
         val headers = mapOf(
-            "Referer" to "$reanimeAPI/",
-            "User-Agent" to USER_AGENT
+            "Referer" to "https://reanime.to/",
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
 
-        val response = cfGet(
-            "$reanimeAPI/api/flix/$aniId/${episode ?: 1}",
+        // reanimeAPI endpoint hit karke servers nikalna
+        val response = app.get(
+            "https://reanime.to/api/flix/$aniId/${episode ?: 1}",
             headers = headers
         ).parsedSafe<ReanimeResponse>() ?: return
-
-        Log.d("Reanime", "Response: $response")
 
         if (!response.success) return
 
         response.servers.safeAmap { server ->
-            val type = server.dataType.capitalizeServer()
+            val type = server.dataType.replaceFirstChar { it.uppercase() }
             val dataLink = server.dataLink
+            
+            val videoId = dataLink.substringAfter("/e/").substringBefore("?")
+            if (videoId.isEmpty()) return@safeAmap
 
-            Log.d("Reanime", "DataLink: $dataLink")
+            // 🔥 STEP 1: Iframe ka HTML read karein taaki token mil sake
+            val iframeReq = app.get(dataLink, headers = mapOf("Referer" to "https://reanime.to/"))
+            val html = iframeReq.text
 
-            loadCustomExtractor("Reanime[$type]", dataLink, "", subtitleCallback, callback)
+            // Check if M3U8 is directly in HTML
+            val directM3u8 = Regex("""file["']?\s*:\s*["'](https?://[^"']+\.m3u8[^"']*)["']""").find(html)?.groupValues?.get(1)
+
+            val masterM3u8Url = if (directM3u8 != null) {
+                Log.d("Reanime", "Found Direct M3U8 in HTML")
+                directM3u8
+            } else {
+                // 🔥 STEP 2: HTML se secret Token nikalna
+                val token = Regex("""(?:token|key)["']?\s*[:=]\s*["']([^"']+)["']""").find(html)?.groupValues?.get(1)
+                    ?: Regex("""token=([^"'&]+)""").find(html)?.groupValues?.get(1)
+                    ?: ""
+
+                Log.d("Reanime", "Extracted Token: $token")
+
+                // 🔥 STEP 3: API ko token aur iframe ki cookie ke sath call karna
+                val apiUrl = "https://flixcloud.cc/api/m3u8/$videoId" + if (token.isNotEmpty()) "?token=$token" else ""
+
+                val apiRes = app.get(
+                    apiUrl,
+                    headers = mapOf(
+                        "Referer" to dataLink,
+                        "Accept" to "application/json",
+                        "X-Requested-With" to "XMLHttpRequest"
+                    ),
+                    cookies = iframeReq.cookies
+                ).text
+
+                Log.d("Reanime", "Flixcloud Token API Res: $apiRes")
+                
+                // M3U8 file ka JSON link nikalna
+                val m3u8Json = tryParseJson<Map<String, Any>>(apiRes)
+                m3u8Json?.get("file") as? String ?: return@safeAmap
+            }
+
+            // 🔥 STEP 4: Direct link milne par ExtractorLink ko bhejna
+            if (masterM3u8Url.isNotEmpty()) {
+                callback.invoke(
+                    ExtractorLink(
+                        "Reanime",
+                        "Reanime $type",
+                        masterM3u8Url,
+                        "https://flixcloud.cc/",
+                        ExtractorLink.getQualityFromName("HD"),
+                        ExtractorLinkType.M3U8,
+                        headers = mapOf(
+                            "Origin" to "https://flixcloud.cc",
+                            "Referer" to "https://flixcloud.cc/"
+                        )
+                    )
+                )
+            }
         }
     }
 
