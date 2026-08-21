@@ -759,25 +759,24 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
                 m3u8Json?.get("file") as? String ?: return@safeAmap
             }
 
-            // 🔥 STEP 4: Direct link milne par ExtractorLink ko bhejna
+                        // 🔥 STEP 4: Send the Extracted M3U8 to the Player using newExtractorLink
             if (masterM3u8Url.isNotEmpty()) {
                 callback.invoke(
-                    ExtractorLink(
+                    newExtractorLink(
                         "Reanime",
                         "Reanime $type",
                         masterM3u8Url,
-                        "https://flixcloud.cc/",
-                        ExtractorLink.getQualityFromName("HD"),
-                        ExtractorLinkType.M3U8,
-                        headers = mapOf(
+                        ExtractorLinkType.M3U8
+                    ) {
+                        this.headers = mapOf(
                             "Origin" to "https://flixcloud.cc",
-                            "Referer" to "https://flixcloud.cc/"
+                            "Referer" to "https://flixcloud.cc/",
+                            "User-Agent" to USER_AGENT
                         )
-                    )
+                    }
                 )
             }
-        }
-    }
+
 
 
     suspend fun invokeCinemacity(
