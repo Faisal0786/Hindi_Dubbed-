@@ -4179,36 +4179,7 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
         )
     }
 
-    suspend fun invokeReanime(
-        aniId: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val headers = mapOf(
-            "Referer" to "$reanimeAPI/",
-            "User-Agent" to USER_AGENT
-        )
-
-        val response = cfGet(
-            "$reanimeAPI/api/flix/$aniId/${episode ?: 1}",
-            headers = headers
-        ).parsedSafe<ReanimeResponse>() ?: return
-
-        Log.d("Reanime", "Response: $response")
-
-        if (!response.success) return
-
-        response.servers.safeAmap { server ->
-            val type = server.dataType.capitalizeServer()
-            val dataLink = server.dataLink
-
-            Log.d("Reanime", "DataLink: $dataLink")
-
-            loadCustomExtractor("Reanime[$type]", dataLink, "", subtitleCallback, callback)
-        }
-    }
-
+    
     suspend fun invokePeachify(
         tmdbId: Int? = null,
         season: Int? = null,
