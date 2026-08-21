@@ -54,6 +54,7 @@ suspend fun SourceProviders.invokeReanime(
     "Accept" to "application/json",
     "X-Requested-With" to "XMLHttpRequest"
 )).text
+Log.d("ReAnime_Debug", "Phase 2 Response: ${epRes.take(500)}")
 
         if (epRes.isBlank()) return
 
