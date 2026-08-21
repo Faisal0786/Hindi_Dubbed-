@@ -1,4 +1,4 @@
-package com.hindi
+ package com.hindi
 
 import com.lagradost.cloudstream3.Actor
 import com.lagradost.cloudstream3.ActorData
@@ -50,9 +50,6 @@ fun getCurrentYear(): Int {
     return Calendar.getInstance().get(Calendar.YEAR)
 }
 
-
-
-
 data class AniData(
     val id: Int,
     val format: String = "TV"
@@ -65,14 +62,11 @@ class Cwunchyroll : MainAPI() {
 
     override var mainUrl = "https://graphql.anilist.co"
 
-
     override var lang = "en"
 
-private val haglund_url =
-    "https://arm.haglund.dev/api/v2"
+    private val haglund_url = "https://arm.haglund.dev/api/v2"
 
-private val cinemeta_url =
-    "https://v3-cinemeta.strem.io"
+    private val cinemeta_url = "https://v3-cinemeta.strem.io"
 
     override val hasMainPage = true
 
@@ -87,344 +81,267 @@ private val cinemeta_url =
         TvType.AnimeMovie,
         TvType.AsianDrama
     )
-override val mainPage = mainPageOf(
-
-    "TRENDING" to "Trending Now",
     
-    "TOP100" to "Top Rated",
-   
-    "POPULAR" to "Most Popular",
-    "FAVOURITES" to "Fan Favorites",
-    "HIDDEN_GEMS" to "Hidden Gems",
-    "MOVIE" to " Popular Movies",
-    
-    "OVA_ONA" to "OVA & ONA",
-    "SEASON" to "Popular This Season",
+    override val mainPage = mainPageOf(
+        "TRENDING" to "Trending Now",
+        "TOP100" to "Top Rated",
+        "POPULAR" to "Most Popular",
+        "FAVOURITES" to "Fan Favorites",
+        "HIDDEN_GEMS" to "Hidden Gems",
+        "MOVIE" to " Popular Movies",
+        "OVA_ONA" to "OVA & ONA",
+        "SEASON" to "Popular This Season",
+        "ROMANCE" to "Romance",
+        "ACTION_ADVENTURE" to "Action & Adventure",
+        "FANTASY" to "Fantasy Worlds",
+        "ISEKAI" to "Isekai",
+        "SHOUNEN" to "Shounen Hits",
+        "SLICE" to "Slice of Life",
+        "SPORTS" to "Sports Anime"
+    )
 
-    "ROMANCE" to "Romance",
-    "ACTION_ADVENTURE" to "Action & Adventure",
-    "FANTASY" to "Fantasy Worlds",
-    "ISEKAI" to "Isekai",
-    "SHOUNEN" to "Shounen Hits",
-    "SLICE" to "Slice of Life",
-    "SPORTS" to "Sports Anime"
-    
-)
+    private suspend fun <T> retryRequest(
+        times: Int = 3,
+        delayMs: Long = 500,
+        block: suspend () -> T
+    ): T {
+        var lastError: Throwable? = null
 
-private suspend fun <T> retryRequest(
-    times: Int = 3,
-    delayMs: Long = 500,
-    block: suspend () -> T
-): T {
-    var lastError: Throwable? = null
-
-    repeat(times) { attempt ->
-        try {
-            return block()
-        } catch (e: Throwable) {
-            lastError = e
-            if (attempt < times - 1) {
-                delay(delayMs)
+        repeat(times) { attempt ->
+            try {
+                return block()
+            } catch (e: Throwable) {
+                lastError = e
+                if (attempt < times - 1) {
+                    delay(delayMs)
+                }
             }
         }
+
+        throw lastError ?: RuntimeException("Retry failed")
     }
-
-    throw lastError ?: RuntimeException("Retry failed")
-}
-
-private data class CachedHomePage(
-    val time: Long,
-    val items: List<SearchResponse>
-)
-
-private val homeCache = HashMap<String, CachedHomePage>()
-
-private val HOME_CACHE_TIME = 12 * 60 * 60 * 1000L
 
     override suspend fun search(query: String): List<SearchResponse> {
 
-    val gql = """
-        query (${'$'}search: String) {
-          Page(page: 1, perPage: 50) {
-            media(
-              search: ${'$'}search
-              type: ANIME
-            ) {
-              id
-              format
-              seasonYear
-              averageScore
+        val gql = """
+            query (${'$'}search: String) {
+              Page(page: 1, perPage: 50) {
+                media(
+                  search: ${'$'}search
+                  type: ANIME
+                ) {
+                  id
+                  format
+                  seasonYear
+                  averageScore
 
-              title {
-                romaji
-                english
-                native
-              }
+                  title {
+                    romaji
+                    english
+                    native
+                  }
 
-              coverImage {
-                extraLarge
+                  coverImage {
+                    extraLarge
+                  }
+                }
               }
             }
-          }
-        }
-    """.trimIndent()
+        """.trimIndent()
 
-    val body = mapOf(
-        "query" to gql,
-        "variables" to mapOf(
-            "search" to query
+        val body = mapOf(
+            "query" to gql,
+            "variables" to mapOf(
+                "search" to query
+            )
         )
-    )
 
-    val json = retryRequest {
-    app.post(
-        url = ApiConstants.ANILIST_API,
-        json = body
-    ).text
-}
+        val json = retryRequest {
+            app.post(
+                url = ApiConstants.ANILIST_API,
+                json = body
+            ).text
+        }
 
-    val root = tryParseJson<Map<String, Any>>(json)
-        ?: return emptyList()
+        val root = tryParseJson<Map<String, Any>>(json)
+            ?: return emptyList()
 
-    val data = root["data"] as? Map<*, *>
-        ?: return emptyList()
+        val data = root["data"] as? Map<*, *>
+            ?: return emptyList()
 
-    val page = data["Page"] as? Map<*, *>
-        ?: return emptyList()
+        val page = data["Page"] as? Map<*, *>
+            ?: return emptyList()
 
-    val media = page["media"] as? List<Map<String, Any>>
-        ?: return emptyList()
+        val media = page["media"] as? List<Map<String, Any>>
+            ?: return emptyList()
 
-    return media.mapNotNull { item ->
+        return media.mapNotNull { item ->
 
-        val id = (item["id"] as? Number)?.toInt()
-            ?: return@mapNotNull null
-
-        val format = item["format"]?.toString() ?: "TV"
-
-        val titleObj =
-            item["title"] as? Map<*, *>
-
-        val title =
-            titleObj?.get("english")?.toString()
-                ?: titleObj?.get("romaji")?.toString()
-                ?: titleObj?.get("native")?.toString()
+            val id = (item["id"] as? Number)?.toInt()
                 ?: return@mapNotNull null
 
-        val cover =
-            ((item["coverImage"] as? Map<*, *>)
-                ?.get("extraLarge"))
-                ?.toString()
+            val format = item["format"]?.toString() ?: "TV"
 
-        newAnimeSearchResponse(
-            title,
-            AniData(
-                id = id,
-                format = format
-            ).toJson(),
-            if (format == "MOVIE")
-                TvType.AnimeMovie
-            else
-                TvType.Anime
-        ) {
-            posterUrl = cover
+            val titleObj = item["title"] as? Map<*, *>
+
+            val title = titleObj?.get("english")?.toString()
+                    ?: titleObj?.get("romaji")?.toString()
+                    ?: titleObj?.get("native")?.toString()
+                    ?: return@mapNotNull null
+
+            val cover = ((item["coverImage"] as? Map<*, *>)
+                    ?.get("extraLarge"))?.toString()
+
+            newAnimeSearchResponse(
+                title,
+                AniData(
+                    id = id,
+                    format = format
+                ).toJson(),
+                if (format == "MOVIE")
+                    TvType.AnimeMovie
+                else
+                    TvType.Anime
+            ) {
+                posterUrl = cover
+            }
         }
     }
-}
 
-    private suspend fun getAniListMedia(
-    id: Int
-): AniListMedia? {
+    private suspend fun getAniListMedia(id: Int): AniListMedia? {
+        val query = """
+            query (${'$'}id: Int) {
+              Media(id: ${'$'}id, type: ANIME) {
+                id
+                idMal
 
-    val key = "anilist_$id"
+                title {
+                  romaji
+                  english
+                  native
+                }
 
-AnimeCacheStorage.load(key)?.let { cached ->
-    tryParseJson<AniListMedia>(cached)?.let {
-        return it
-    }
-}
+                description
+                averageScore
+                seasonYear
+                episodes
+                bannerImage
+                genres
 
-    val query = """
-        query (${'$'}id: Int) {
-          Media(id: ${'$'}id, type: ANIME) {
-            id
-            idMal
-
-            title {
-              romaji
-              english
-              native
+                coverImage {
+                  extraLarge
+                  large
+                  medium
+                }
+              }
             }
+        """.trimIndent()
 
-            description
-            averageScore
-            seasonYear
-            episodes
-            bannerImage
-            genres
-
-            coverImage {
-              extraLarge
-              large
-              medium
-            }
-          }
-        }
-    """.trimIndent()
-
-    val body = mapOf(
-        "query" to query,
-        "variables" to mapOf(
-            "id" to id
+        val body = mapOf(
+            "query" to query,
+            "variables" to mapOf(
+                "id" to id
+            )
         )
-    )
 
-    val json = retryRequest {
-    app.post(
-        url = ApiConstants.ANILIST_API,
-        json = body
-    ).text
-}
+        val json = retryRequest {
+            app.post(
+                url = ApiConstants.ANILIST_API,
+                json = body
+            ).text
+        }
 
-   val media = tryParseJson<AniListResponse>(json)
-    ?.data
-    ?.Media
+        return tryParseJson<AniListResponse>(json)?.data?.Media
+    }
 
-media?.let {
-    AnimeCacheStorage.save(
-        key,
-        it.toJson()
-    )
-}
+    override suspend fun load(url: String): LoadResponse? {
 
-return media
+        val aniData = parseJson<AniData>(url)
+            ?: return null
 
+        val ani = getAniListMedia(aniData.id) ?: return null
 
-}
+        val title = ani.title?.english
+            ?: ani.title?.romaji
+            ?: ani.title?.native
+            ?: return null
 
-override suspend fun load(url: String): LoadResponse? {
+        val englishTitle = ani.title?.english
+        val romajiTitle = ani.title?.romaji
+        val nativeTitle = ani.title?.native
 
-    val aniData =
-    parseJson<AniData>(url)
-        ?: return null
+        suspend fun tmdbSearch(query: String?): TmdbMultiSearchResponse? {
+            if (query.isNullOrBlank()) return null
 
-    val ani =
-    getAniListMedia(
-        aniData.id
-    ) ?: return null
+            val url = "${ApiConstants.TMDB_BASE}/search/multi" +
+                "?api_key=${ApiConstants.TMDB_KEY}" +
+                "&query=${URLEncoder.encode(query, "UTF-8")}"
 
-val title =
-    ani.title?.english
-        ?: ani.title?.romaji
-        ?: ani.title?.native
-        ?: return null
+            return app.get(url).parsed<TmdbMultiSearchResponse>()
+        }
 
-    val englishTitle = ani.title?.english
-val romajiTitle = ani.title?.romaji
-val nativeTitle = ani.title?.native
+        val englishSearch = tmdbSearch(englishTitle)
+        val romajiSearch = tmdbSearch(romajiTitle)
+        val nativeSearch = tmdbSearch(nativeTitle)
 
-suspend fun tmdbSearch(query: String?): TmdbMultiSearchResponse? {
-    if (query.isNullOrBlank()) return null
-
-    val url =
-        "${ApiConstants.TMDB_BASE}/search/multi" +
-        "?api_key=${ApiConstants.TMDB_KEY}" +
-        "&query=${URLEncoder.encode(query, "UTF-8")}"
-
-    return app.get(url).parsed<TmdbMultiSearchResponse>()
-}
-
-val englishSearch = tmdbSearch(englishTitle)
-val romajiSearch = tmdbSearch(romajiTitle)
-val nativeSearch = tmdbSearch(nativeTitle)
-
-
-    val searchUrl =
-    "${ApiConstants.TMDB_BASE}/search/multi" +
-    "?api_key=${ApiConstants.TMDB_KEY}" +
-    "&query=${URLEncoder.encode(title, "UTF-8")}"
-
-val tmdbSearch =
-    englishSearch
-        ?: romajiSearch
-        ?: nativeSearch
-
-
-
-   val tmdbResult = selectBestTmdbResult(
-    tmdbSearch?.results ?: emptyList(),
-    ani,
-    title,
-    aniData.format
-)
-
-    val mediaType =
-    tmdbResult?.media_type
-        ?: if (aniData.format == "MOVIE")
-            "movie"
-        else
-            "tv"
-
-    val tmdbId = tmdbResult?.id
-
-val metadata =
-    if (tmdbId != null) {
-
-        val tmdb = app.get(
-            "${ApiConstants.TMDB_BASE}/$mediaType/$tmdbId" +
+        val searchUrl = "${ApiConstants.TMDB_BASE}/search/multi" +
             "?api_key=${ApiConstants.TMDB_KEY}" +
-            "&append_to_response=external_ids"
-        ).parsed<TmdbDetails>()
+            "&query=${URLEncoder.encode(title, "UTF-8")}"
 
-        AnimeMetadataAggregator.aggregate(
-            imdbId = tmdb?.external_ids?.imdbId,
-            tmdbId = tmdbId,
-            mediaType = mediaType,
-            title = title,
-            aniListId = ani.id
+        val tmdbSearch = englishSearch ?: romajiSearch ?: nativeSearch
+
+        val tmdbResult = selectBestTmdbResult(
+            tmdbSearch?.results ?: emptyList(),
+            ani,
+            title,
+            aniData.format
         )
 
-    } else {
+        val mediaType = tmdbResult?.media_type
+            ?: if (aniData.format == "MOVIE") "movie" else "tv"
 
-        AnimeMetadataAggregator.aggregate(
-            imdbId = null,
-            tmdbId = null,
-            mediaType = mediaType,
-            title = title,
-            aniListId = ani.id
-        )
+        val tmdbId = tmdbResult?.id
 
-    }
+        val metadata = if (tmdbId != null) {
+            val tmdb = app.get(
+                "${ApiConstants.TMDB_BASE}/$mediaType/$tmdbId" +
+                "?api_key=${ApiConstants.TMDB_KEY}" +
+                "&append_to_response=external_ids"
+            ).parsed<TmdbDetails>()
 
+            AnimeMetadataAggregator.aggregate(
+                imdbId = tmdb?.external_ids?.imdbId,
+                tmdbId = tmdbId,
+                mediaType = mediaType,
+                title = title,
+                aniListId = ani.id
+            )
+        } else {
+            AnimeMetadataAggregator.aggregate(
+                imdbId = null,
+                tmdbId = null,
+                mediaType = mediaType,
+                title = title,
+                aniListId = ani.id
+            )
+        }
 
-if (metadata == null) {
+        if (metadata == null) {
+            return newAnimeLoadResponse(
+                title,
+                url,
+                if (aniData.format == "MOVIE") TvType.AnimeMovie else TvType.Anime
+            ) {
+                posterUrl = ani.coverImage?.extraLarge
+                    ?: ani.coverImage?.large
+                    ?: ani.coverImage?.medium
 
-    return newAnimeLoadResponse(
-        title,
-        url,
-        if (aniData.format == "MOVIE")
-            TvType.AnimeMovie
-        else
-            TvType.Anime
-    ) {
+                backgroundPosterUrl = ani.bannerImage
 
-        posterUrl =
-            ani.coverImage?.extraLarge
-                ?: ani.coverImage?.large
-                ?: ani.coverImage?.medium
-
-        backgroundPosterUrl =
-            ani.bannerImage
-
-        plot = buildString {
-
-
-
-    tmdbSearch?.results
-    ?.forEachIndexed { index, item ->
-
-        append(
-            """
+                plot = buildString {
+                    tmdbSearch?.results?.forEachIndexed { index, item ->
+                        append(
+                            """
 [$index]
 id=${item.id}
 media=${item.media_type}
@@ -438,746 +355,625 @@ air=${item.first_air_date}
 genres=${item.genreIds}
 
 """.trimIndent()
+                        )
+                        append("\n--------------------------\n")
+                    }
+
+                    if (tmdbSearch?.results.isNullOrEmpty()) {
+                        append("No TMDB results found\n")
+                    }
+                }
+                tags = ani.genres
+                year = ani.seasonYear
+                score = ani.averageScore?.let { Score.from10(it / 10.0) }
+                addAniListId(ani.id)
+                addMalId(ani.idMal)
+            }
+        }
+        
+        val linkData = LoadLinksData(
+            title = metadata.title ?: "Unknown",
+            id = metadata.imdbId ?: tmdbId.toString(),
+            tmdbId = tmdbId,
+            tvtype = mediaType,
+            year = metadata.year?.toString(),
+            isAnime = metadata.anilistId != null,
+            isBollywood = false,
+            isAsian = false,
+            isCartoon = metadata.genres.any { it.contains("Animation", true) },
+            imdb_id = metadata.imdbId,
+            anilistId = metadata.anilistId,
+            malId = metadata.malId,
+            kitsuId = metadata.kitsuId?.toString(),
+            orgTitle = metadata.originalTitle,
+            airedYear = metadata.year
         )
 
-        append("\n--------------------------\n")
+        return if (mediaType == "movie") {
+            newMovieLoadResponse(
+                metadata.title ?: "Unknown",
+                url,
+                if (metadata.anilistId != null) TvType.AnimeMovie else TvType.Movie,
+                linkData.toJson()
+            ){
+                posterUrl = metadata.poster
+                backgroundPosterUrl = metadata.backdrop
+                logoUrl = metadata.logo
+                plot = buildString {
+                    metadata.countries.firstOrNull()?.let {
+                        val flag = it.isoCode?.toFlagEmoji().orEmpty()
+                        append("${"Origin".toSansSerifBold()}: ")
+                        append("$flag ${it.name.toSansSerifItalic()}\n\n")
+                    }
+
+                    metadata.awards?.let {
+                        append("${"🏆 Awards".toSansSerifBold()}: ")
+                        append("${it.toSansSerifItalic()}\n\n")
+                    }
+
+                    append("${"Description".toSansSerifBold()}: ")
+                    append(metadata.description?.toSansSerifItalic() ?: "")
+                }
+                tags = metadata.genres
+                year = metadata.year
+                contentRating = metadata.certification
+                duration = metadata.runtime
+
+                actors = metadata.cast.map {
+                    ActorData(
+                        Actor(
+                            it.name,
+                            it.image
+                        ),
+                        roleString = it.role
+                    )
+                }
+                score = Score.from10(metadata.imdbRating ?: metadata.tmdbRating)
+                addImdbId(metadata.imdbId)
+                addAniListId(metadata.anilistId)
+                addMalId(metadata.malId)
+                metadata.trailer?.let { addTrailer(it) }
+            }
+        } else {
+            buildSeriesResponse(
+                tmdbId = tmdbId,
+                metadata = metadata,
+                ani = ani,
+                sourceUrl = url
+            )
+        }
     }
 
-if (tmdbSearch?.results.isNullOrEmpty()) {
-    append("No TMDB results found\n")
-}
-}
-        tags =
-            ani.genres
+    private fun selectBestTmdbResult(
+        results: List<TmdbSearchResult>,
+        ani: AniListMedia,
+        title: String,
+        format: String
+    ): TmdbSearchResult? {
 
-        year =
-            ani.seasonYear
+        return results.maxByOrNull { item ->
 
-        score =
-            ani.averageScore?.let {
-                Score.from10(it / 10.0)
+            var score = 0
+
+            val tmdbTitle = (
+                item.name
+                    ?: item.title
+                    ?: item.originalName
+                    ?: item.originalTitle
+                    ?: ""
+            ).trim()
+
+            if (tmdbTitle.equals(title, true))
+                score += 100
+
+            if (item.originalLanguage == "ja")
+                score += 50
+
+            if (item.genreIds.contains(16))
+                score += 80
+
+            if (format == "MOVIE" && item.media_type == "movie")
+                score += 40
+
+            if (format != "MOVIE" && item.media_type == "tv")
+                score += 40
+
+            val year = (item.first_air_date ?: item.release_date)
+                    ?.take(4)
+                    ?.toIntOrNull()
+
+            if (year != null && year == ani.seasonYear)
+                score += 30
+
+            score
+        }
+    }
+
+    private suspend fun buildSeriesResponse(
+        tmdbId: Int?,
+        metadata: AnimeMetadataAggregator.AggregatedMetadata,
+        ani: AniListMedia,
+        sourceUrl: String
+    ): LoadResponse {
+
+        val aniZip = fetchAniZip(metadata.anilistId)
+
+        val episodes = if (tmdbId != null) {
+            val tmdbEpisodes = loadTmdbEpisodes(
+                tmdbId,
+                metadata,
+                aniZip
+            )
+
+            if (tmdbEpisodes.isNotEmpty()) {
+                tmdbEpisodes
+            } else {
+                buildAniListEpisodes(
+                    ani,
+                    metadata,
+                    tmdbId,
+                    aniZip
+                )
             }
 
-        addAniListId(ani.id)
+        } else {
+            buildAniListEpisodes(
+                ani,
+                metadata,
+                null,
+                aniZip
+            )
+        }
 
-        addMalId(ani.idMal)
-    }
-}
-val linkData = LoadLinksData(
-    title = metadata.title ?: "Unknown",
-    id = metadata.imdbId ?: tmdbId.toString(),
-    tmdbId = tmdbId,
-    tvtype = mediaType,
-    year = metadata.year?.toString(),
-    isAnime = metadata.anilistId != null,
-    isBollywood = false,
-    isAsian = false,
-    isCartoon = metadata.genres.any { it.contains("Animation", true) },
-    imdb_id = metadata.imdbId,
-    anilistId = metadata.anilistId,
-    malId = metadata.malId,
-kitsuId = metadata.kitsuId?.toString(),
-    orgTitle = metadata.originalTitle,
-    airedYear = metadata.year
-)
+        return newAnimeLoadResponse(
+            metadata.title ?: "Unknown",
+            sourceUrl,
+            if (metadata.anilistId != null)
+                TvType.Anime
+            else
+                TvType.TvSeries
+        ) {
 
-return if (mediaType == "movie") {
+            addEpisodes(
+                DubStatus.Subbed,
+                episodes
+            )
 
-newMovieLoadResponse(
-    metadata.title ?: "Unknown",
-    url,
-    if (metadata.anilistId != null) TvType.AnimeMovie else TvType.Movie,
-    linkData.toJson()
-){
             posterUrl = metadata.poster
             backgroundPosterUrl = metadata.backdrop
             logoUrl = metadata.logo
-           plot = buildString {
 
-    metadata.countries.firstOrNull()?.let {
-        val flag = it.isoCode?.toFlagEmoji().orEmpty()
+            plot = buildString {
+                metadata.countries.firstOrNull()?.let {
+                    val flag = it.isoCode?.toFlagEmoji().orEmpty()
+                    append("${"Origin".toSansSerifBold()}: ")
+                    append("$flag ${it.name.toSansSerifItalic()}\n\n")
+                }
 
-        append("${"Origin".toSansSerifBold()}: ")
-        append("$flag ${it.name.toSansSerifItalic()}\n\n")
-    }
+                metadata.awards?.let {
+                    append("${"🏆 Awards".toSansSerifBold()}: ")
+                    append("${it.toSansSerifItalic()}\n\n")
+                }
 
-    metadata.awards?.let {
-        append("${"🏆 Awards".toSansSerifBold()}: ")
-        append("${it.toSansSerifItalic()}\n\n")
-    }
+                append("${"Description".toSansSerifBold()}: ")
+                append(metadata.description?.toSansSerifItalic() ?: "")
+            }
 
-    append("${"Description".toSansSerifBold()}: ")
-    append(metadata.description?.toSansSerifItalic() ?: "")
-}
             tags = metadata.genres
             year = metadata.year
             contentRating = metadata.certification
             duration = metadata.runtime
 
-actors = metadata.cast.map {
-    ActorData(
-        Actor(
-            it.name,
-            it.image
-        ),
-        roleString = it.role
-    )
-}
-            score = Score.from10(metadata.imdbRating ?: metadata.tmdbRating)
+            actors = metadata.cast.map {
+                ActorData(
+                    Actor(
+                        it.name,
+                        it.image
+                    ),
+                    roleString = it.role
+                )
+            }
+            
+            showStatus = when(metadata.status) {
+                "Returning Series" -> ShowStatus.Ongoing
+                "In Production" -> ShowStatus.Ongoing
+                "Ended" -> ShowStatus.Completed
+                else -> null
+            }
+            
+            score = Score.from10(
+                metadata.imdbRating ?: metadata.tmdbRating
+            )
+
             addImdbId(metadata.imdbId)
             addAniListId(metadata.anilistId)
             addMalId(metadata.malId)
-            metadata.trailer?.let { addTrailer(it) }
-        }
-   } else {
-
-    buildSeriesResponse(
-    tmdbId = tmdbId,
-    metadata = metadata,
-    ani = ani,
-    sourceUrl = url
-)
-}
-}
-
-private fun selectBestTmdbResult(
-    results: List<TmdbSearchResult>,
-    ani: AniListMedia,
-    title: String,
-    format: String
-): TmdbSearchResult? {
-
-    return results.maxByOrNull { item ->
-
-        var score = 0
-
-        val tmdbTitle = (
-            item.name
-                ?: item.title
-                ?: item.originalName
-                ?: item.originalTitle
-                ?: ""
-        ).trim()
-
-        if (tmdbTitle.equals(title, true))
-            score += 100
-
-        if (item.originalLanguage == "ja")
-            score += 50
-
-        if (item.genreIds.contains(16))
-            score += 80
-
-        if (format == "MOVIE" && item.media_type == "movie")
-            score += 40
-
-        if (format != "MOVIE" && item.media_type == "tv")
-            score += 40
-
-        val year =
-            (item.first_air_date ?: item.release_date)
-                ?.take(4)
-                ?.toIntOrNull()
-
-        if (year != null && year == ani.seasonYear)
-            score += 30
-
-        score
-    }
-}
-
-private suspend fun buildSeriesResponse(
-    tmdbId: Int?,
-    metadata: AnimeMetadataAggregator.AggregatedMetadata,
-    ani: AniListMedia,
-    sourceUrl: String
-): LoadResponse {
-
-    val aniZip = fetchAniZip(metadata.anilistId)
-
-    val episodes =
-    if (tmdbId != null) {
-
-        val tmdbEpisodes = loadTmdbEpisodes(
-            tmdbId,
-            metadata,
-            aniZip
-        )
-
-        if (tmdbEpisodes.isNotEmpty()) {
-            tmdbEpisodes
-        } else {
-            buildAniListEpisodes(
-                ani,
-                metadata,
-                tmdbId,
-                aniZip
-            )
-        }
-
-    } else {
-
-        buildAniListEpisodes(
-            ani,
-            metadata,
-            null,
-            aniZip
-        )
-
-    }
-
-    return newAnimeLoadResponse(
-        metadata.title ?: "Unknown",
-        sourceUrl,
-        if (metadata.anilistId != null)
-            TvType.Anime
-        else
-            TvType.TvSeries
-    ) {
-
-        addEpisodes(
-            DubStatus.Subbed,
-            episodes
-        )
-
-        posterUrl =
-            metadata.poster
-
-        backgroundPosterUrl =
-            metadata.backdrop
-
-        logoUrl =
-            metadata.logo
-
-       plot = buildString {
-
-    metadata.countries.firstOrNull()?.let {
-        val flag = it.isoCode?.toFlagEmoji().orEmpty()
-
-        append("${"Origin".toSansSerifBold()}: ")
-        append("$flag ${it.name.toSansSerifItalic()}\n\n")
-    }
-
-    metadata.awards?.let {
-        append("${"🏆 Awards".toSansSerifBold()}: ")
-        append("${it.toSansSerifItalic()}\n\n")
-    }
-
-    append("${"Description".toSansSerifBold()}: ")
-    append(metadata.description?.toSansSerifItalic() ?: "")
-}
-
-            tags =
-                metadata.genres
-
-            year =
-                metadata.year
-            contentRating =
-    metadata.certification
-            duration =
-    metadata.runtime
-
-actors =
-    metadata.cast.map {
-        ActorData(
-            Actor(
-                it.name,
-                it.image
-            ),
-            roleString = it.role
-        )
-    }
-            showStatus =
-    when(metadata.status) {
-        "Returning Series" -> ShowStatus.Ongoing
-        "In Production" -> ShowStatus.Ongoing
-        "Ended" -> ShowStatus.Completed
-        else -> null
-    }
-            score =
-                Score.from10(
-                    metadata.imdbRating
-                        ?: metadata.tmdbRating
-                )
-
-            addImdbId(
-                metadata.imdbId
-            )
-
-            addAniListId(
-                metadata.anilistId
-            )
-
-            addMalId(
-                metadata.malId
-            )
 
             metadata.trailer?.let {
                 addTrailer(it)
             }
+        }
     }
-}
+  
 
-private suspend fun loadTmdbEpisodes(
-    tmdbId: Int,
-    metadata: AnimeMetadataAggregator.AggregatedMetadata,
-    aniZip: AniZipResponse?
-): List<Episode> {
+ private suspend fun loadTmdbEpisodes(
+        tmdbId: Int,
+        metadata: AnimeMetadataAggregator.AggregatedMetadata,
+        aniZip: AniZipResponse?
+    ): List<Episode> {
 
-    val series = app.get(
-        "${ApiConstants.TMDB_BASE}/tv/$tmdbId" +
-        "?api_key=${ApiConstants.TMDB_KEY}"
-    ).parsed<TmdbDetails>()
-        ?: return emptyList()
-
-    val seasonCount =
-        series.number_of_seasons ?: return emptyList()
-
-    val episodes = mutableListOf<Episode>()
-
-    for (seasonNumber in 1..seasonCount) {
-
-        val season = app.get(
-            "${ApiConstants.TMDB_BASE}/tv/$tmdbId/season/$seasonNumber" +
+        val series = app.get(
+            "${ApiConstants.TMDB_BASE}/tv/$tmdbId" +
             "?api_key=${ApiConstants.TMDB_KEY}"
-        ).parsed<TmdbSeasonResponse>()
-            ?: continue
+        ).parsed<TmdbDetails>()
+            ?: return emptyList()
 
-        season.episodes.forEach { episode ->
+        val seasonCount = series.number_of_seasons ?: return emptyList()
+        val episodes = mutableListOf<Episode>()
 
-val zipEpisode =
-    aniZip?.episodes?.get(
-        episode.episode_number.toString()
-    )
+        for (seasonNumber in 1..seasonCount) {
 
+            val season = app.get(
+                "${ApiConstants.TMDB_BASE}/tv/$tmdbId/season/$seasonNumber" +
+                "?api_key=${ApiConstants.TMDB_KEY}"
+            ).parsed<TmdbSeasonResponse>()
+                ?: continue
+
+            season.episodes.forEach { episode ->
+
+                val zipEpisode = aniZip?.episodes?.get(episode.episode_number.toString())
+
+                episodes.add(
+                    newEpisode(
+                        LoadLinksData(
+                            title = metadata.title ?: "Unknown",
+                            id = metadata.imdbId ?: tmdbId.toString(),
+                            tmdbId = tmdbId,
+                            tvtype = "tv",
+                            year = metadata.year?.toString(),
+                            season = episode.season_number,
+                            episode = episode.episode_number,
+                            firstAired = episode.air_date,
+                            isAnime = metadata.anilistId != null,
+                            isBollywood = false,
+                            isAsian = false,
+                            isCartoon = metadata.genres.any {
+                                it.contains("Animation", true)
+                            },
+                            imdb_id = metadata.imdbId,
+                            anilistId = metadata.anilistId,
+                            malId = metadata.malId,
+                            kitsuId = metadata.kitsuId?.toString(),
+                            orgTitle = metadata.originalTitle,
+                            airedYear = metadata.year
+                        ).toJson()
+                    ) {
+
+                        this.season = episode.season_number
+                        this.episode = episode.episode_number
+
+                        this.name = episode.name?.takeIf { it.isNotBlank() }
+                            ?: zipEpisode?.title?.get("en")
+                            ?: zipEpisode?.title?.get("romaji")
+                            ?: "Episode ${episode.episode_number}"
+
+                        this.description = episode.overview?.takeIf { it.isNotBlank() }
+                            ?: zipEpisode?.overview
+
+                        this.posterUrl = episode.still_path?.let {
+                            "${ApiConstants.TMDB_BACKDROP}$it"
+                        } ?: zipEpisode?.image
+
+                        this.score = Score.from10(
+                            episode.vote_average ?: zipEpisode?.rating?.toDoubleOrNull()
+                        )
+
+                        this.runTime = episode.runtime ?: zipEpisode?.runtime
+                        addDate(episode.air_date)
+                    }
+                )
+            }
+        }
+        return episodes
+    }
+
+    private fun buildAniListEpisodes(
+        ani: AniListMedia,
+        metadata: AnimeMetadataAggregator.AggregatedMetadata,
+        tmdbId: Int?,
+        aniZip: AniZipResponse?
+    ): List<Episode> {
+
+        val totalEpisodes = ani.episodes ?: return emptyList()
+        val episodes = mutableListOf<Episode>()
+
+        for (ep in 1..totalEpisodes) {
+
+            val zipEpisode = aniZip?.episodes?.get(ep.toString())
 
             episodes.add(
                 newEpisode(
-    LoadLinksData(
-        title = metadata.title ?: "Unknown",
-        id = metadata.imdbId ?: tmdbId.toString(),
-        tmdbId = tmdbId,
-        tvtype = "tv",
-        year = metadata.year?.toString(),
-        season = episode.season_number,
-        episode = episode.episode_number,
-        firstAired = episode.air_date,
-        isAnime = metadata.anilistId != null,
-        isBollywood = false,
-        isAsian = false,
-        isCartoon = metadata.genres.any {
-            it.contains("Animation", true)
-        },
-        imdb_id = metadata.imdbId,
-        anilistId = metadata.anilistId,
-        malId = metadata.malId,
-kitsuId = metadata.kitsuId?.toString(),
-        orgTitle = metadata.originalTitle,
-        airedYear = metadata.year
-    ).toJson()
-) {
+                    LoadLinksData(
+                        title = metadata.title ?: (
+                            ani.title?.english
+                                ?: ani.title?.romaji
+                                ?: ani.title?.native
+                                ?: "Unknown"
+                        ),
+                        id = metadata.imdbId ?: (tmdbId?.toString() ?: ani.id.toString()),
+                        tmdbId = tmdbId,
+                        tvtype = "tv",
+                        year = ani.seasonYear?.toString(),
+                        season = 1,
+                        episode = ep,
+                        isAnime = true,
+                        isBollywood = false,
+                        isAsian = false,
+                        isCartoon = true,
+                        imdb_id = metadata.imdbId,
+                        anilistId = ani.id,
+                        malId = ani.idMal,
+                        kitsuId = metadata.kitsuId?.toString(),
+                        orgTitle = metadata.originalTitle,
+                        airedYear = ani.seasonYear
+                    ).toJson()
+                ) {
+                    season = 1
+                    episode = ep
 
-                    this.season =
-                        episode.season_number
-
-                    this.episode =
-                        episode.episode_number
-
-                    this.name =
-    episode.name
-        ?.takeIf { it.isNotBlank() }
-        ?: zipEpisode?.title?.get("en")
-        ?: zipEpisode?.title?.get("romaji")
-        ?: "Episode ${episode.episode_number}"
-
-                    this.description =
-    episode.overview
-        ?.takeIf { it.isNotBlank() }
-        ?: zipEpisode?.overview
-
-                    this.posterUrl =
-    episode.still_path?.let {
-        "${ApiConstants.TMDB_BACKDROP}$it"
-    }
-        ?: zipEpisode?.image
-
-                    this.score =
-    Score.from10(
-        episode.vote_average
-            ?: zipEpisode?.rating?.toDoubleOrNull()
-    )
-
-
-this.runTime =
-    episode.runtime
-        ?: zipEpisode?.runtime
-addDate(
-    episode.air_date
-)
-                }
-            )
-        }
-    }
-
-    return episodes
-}
-    private fun buildAniListEpisodes(
-    ani: AniListMedia,
-    metadata: AnimeMetadataAggregator.AggregatedMetadata,
-    tmdbId: Int?,
-    aniZip: AniZipResponse?
-): List<Episode> {
-
-    val totalEpisodes = ani.episodes ?: return emptyList()
-
-    val episodes = mutableListOf<Episode>()
-
-    for (ep in 1..totalEpisodes) {
-
-        val zipEpisode = aniZip?.episodes?.get(ep.toString())
-
-        episodes.add(
-            newEpisode(
-                LoadLinksData(
-                    title = metadata.title ?: (
-                        ani.title?.english
-                            ?: ani.title?.romaji
-                            ?: ani.title?.native
-                            ?: "Unknown"
-                    ),
-                    id = metadata.imdbId ?: (tmdbId?.toString() ?: ani.id.toString()),
-                    tmdbId = tmdbId,
-                    tvtype = "tv",
-                    year = ani.seasonYear?.toString(),
-                    season = 1,
-                    episode = ep,
-                    isAnime = true,
-                    isBollywood = false,
-                    isAsian = false,
-                    isCartoon = true,
-                    imdb_id = metadata.imdbId,
-                    anilistId = ani.id,
-                    malId = ani.idMal,
-kitsuId = metadata.kitsuId?.toString(),
-                    orgTitle = metadata.originalTitle,
-                    airedYear = ani.seasonYear
-                ).toJson()
-            ) {
-
-                season = 1
-                episode = ep
-
-                name =
-                    zipEpisode?.title?.get("en")
+                    name = zipEpisode?.title?.get("en")
                         ?: zipEpisode?.title?.get("romaji")
                         ?: "Episode $ep"
 
-                description =
-                    zipEpisode?.overview
+                    description = zipEpisode?.overview
 
-                posterUrl =
-                    zipEpisode?.image
+                    posterUrl = zipEpisode?.image
                         ?: ani.coverImage?.extraLarge
                         ?: ani.coverImage?.large
                         ?: ani.coverImage?.medium
 
-                runTime =
-                    zipEpisode?.runtime
+                    runTime = zipEpisode?.runtime
 
-                score =
-                    zipEpisode?.rating
-                        ?.toDoubleOrNull()
-                        ?.let { Score.from10(it) }
-            }
-        )
-    }
-
-    return episodes
-}
-
-
-override suspend fun getMainPage(
-    page: Int,
-    request: MainPageRequest
-): HomePageResponse {
-
-val cacheKey = "${request.data}_$page"
-
-    homeCache[cacheKey]?.let { cache ->
-        if (System.currentTimeMillis() - cache.time < HOME_CACHE_TIME) {
-            return newHomePageResponse(
-                request.name,
-                cache.items
+                    score = zipEpisode?.rating?.toDoubleOrNull()?.let { Score.from10(it) }
+                }
             )
         }
+        return episodes
     }
 
-    val season = getCurrentAniListSeason()
-    val seasonYear = getCurrentYear()
+    override suspend fun getMainPage(
+        page: Int,
+        request: MainPageRequest
+    ): HomePageResponse {
 
-   val mediaArgs = when (request.data) {
+        val season = getCurrentAniListSeason()
+        val seasonYear = getCurrentYear()
 
-    "TRENDING" ->
-        """
-        type: ANIME
-        sort: TRENDING_DESC
-        """
+        val mediaArgs = when (request.data) {
+            "TRENDING" -> """
+            type: ANIME
+            sort: TRENDING_DESC
+            """
 
-    "POPULAR" ->
-        """
-        type: ANIME
-        sort: POPULARITY_DESC
-        """
+            "POPULAR" -> """
+            type: ANIME
+            sort: POPULARITY_DESC
+            """
 
-    "TOP100" ->
-        """
-        type: ANIME
-        sort: SCORE_DESC
-        """
+            "TOP100" -> """
+            type: ANIME
+            sort: SCORE_DESC
+            """
 
-    "SEASON" ->
-        """
-        type: ANIME
-        season: $season
-        seasonYear: $seasonYear
-        sort: POPULARITY_DESC
-        """
+            "SEASON" -> """
+            type: ANIME
+            season: $season
+            seasonYear: $seasonYear
+            sort: POPULARITY_DESC
+            """
 
-    "UPCOMING" ->
-        """
-        type: ANIME
-        status: NOT_YET_RELEASED
-        sort: POPULARITY_DESC
-        """
+            "UPCOMING" -> """
+            type: ANIME
+            status: NOT_YET_RELEASED
+            sort: POPULARITY_DESC
+            """
 
-    "AIRING" ->
-        """
-        type: ANIME
-        status: RELEASING
-        sort: POPULARITY_DESC
-        """
+            "AIRING" -> """
+            type: ANIME
+            status: RELEASING
+            sort: POPULARITY_DESC
+            """
 
-    "UPDATED" ->
-        """
-        type: ANIME
-        status: RELEASING
-        sort: UPDATED_AT_DESC
-        """
+            "UPDATED" -> """
+            type: ANIME
+            status: RELEASING
+            sort: UPDATED_AT_DESC
+            """
 
-    "NEW" ->
-        """
-        type: ANIME
-        sort: START_DATE_DESC
-        """
+            "NEW" -> """
+            type: ANIME
+            sort: START_DATE_DESC
+            """
 
-    "FAVOURITES" ->
-        """
-        type: ANIME
-        sort: FAVOURITES_DESC
-        """
+            "FAVOURITES" -> """
+            type: ANIME
+            sort: FAVOURITES_DESC
+            """
 
-    "MOVIE" ->
-        """
-        type: ANIME
-        format: MOVIE
-        sort: POPULARITY_DESC
-        """
+            "MOVIE" -> """
+            type: ANIME
+            format: MOVIE
+            sort: POPULARITY_DESC
+            """
 
-    "TV" ->
-        """
-        type: ANIME
-        format: TV
-        sort: POPULARITY_DESC
-        """
+            "TV" -> """
+            type: ANIME
+            format: TV
+            sort: POPULARITY_DESC
+            """
 
-    "OVA_ONA" ->
-        """
-        type: ANIME
-        format_in: [OVA, ONA]
-        sort: POPULARITY_DESC
-        """
+            "OVA_ONA" -> """
+            type: ANIME
+            format_in: [OVA, ONA]
+            sort: POPULARITY_DESC
+            """
 
-    "ROMANCE" ->
-        """
-        type: ANIME
-        genre: "Romance"
-        sort: POPULARITY_DESC
-        """
+            "ROMANCE" -> """
+            type: ANIME
+            genre: "Romance"
+            sort: POPULARITY_DESC
+            """
 
-    "ACTION_ADVENTURE" ->
-        """
-        type: ANIME
-        genre_in: ["Action", "Adventure"]
-        sort: POPULARITY_DESC
-        """
+            "ACTION_ADVENTURE" -> """
+            type: ANIME
+            genre_in: ["Action", "Adventure"]
+            sort: POPULARITY_DESC
+            """
 
-    "FANTASY" ->
-        """
-        type: ANIME
-        genre: "Fantasy"
-        sort: POPULARITY_DESC
-        """
+            "FANTASY" -> """
+            type: ANIME
+            genre: "Fantasy"
+            sort: POPULARITY_DESC
+            """
 
-    "ISEKAI" ->
-        """
-        type: ANIME
-        tag: "Isekai"
-        sort: POPULARITY_DESC
-        """
+            "ISEKAI" -> """
+            type: ANIME
+            tag: "Isekai"
+            sort: POPULARITY_DESC
+            """
 
-    "SHOUNEN" ->
-        """
-        type: ANIME
-        tag: "Shounen"
-        sort: POPULARITY_DESC
-        """
+            "SHOUNEN" -> """
+            type: ANIME
+            tag: "Shounen"
+            sort: POPULARITY_DESC
+            """
 
-    "SLICE" ->
-        """
-        type: ANIME
-        genre: "Slice of Life"
-        sort: POPULARITY_DESC
-        """
+            "SLICE" -> """
+            type: ANIME
+            genre: "Slice of Life"
+            sort: POPULARITY_DESC
+            """
 
-    "SPORTS" ->
-        """
-        type: ANIME
-        genre: "Sports"
-        sort: POPULARITY_DESC
-        """
+            "SPORTS" -> """
+            type: ANIME
+            genre: "Sports"
+            sort: POPULARITY_DESC
+            """
 
-    "HIDDEN_GEMS" ->
-        """
-        type: ANIME
-        averageScore_greater: 80
-        popularity_lesser: 50000
-        sort: SCORE_DESC
-        """
+            "HIDDEN_GEMS" -> """
+            type: ANIME
+            averageScore_greater: 80
+            popularity_lesser: 50000
+            sort: SCORE_DESC
+            """
 
-    else ->
-        """
-        type: ANIME
-        sort: TRENDING_DESC
-        """
-}
+            else -> """
+            type: ANIME
+            sort: TRENDING_DESC
+            """
+        }
+
         val gql = """
-query {
-  Page(page: $page, perPage: 10) {
-    media(
-      $mediaArgs
-    ) {
+            query {
+              Page(page: $page, perPage: 10) {
+                media(
+                  $mediaArgs
+                ) {
 
-      id
-      format
-      averageScore
+                  id
+                  format
+                  averageScore
 
-      title {
-        romaji
-        english
-        native
-      }
+                  title {
+                    romaji
+                    english
+                    native
+                  }
 
-      coverImage {
-        extraLarge
-      }
-    }
-  }
-}
-""".trimIndent()
+                  coverImage {
+                    extraLarge
+                  }
+                }
+              }
+            }
+        """.trimIndent()
 
-    val body = mapOf(
-    "query" to gql
-)
-
-    val json = retryRequest {
-    app.post(
-        url = ApiConstants.ANILIST_API,
-        json = body
-    ).text
-}
-
-    val root = tryParseJson<Map<String, Any>>(json)
-        ?: return newHomePageResponse(
-            request.name,
-            emptyList()
+        val body = mapOf(
+            "query" to gql
         )
 
-    val data =
-        root["data"] as? Map<*, *>
+        val json = retryRequest {
+            app.post(
+                url = ApiConstants.ANILIST_API,
+                json = body
+            ).text
+        }
+
+        val root = tryParseJson<Map<String, Any>>(json)
             ?: return newHomePageResponse(
                 request.name,
                 emptyList()
             )
 
-    val pageData =
-        data["Page"] as? Map<*, *>
+        val data = root["data"] as? Map<*, *>
             ?: return newHomePageResponse(
                 request.name,
                 emptyList()
             )
 
-    val media =
-        pageData["media"] as? List<Map<String, Any>>
+        val pageData = data["Page"] as? Map<*, *>
+            ?: return newHomePageResponse(
+                request.name,
+                emptyList()
+            )
+
+        val media = pageData["media"] as? List<Map<String, Any>>
             ?: emptyList()
 
-    val items = media.mapNotNull { item ->
+        val items = media.mapNotNull { item ->
 
-        val id =
-            (item["id"] as? Number)
-                ?.toInt()
+            val id = (item["id"] as? Number)?.toInt()
                 ?: return@mapNotNull null
 
-        val format =
-    item["format"]?.toString() ?: "TV"
+            val format = item["format"]?.toString() ?: "TV"
 
-        val titleObj =
-            item["title"] as? Map<*, *>
+            val titleObj = item["title"] as? Map<*, *>
 
-        val title =
-            titleObj?.get("english")?.toString()
+            val title = titleObj?.get("english")?.toString()
                 ?: titleObj?.get("romaji")?.toString()
                 ?: titleObj?.get("native")?.toString()
                 ?: return@mapNotNull null
 
-        val poster =
-            ((item["coverImage"] as? Map<*, *>)
-                ?.get("extraLarge"))
-                ?.toString()
+            val poster = ((item["coverImage"] as? Map<*, *>)?.get("extraLarge"))?.toString()
 
-        val averageScore =
-    (item["averageScore"] as? Number)?.toDouble()
+            val averageScore = (item["averageScore"] as? Number)?.toDouble()
 
-        newAnimeSearchResponse(
-            title,
-            AniData(
-                id,
-                format
-            ).toJson(),
-            if (format == "MOVIE")
-                TvType.AnimeMovie
-            else
-                TvType.Anime
-        ) {
-            posterUrl = poster
+            newAnimeSearchResponse(
+                title,
+                AniData(
+                    id,
+                    format
+                ).toJson(),
+                if (format == "MOVIE")
+                    TvType.AnimeMovie
+                else
+                    TvType.Anime
+            ) {
+                posterUrl = poster
 
-            averageScore?.let {
-        score = Score.from10(it / 10.0)
+                averageScore?.let {
+                    score = Score.from10(it / 10.0)
+                }
+            }
         }
+
+        return newHomePageResponse(
+            "${request.name}",
+            items
+        )
     }
-}
-    homeCache[cacheKey] = CachedHomePage(
-    System.currentTimeMillis(),
-    items
-)
 
-return newHomePageResponse(
-    "${request.name}",
-    items
-)
-}
-
-
-                        override suspend fun loadLinks(
+    override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -1239,17 +1035,15 @@ return newHomePageResponse(
                             }
 
                             invokeAnimes(malId, aniId, res.episode, seasonYear, animeSource, subtitleCallback, callback)
-//invokeAniStream(aniId, res.episode, subtitleCallback, callback)
 
-SourceProviders.invokeReanime(
-    title = res.title, 
-    episode = res.episode, 
-    anilistId = aniId, 
-    isDub = false, 
-    subtitleCallback = subtitleCallback, 
-    callback = callback
-)
-
+                            SourceProviders.invokeReanime(
+                                title = res.title, 
+                                episode = res.episode, 
+                                anilistId = aniId, 
+                                isDub = false, 
+                                subtitleCallback = subtitleCallback, 
+                                callback = callback
+                            )
                         }
                     }
                 )
@@ -1257,6 +1051,7 @@ SourceProviders.invokeReanime(
             }
         }
     }
+} // <--- Cwunchyroll CLASS ENDS HERE (Perfectly closed)
 
 data class LoadLinksData(  
     val title: String,  
@@ -1414,13 +1209,10 @@ private suspend fun runKitsuInvokers(
     var tmdbId: Int? = null  
 
     try {  
-        val json = app.get(  
-"${ApiConstants.CINEMETA_BASE}/meta/${res.tvtype}/${res.imdb_id}.json"
+        val json = app.get("${ApiConstants.CINEMETA_BASE}/meta/${res.tvtype}/${res.imdb_id}.json").text
+        val movieData = tryParseJson<ResponseData>(json)
 
-).text
-val movieData = tryParseJson<ResponseData>(json)
-
-movieData?.meta?.let { meta ->  
+        movieData?.meta?.let { meta ->  
             imdbTitle = meta.name  
             imdbYear = meta.year?.substringBefore("-")?.toIntOrNull()  
                         ?: meta.year?.substringBefore("–")?.toIntOrNull()  
@@ -1432,31 +1224,29 @@ movieData?.meta?.let { meta ->
     }  
 
     invokeAllAnimeSources(  
-AllLoadLinksData(  
-    res.title,  
-    res.imdb_id,  
-    tmdbId,  
-    res.anilistId,  
-    res.malId,  
-    res.kitsuId,  
-    year,  
-    seasonYear,  
-    res.season,  
-    res.episode,  
-    res.isAnime,  
-    res.isBollywood,  
-    res.isAsian,  
-    res.isCartoon,  
-    res.orgTitle,  
-    imdbTitle,  
-    res.imdbSeason,  
-    res.imdbEpisode,  
-    imdbYear,  
-),  
-subtitleCallback,  
-callback  
-
+        AllLoadLinksData(  
+            res.title,  
+            res.imdb_id,  
+            tmdbId,  
+            res.anilistId,  
+            res.malId,  
+            res.kitsuId,  
+            year,  
+            seasonYear,  
+            res.season,  
+            res.episode,  
+            res.isAnime,  
+            res.isBollywood,  
+            res.isAsian,  
+            res.isCartoon,  
+            res.orgTitle,  
+            imdbTitle,  
+            res.imdbSeason,  
+            res.imdbEpisode,  
+            imdbYear,  
+        ),  
+        subtitleCallback,  
+        callback  
     )  
 }
-
 }
