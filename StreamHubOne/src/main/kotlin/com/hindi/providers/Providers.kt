@@ -696,7 +696,7 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
     }
                     
 
-    suspend fun invokeReanime(
+        suspend fun invokeReanime(
         aniId: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -712,45 +712,58 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
         if (!response.success) return
 
         response.servers.safeAmap { server ->
-            var dataLink = server.dataLink 
+            val dataLink = server.dataLink // e.g., https://flixcloud.cc/e/VIDEO_ID
+            val type = server.dataType.replaceFirstChar { it.uppercase() }
+            
             if (dataLink.isEmpty()) return@safeAmap
 
-            val type = server.dataType.replaceFirstChar { it.uppercase() }
-
-            // 🔥 FIX 1: Zabardasti AutoPlay on karo taaki network request trigger ho
-            if (!dataLink.contains("autoPlay=true")) {
-                dataLink += if (dataLink.contains("?")) "&autoPlay=true" else "?autoPlay=true"
-            }
-
-            Log.d("Reanime", "Final Try WebView: $dataLink")
+            val videoId = dataLink.substringAfter("/e/").substringBefore("?")
+            Log.d("Reanime", "Starting CF Bypass for: $dataLink")
 
             try {
-                // 🔥 FIX 2: Javascript injection jo background me play button click karega
-                val jsClicker = """
-                    setTimeout(function() {
-                        // Try playing the video directly
-                        var vid = document.querySelector('video');
-                        if(vid) { vid.play(); }
-                        // Click anywhere on body to bypass interaction locks
-                        document.body.click();
-                        // Try clicking generic JWPlayer / Play buttons
-                        var playBtn = document.querySelector('.jw-icon-display') || document.querySelector('.play-button') || document.querySelector('.vjs-big-play-button');
-                        if(playBtn) { playBtn.click(); }
-                    }, 2500);
-                """.trimIndent()
+                // 🔥 STEP 1: Cloudflare Bypass using fully supported CloudflareKiller
+                val iframeReq = app.get(
+                    dataLink,
+                    interceptor = com.lagradost.cloudstream3.network.CloudflareKiller(),
+                    headers = mapOf(
+                        "Referer" to "https://reanime.to/",
+                        "User-Agent" to userAgent,
+                        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+                    )
+                )
 
-                // WebViewResolver ab script run karega aur .m3u8 ka wait karega
-                val resolvedUrl = com.lagradost.cloudstream3.utils.WebViewResolver(
-                    Regex("""\.m3u8""")
-                ).resolve(dataLink, javascript = jsClicker)
+                val html = iframeReq.text
 
-                if (resolvedUrl != null) {
-                    Log.d("Reanime", "SUCCESS! Link Catch Ho Gaya: $resolvedUrl")
+                // 🔥 STEP 2: Extract API Token from HTML
+                val token = Regex("""(?:token|key)["']?\s*[:=]\s*["']([^"']+)["']""").find(html)?.groupValues?.get(1)
+                    ?: Regex("""token=([^"'&]+)""").find(html)?.groupValues?.get(1)
+                    ?: ""
+
+                val apiUrl = "https://flixcloud.cc/api/m3u8/$videoId" + if (token.isNotEmpty()) "?token=$token" else ""
+
+                // 🔥 STEP 3: API Request using the Cloudflare Cookies (cf_clearance)
+                val apiRes = app.get(
+                    apiUrl,
+                    headers = mapOf(
+                        "Referer" to dataLink,
+                        "Accept" to "application/json",
+                        "X-Requested-With" to "XMLHttpRequest",
+                        "User-Agent" to userAgent
+                    ),
+                    cookies = iframeReq.cookies // Passing bypass cookies directly to API
+                ).text
+
+                val m3u8Json = tryParseJson<Map<String, Any>>(apiRes)
+                val masterM3u8Url = m3u8Json?.get("file") as? String
+
+                // 🔥 STEP 4: Send the Extractor Link
+                if (!masterM3u8Url.isNullOrEmpty()) {
+                    Log.d("Reanime", "SUCCESS! Found M3U8: $masterM3u8Url")
                     callback.invoke(
                         newExtractorLink(
                             "Reanime",
                             "Reanime $type",
-                            resolvedUrl.toString(),
+                            masterM3u8Url,
                             ExtractorLinkType.M3U8
                         ) {
                             this.headers = mapOf(
@@ -761,10 +774,10 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
                         }
                     )
                 } else {
-                    Log.e("Reanime", "Fail: Link nahi mila.")
+                    Log.d("Reanime", "Failed to extract M3U8. API Response: $apiRes")
                 }
             } catch (e: Exception) {
-                Log.e("Reanime", "Error: ${e.message}")
+                Log.e("Reanime", "Error during extraction: ${e.message}")
             }
         }
     }
