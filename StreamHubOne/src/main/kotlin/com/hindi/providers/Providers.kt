@@ -694,72 +694,135 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
             Log.e("Castle", "CRASHED: ${e.message}")
         }
     }
-                    suspend fun invokeReanime(
-        aniId: Int? = null,
-        episode: Int? = null,
+                    
+
+// =========================================================================
+// 🔥 PART 1: CUSTOM EXTRACTOR CLASS 
+// (Isko file mein open space par paste karein, kisi aur function ke andar NAHI)
+// =========================================================================
+
+class ReanimeFlixCloud : ExtractorApi() {
+    override val name = "FlixCloud"
+    override val mainUrl = "https://flixcloud.cc"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ) {
         val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        val headers = mapOf("Referer" to (referer ?: mainUrl), "User-Agent" to userAgent)
 
-        val response = app.get(
-            "https://reanime.to/api/flix/$aniId/${episode ?: 1}",
-            headers = mapOf(
-                "Referer" to "https://reanime.to/",
+        val res = app.get(url, headers = headers)
+        val html = res.text
+
+        // METHOD 1: JS Unpacker (Flixcloud mostly hides M3U8 inside packed JS)
+        val packedRegex = Regex("""eval\(function\(p,a,c,k,e,d\).*?\.split\('\|'\).*?\)""")
+        val packedMatch = packedRegex.find(html)
+        if (packedMatch != null) {
+            val unpacked = com.lagradost.cloudstream3.utils.JsUnpacker(packedMatch.value).unpack() ?: ""
+            val m3u8 = Regex("""file:\s*["'](https?://[^"']+\.m3u8[^"']*)["']""").find(unpacked)?.groupValues?.get(1)
+            if (m3u8 != null) {
+                callback.invoke(
+                    newExtractorLink(name, name, m3u8, ExtractorLinkType.M3U8) {
+                        this.headers = mapOf("Referer" to "$mainUrl/", "Origin" to mainUrl, "User-Agent" to userAgent)
+                    }
+                )
+                return
+            }
+        }
+
+        // METHOD 2: Direct Sources Array check
+        val sourcesMatch = Regex("""sources\s*:\s*\[\s*\{\s*file\s*:\s*["'](https?://[^"']+\.m3u8[^"']*)["']""").find(html)
+        if (sourcesMatch != null) {
+            val m3u8 = sourcesMatch.groupValues[1]
+            callback.invoke(
+                newExtractorLink(name, name, m3u8, ExtractorLinkType.M3U8) {
+                    this.headers = mapOf("Referer" to "$mainUrl/", "Origin" to mainUrl, "User-Agent" to userAgent)
+                }
+            )
+            return
+        }
+
+        // METHOD 3: The API Token Fallback (GET & POST both covered)
+        val videoId = url.substringAfter("/e/").substringBefore("?")
+        val token = Regex("""(?:token|key)["']?\s*[:=]\s*["']([^"']+)["']""").find(html)?.groupValues?.get(1)
+            ?: Regex("""token=([^"'&]+)""").find(html)?.groupValues?.get(1)
+
+        if (token != null && videoId.isNotBlank()) {
+            val apiUrl = "$mainUrl/api/m3u8/$videoId?token=$token"
+            val apiHeaders = mapOf(
+                "Referer" to url,
+                "X-Requested-With" to "XMLHttpRequest",
                 "User-Agent" to userAgent
             )
-        ).parsedSafe<ReanimeResponse>() ?: return
 
-        if (!response.success) return
+            var apiRes = app.get(apiUrl, headers = apiHeaders, cookies = res.cookies).text
+            var fileUrl = tryParseJson<Map<String, Any>>(apiRes)?.get("file") as? String
 
-        response.servers.safeAmap { server ->
-            val type = server.dataType.replaceFirstChar { it.uppercase() }
-            val dataLink = server.dataLink // e.g., https://flixcloud.cc/e/VIDEO_ID
-            
-            if (dataLink.isEmpty() || !dataLink.contains("flixcloud.cc")) return@safeAmap
+            if (fileUrl.isNullOrEmpty() || apiRes.contains("invalid")) {
+                apiRes = app.post(apiUrl, headers = apiHeaders, cookies = res.cookies).text
+                fileUrl = tryParseJson<Map<String, Any>>(apiRes)?.get("file") as? String
+            }
 
-            Log.d("Reanime", "Starting WebView Interceptor for: $dataLink")
-
-            // 🔥 FINAL FIX: Using Cloudstream's WebView to bypass Cloudflare/JS challenge
-            // This will open a hidden browser, run JS, solve tokens, and grab the master.m3u8
-            val doc = app.get(
-                dataLink, 
-                interceptor = CloudflareKiller(), // Uses a real WebView to solve the challenge
-                headers = mapOf(
-                    "Referer" to "https://reanime.to/",
-                    "User-Agent" to userAgent
+            if (!fileUrl.isNullOrEmpty()) {
+                callback.invoke(
+                    newExtractorLink(name, name, fileUrl, ExtractorLinkType.M3U8) {
+                        this.headers = mapOf("Referer" to "$mainUrl/", "Origin" to mainUrl, "User-Agent" to userAgent)
+                    }
                 )
-            ).document
+                return
+            }
+        }
+    }
+}
 
-            // The JS inside the WebView usually injects the player variables or M3U8 link
-            // We scrape all scripts from the rendered HTML to find the link
-            val scriptContent = doc.select("script").joinToString(" ") { it.data() }
-            
-            // Regex to find the final M3U8 link in the rendered JS
-            val masterM3u8Url = Regex("""(https?://[^"'\s]+\.m3u8[^"'\s]*)""").find(scriptContent)?.groupValues?.get(1)
-                ?: Regex("""file["']?\s*:\s*["'](https?://[^"']+\.m3u8[^"']*)["']""").find(scriptContent)?.groupValues?.get(1)
 
-            if (!masterM3u8Url.isNullOrEmpty()) {
-                Log.d("Reanime", "WebView Success! Found M3U8: $masterM3u8Url")
+// =========================================================================
+// 🔥 PART 2: MAIN FUNCTION 
+// (Aapne pichli baar jo invokeReanime likha tha, usko isse replace kar dein)
+// =========================================================================
+
+suspend fun invokeReanime(
+    aniId: Int? = null,
+    episode: Int? = null,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit,
+) {
+    val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    val response = app.get(
+        "https://reanime.to/api/flix/$aniId/${episode ?: 1}",
+        headers = mapOf("Referer" to "https://reanime.to/", "User-Agent" to userAgent)
+    ).parsedSafe<ReanimeResponse>() ?: return
+
+    if (!response.success) return
+
+    response.servers.safeAmap { server ->
+        val dataLink = server.dataLink
+        val type = server.dataType.replaceFirstChar { it.uppercase() }
+        
+        if (dataLink.contains("flixcloud.cc")) {
+            Log.d("Reanime", "Routing to Custom ReanimeFlixCloud Extractor")
+            ReanimeFlixCloud().getUrl(dataLink, "https://reanime.to/", subtitleCallback) { link ->
                 callback.invoke(
                     newExtractorLink(
                         "Reanime",
                         "Reanime $type",
-                        masterM3u8Url,
-                        ExtractorLinkType.M3U8
+                        link.url,
+                        link.type
                     ) {
-                        this.headers = mapOf(
-                            "Origin" to "https://flixcloud.cc",
-                            "Referer" to "https://flixcloud.cc/",
-                            "User-Agent" to userAgent
-                        )
+                        this.headers = link.headers
                     }
                 )
-            } else {
-                Log.d("Reanime", "WebView Failed to find M3U8. Anti-bot is too strong.")
             }
+        } else {
+            // Fallback for other servers
+            loadExtractor(dataLink, "https://reanime.to/", subtitleCallback, callback)
         }
     }
+}
 
     suspend fun invokeCinemacity(
         title: String? = null,
