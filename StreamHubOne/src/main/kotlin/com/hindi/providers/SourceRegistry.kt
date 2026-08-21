@@ -130,10 +130,7 @@ object SourceRegistry {
             executeStandard = { res, subCb, cb -> invokeCastle(res.title, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeCastle(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
-        SourceProviderDef(
-            key = "p_reanime", displayName = "Reanime",
-            executeAnime = { res, subCb, cb -> invokeReanime(res.anilistId, res.episode, subCb, cb) }
-        ),
+        
         SourceProviderDef(
             key = "p_zinkmovies", displayName = "Zinkmovies", category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeZinkmovies(res.title, res.year, res.season, res.episode, subCb, cb) },
