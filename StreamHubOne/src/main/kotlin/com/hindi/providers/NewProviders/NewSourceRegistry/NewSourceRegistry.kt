@@ -37,33 +37,7 @@ object NewSourceRegistry {
             }
         ),
 
-        SourceProviderDef(
-    key = "p_reanime",
-    displayName = "Reanime",
-    executeAnime = { res, subCb, cb ->
-
-        // Sub
-        invokeReanime(
-            title = res.originalTitle ?: res.title,
-            episode = res.episode,
-            anilistId = res.anilistId,
-            isDub = false,
-            subtitleCallback = subCb,
-            callback = cb
-        )
-
-        // Dub
-        invokeReanime(
-            title = res.originalTitle ?: res.title,
-            episode = res.episode,
-            anilistId = res.anilistId,
-            isDub = true,
-            subtitleCallback = subCb,
-            callback = cb
-        )
-    }
-),
-
+        
         SourceProviderDef(
             key = "p_anistream",
             displayName = "AniStream",
