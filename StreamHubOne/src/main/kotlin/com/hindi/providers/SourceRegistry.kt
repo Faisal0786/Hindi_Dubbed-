@@ -339,6 +339,10 @@ object SourceRegistry {
             executeStandard = { res, _, cb -> invokeStremioTorrents("TorrentsDB", torrentsdbAPI, res.imdbId, res.season, res.episode, cb) },
             executeAnime = { res, _, cb -> invokeStremioTorrents("TorrentsDB", torrentsdbAPI, "kitsu:${res.kitsuId}", res.season, res.episode, cb) }
         ),
+SourceProviderDef(
+            key = "p_reanime", displayName = "Reanime",
+            executeAnime = { res, subCb, cb -> invokeReanime(res.anilistId, res.episode, subCb, cb) }
+        ),
         SourceProviderDef(
             key = "p_animetosho", displayName = "🧲 AnimeTosho", isTorrent = true,
             executeAnime = { res, _, cb -> invokeAnimetosho(res.kitsuId, res.malId, res.episode, cb) }
