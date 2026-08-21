@@ -13,8 +13,7 @@ class StreamHubOnePlugin : Plugin() {
 
     override fun load(context: Context) {
 
-        // Initialize storage
-        AnimeCacheStorage.init(context.applicationContext)
+        
 
         // Load dynamic API URLs
         runBlocking { init() }
