@@ -49,7 +49,12 @@ suspend fun SourceProviders.invokeReanime(
         val watchReferer = "https://reanime.to/watch/$slug?ep=$episode&lang=$lang"
         val epApiUrl = "https://reanime.to/api/flix/$anilistId/$episode"
 
-        val epRes = cfGet(epApiUrl, headers = mapOf("Referer" to watchReferer)).text
+        val epRes = cfGet(epApiUrl, headers = mapOf(
+    "Referer" to watchReferer,
+    "Accept" to "application/json",
+    "X-Requested-With" to "XMLHttpRequest"
+)).text
+
         if (epRes.isBlank()) return
 
         val epJson = try { JSONObject(epRes) } catch (e: Exception) { return }
