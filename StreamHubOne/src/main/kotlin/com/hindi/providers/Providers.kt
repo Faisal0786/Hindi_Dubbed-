@@ -694,13 +694,12 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
             Log.e("Castle", "CRASHED: ${e.message}")
         }
     }
-                suspend fun invokeReanime(
+                    suspend fun invokeReanime(
         aniId: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        // 🔥 SAME User-Agent har request me jayega
         val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
         val response = app.get(
@@ -715,58 +714,33 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
 
         response.servers.safeAmap { server ->
             val type = server.dataType.replaceFirstChar { it.uppercase() }
-            val dataLink = server.dataLink
+            val dataLink = server.dataLink // e.g., https://flixcloud.cc/e/VIDEO_ID
             
-            val videoId = dataLink.substringAfter("/e/").substringBefore("?")
-            if (videoId.isEmpty()) return@safeAmap
+            if (dataLink.isEmpty() || !dataLink.contains("flixcloud.cc")) return@safeAmap
 
-            Log.d("Reanime", "Fetching Iframe for: $dataLink")
+            Log.d("Reanime", "Starting WebView Interceptor for: $dataLink")
 
-            // 🔥 STEP 1: Iframe request WITH STRICT HEADERS
-            val iframeReq = app.get(
+            // 🔥 FINAL FIX: Using Cloudstream's WebView to bypass Cloudflare/JS challenge
+            // This will open a hidden browser, run JS, solve tokens, and grab the master.m3u8
+            val doc = app.get(
                 dataLink, 
+                interceptor = CloudflareKiller(), // Uses a real WebView to solve the challenge
                 headers = mapOf(
                     "Referer" to "https://reanime.to/",
-                    "User-Agent" to userAgent,
-                    "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+                    "User-Agent" to userAgent
                 )
-            )
-            val html = iframeReq.text
+            ).document
 
-            val directM3u8 = Regex("""file["']?\s*:\s*["'](https?://[^"']+\.m3u8[^"']*)["']""").find(html)?.groupValues?.get(1)
+            // The JS inside the WebView usually injects the player variables or M3U8 link
+            // We scrape all scripts from the rendered HTML to find the link
+            val scriptContent = doc.select("script").joinToString(" ") { it.data() }
+            
+            // Regex to find the final M3U8 link in the rendered JS
+            val masterM3u8Url = Regex("""(https?://[^"'\s]+\.m3u8[^"'\s]*)""").find(scriptContent)?.groupValues?.get(1)
+                ?: Regex("""file["']?\s*:\s*["'](https?://[^"']+\.m3u8[^"']*)["']""").find(scriptContent)?.groupValues?.get(1)
 
-            val masterM3u8Url = if (directM3u8 != null) {
-                directM3u8
-            } else {
-                // 🔥 STEP 2: Extract Token
-                val token = Regex("""(?:token|key)["']?\s*[:=]\s*["']([^"']+)["']""").find(html)?.groupValues?.get(1)
-                    ?: Regex("""token=([^"'&]+)""").find(html)?.groupValues?.get(1)
-                    ?: ""
-
-                Log.d("Reanime", "Token Found: $token")
-
-                val apiUrl = "https://flixcloud.cc/api/m3u8/$videoId" + if (token.isNotEmpty()) "?token=$token" else ""
-
-                // 🔥 STEP 3: API Request MATCHING PREVIOUS HEADERS & COOKIES
-                val apiRes = app.get(
-                    apiUrl,
-                    headers = mapOf(
-                        "Referer" to dataLink, // Yahan referer iframe ka link jayega
-                        "Accept" to "application/json",
-                        "X-Requested-With" to "XMLHttpRequest",
-                        "User-Agent" to userAgent // MUST MATCH STEP 1
-                    ),
-                    cookies = iframeReq.cookies // MUST MATCH STEP 1
-                ).text
-                
-                Log.d("Reanime", "API Response: $apiRes")
-                val m3u8Json = tryParseJson<Map<String, Any>>(apiRes)
-                m3u8Json?.get("file") as? String ?: return@safeAmap
-            }
-
-            // 🔥 STEP 4: Send exact M3U8 to the player
-            if (masterM3u8Url.isNotEmpty()) {
-                Log.d("Reanime", "SUCCESS! Found M3U8: $masterM3u8Url")
+            if (!masterM3u8Url.isNullOrEmpty()) {
+                Log.d("Reanime", "WebView Success! Found M3U8: $masterM3u8Url")
                 callback.invoke(
                     newExtractorLink(
                         "Reanime",
@@ -781,6 +755,8 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
                         )
                     }
                 )
+            } else {
+                Log.d("Reanime", "WebView Failed to find M3U8. Anti-bot is too strong.")
             }
         }
     }
