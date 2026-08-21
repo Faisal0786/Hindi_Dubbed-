@@ -23,7 +23,7 @@ import com.hindi.providers.SourceProviders.invokeAllAnimeSources
 
 //ghdyvcg
 import com.hindi.providers.NewProviders.invokeAniStream
-import com.hindi.providers.NewProviders.invokeReanime
+import 
 
 import com.hindi.providers.SourceProviders.invokeAnimes
 import com.hindi.providers.AllLoadLinksData
@@ -1036,14 +1036,7 @@ genres=${item.genreIds}
 
                             invokeAnimes(malId, aniId, res.episode, seasonYear, animeSource, subtitleCallback, callback)
 
-                            SourceProviders.invokeReanime(
-                                title = res.title, 
-                                episode = res.episode, 
-                                anilistId = aniId, 
-                                isDub = false, 
-                                subtitleCallback = subtitleCallback, 
-                                callback = callback
-                            )
+                            
                         }
                     }
                 )
@@ -1051,7 +1044,7 @@ genres=${item.genreIds}
             }
         }
     }
-} // <--- Cwunchyroll CLASS ENDS HERE (Perfectly closed)
+} 
 
 data class LoadLinksData(  
     val title: String,  
