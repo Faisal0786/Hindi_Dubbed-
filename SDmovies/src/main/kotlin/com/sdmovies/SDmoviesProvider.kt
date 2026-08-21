@@ -9,7 +9,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-
 data class WpPost(
     @JsonProperty("id")
     val id: Int,
@@ -26,7 +25,7 @@ data class WpPost(
 
 class SDMoviesProvider : MainAPI() {
 
-    override var mainUrl = "https://sd2.sdmoviespoint.trade"
+    override var mainUrl = "https://sd2.sdmoviespoint.tours"
     override var name = "SDMovies"
     override val hasMainPage = true
     override var lang = "hi"
@@ -52,34 +51,24 @@ class SDMoviesProvider : MainAPI() {
     )
 
     override suspend fun search(query: String): List<SearchResponse> {
-    val json = app.get(
-        "$mainUrl/wp-json/wp/v2/posts?search=$query"
-    ).text
+        val json = app.get("$mainUrl/wp-json/wp/v2/posts?search=$query").text
+        val mapper = jacksonObjectMapper()
 
-    val mapper = jacksonObjectMapper()
-
-    val posts: List<WpPost> = mapper.readValue(
-        json,
-        mapper.typeFactory.constructCollectionType(
-            List::class.java,
-            WpPost::class.java
+        val posts: List<WpPost> = mapper.readValue(
+            json,
+            mapper.typeFactory.constructCollectionType(List::class.java, WpPost::class.java)
         )
-    )
 
-    return posts.map {
-        val title = it.title?.get("rendered")?.toString() ?: ""
-
-        newMovieSearchResponse(
-            title,
-            it.link,
-            if (isSeries(title)) TvType.TvSeries else TvType.Movie
-        ) {
-            posterUrl =
-                extractPoster(
-                    it.content?.get("rendered")?.toString() ?: ""
-                )
+        return posts.map {
+            val title = it.title?.get("rendered")?.toString() ?: ""
+            newMovieSearchResponse(
+                title,
+                it.link,
+                if (isSeries(title)) TvType.TvSeries else TvType.Movie
+            ) {
+                posterUrl = extractPoster(it.content?.get("rendered")?.toString() ?: "")
+            }
         }
-    }
     }
 
     override suspend fun getMainPage(
@@ -88,35 +77,27 @@ class SDMoviesProvider : MainAPI() {
     ): HomePageResponse {
         val url = "$mainUrl${request.data}&page=$page"
         val json = app.get(url).text
+        val mapper = jacksonObjectMapper()
 
-val mapper = jacksonObjectMapper()
-
-val posts: List<WpPost> = mapper.readValue(
-    json,
-    mapper.typeFactory.constructCollectionType(
-        List::class.java,
-        WpPost::class.java
-    )
-)
+        val posts: List<WpPost> = mapper.readValue(
+            json,
+            mapper.typeFactory.constructCollectionType(List::class.java, WpPost::class.java)
+        )
 
         val home = posts.map {
             val title = it.title?.get("rendered")?.toString() ?: ""
-
             newMovieSearchResponse(
                 title,
                 it.link,
                 if (isSeries(title)) TvType.TvSeries else TvType.Movie
             ) {
-                posterUrl = extractPoster(
-                    it.content?.get("rendered")?.toString() ?: ""
-                )
+                posterUrl = extractPoster(it.content?.get("rendered")?.toString() ?: "")
             }
         }
 
         return newHomePageResponse(request.name, home)
     }
 
-    // 🎯 1. LOAD FUNCTION: Kaam sirf details aur button payload bana kar aage bhejna hai
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
         val rawTitle = document.select("title").text().replace("Download ", "")
@@ -126,59 +107,165 @@ val posts: List<WpPost> = mapper.readValue(
             posterUrl = extractPoster(document.html()) ?: ""
         }
 
-        // HTML se saare available forms (quality blocks) select karna
         val forms = document.select("div.dlarea form")
         
         if (isSeries(rawTitle)) {
             val tvSeriesEpisodes = mutableListOf<Episode>()
             
             forms.forEachIndexed { index, form ->
-                // Har button ke input data ko map mein convert karna
                 val payloadMap = form.select("input").associate { 
                     it.attr("name") to it.attr("value") 
                 }
-                
-                // Pure form data ko string data text mein convert karke pass karna
                 val stringifiedData = payloadMap.toJson()
 
-tvSeriesEpisodes.add(
-    newEpisode(stringifiedData) {
-        name = "Episode ${index + 1}"
-        season = 1
-        episode = index + 1
-    }
-)
+                tvSeriesEpisodes.add(
+                    newEpisode(stringifiedData) {
+                        name = "Episode ${index + 1}"
+                        season = 1
+                        episode = index + 1
+                    }
+                )
             }
             
             return newTvSeriesLoadResponse(rawTitle, url, TvType.TvSeries, tvSeriesEpisodes) {
                 this.posterUrl = posterUrl
             }
         } else {
-    val firstForm = forms.firstOrNull()
+            val firstForm = forms.firstOrNull()
+            val payloadMap = firstForm?.select("input")?.associate {
+                it.attr("name") to it.attr("value")
+            } ?: emptyMap()
 
-    val payloadMap = firstForm?.select("input")?.associate {
-        it.attr("name") to it.attr("value")
-    } ?: emptyMap()
+            val movieData = payloadMap.toJson()
 
-    val movieData = payloadMap.toJson()
-
-    return newMovieLoadResponse(
-        rawTitle,
-        url,
-        TvType.Movie,
-        movieData
-    ) {
-        posterUrl = posterUrl
+            return newMovieLoadResponse(
+                rawTitle,
+                url,
+                TvType.Movie,
+                movieData
+            ) {
+                this.posterUrl = posterUrl
+            }
+        }
     }
-}
-    }
 
+    // 🎯 2. LOAD LINKS FUNCTION: Mediator Bypass + Next.js Stream Server Extraction
     override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    return false
-}
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val mapper = jacksonObjectMapper()
+        val payloadMap = try {
+            mapper.readValue<Map<String, String>>(data)
+        } catch (e: Exception) {
+            emptyMap()
+        }
+
+        if (payloadMap.isEmpty()) return false
+
+        // Step A: Submit hidden form tokens to host.pkpics.live to get the Dotflix URL
+        val actionUrl = "https://host.pkpics.live/take-me/"
+        val headers = mapOf(
+            "Origin" to "https://host.pkpics.live",
+            "Referer" to mainUrl,
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36",
+            "Content-Type" to "application/x-www-form-urlencoded"
+        )
+
+        val response = app.post(actionUrl, data = payloadMap, headers = headers)
+        val dotflixUrl = response.url // Final redirected Dotflix share URL
+
+        // Step B: Fetch Dotflix page HTML
+        val dotflixHtml = app.get(dotflixUrl, headers = mapOf("User-Agent" to headers["User-Agent"]!!)).text
+
+        // Step C: Extract all links from Next.js stream chunks (__next_f.push)
+        val pushRegex = """self\.__next_f\.push\(\s*(\[.*?\])\s*\)""".toRegex(RegexOption.DOT_MATCHES_ALL)
+        val pushBlocks = pushRegex.findAll(dotflixHtml)
+        
+        val allExtractedLinks = mutableSetOf<String>()
+
+        for (block in pushBlocks) {
+            val chunk = block.groupValues[1]
+            val urlRegex = """(https?://[^\s'<>\\)]+)""".toRegex()
+            for (urlMatch in urlRegex.findAll(chunk)) {
+                val cleanUrl = urlMatch.value
+                    .replace("\\", "")
+                    .trimEnd('"', '\'', '\\', ')')
+                allExtractedLinks.add(cleanUrl)
+            }
+        }
+
+        var foundLinks = false
+        val qualityText = "HD"
+
+        // Step D: Filter and push every server to Cloudstream UI with custom names
+        for (link in allExtractedLinks) {
+            val lowerLink = link.lowercase()
+
+            // Skip unwanted trackers, ads, and telegram links
+            if (lowerLink.contains("adsboosters") || 
+                lowerLink.contains("yonogames") || 
+                lowerLink.contains("w3.org") || 
+                lowerLink.contains("dtflix.ink/logo") || 
+                lowerLink.contains("t.me") || 
+                lowerLink.contains("telegram")) {
+                continue
+            }
+
+            // 1. Direct CDN / .mkv / .mp4 links
+            if (lowerLink.contains("googleusercontent.com") || lowerLink.endsWith(".mkv") || lowerLink.endsWith(".mp4") || lowerLink.contains(".r2.dev")) {
+                foundLinks = true
+                callback.invoke(
+                    ExtractorLink(
+                        source = "SDMovies",
+                        name = "SDMovies ($qualityText - Direct CDN)",
+                        url = link,
+                        referer = dotflixUrl,
+                        quality = Qualities.P720.value,
+                        isM3u8 = false
+                    )
+                )
+            } 
+            // 2. Pixeldrain Server
+            else if (lowerLink.contains("pixeldrain")) {
+                foundLinks = true
+                loadExtractor(link, dotflixUrl, subtitleCallback) { extractedLink ->
+                    callback.invoke(
+                        extractedLink.copy(
+                            source = "SDMovies",
+                            name = "SDMovies ($qualityText - Pixeldrain)"
+                        )
+                    )
+                }
+            }
+            // 3. Vikingfile Server
+            else if (lowerLink.contains("vikingfile")) {
+                foundLinks = true
+                loadExtractor(link, dotflixUrl, subtitleCallback) { extractedLink ->
+                    callback.invoke(
+                        extractedLink.copy(
+                            source = "SDMovies",
+                            name = "SDMovies ($qualityText - Vikingfile)"
+                        )
+                    )
+                }
+            }
+            // 4. Other File Hosting Servers (Transfer.it, Doodstream, StreamWish, etc.)
+            else if (lowerLink.contains("transfer.it") || lowerLink.contains("dood") || lowerLink.contains("streamwish")) {
+                foundLinks = true
+                loadExtractor(link, dotflixUrl, subtitleCallback) { extractedLink ->
+                    callback.invoke(
+                        extractedLink.copy(
+                            source = "SDMovies",
+                            name = "SDMovies ($qualityText - ${extractedLink.source})"
+                        )
+                    )
+                }
+            }
+        }
+
+        return foundLinks
+    }
 }
