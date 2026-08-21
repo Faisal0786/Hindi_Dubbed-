@@ -241,9 +241,13 @@ class SDMoviesProvider : MainAPI() {
                 foundLinks = true
                 loadExtractor(link, dotflixUrl, subtitleCallback) { extractedLink ->
                     callback.invoke(
-                        extractedLink.copy(
+                        ExtractorLink(
                             source = "SDMovies",
-                            name = "SDMovies ($qualityText - Pixeldrain)"
+                            name = "SDMovies ($qualityText - Pixeldrain)",
+                            url = extractedLink.url,
+                            referer = extractedLink.referer,
+                            quality = extractedLink.quality,
+                            isM3u8 = extractedLink.isM3u8
                         )
                     )
                 }
@@ -253,9 +257,13 @@ class SDMoviesProvider : MainAPI() {
                 foundLinks = true
                 loadExtractor(link, dotflixUrl, subtitleCallback) { extractedLink ->
                     callback.invoke(
-                        extractedLink.copy(
+                        ExtractorLink(
                             source = "SDMovies",
-                            name = "SDMovies ($qualityText - Vikingfile)"
+                            name = "SDMovies ($qualityText - Vikingfile)",
+                            url = extractedLink.url,
+                            referer = extractedLink.referer,
+                            quality = extractedLink.quality,
+                            isM3u8 = extractedLink.isM3u8
                         )
                     )
                 }
@@ -265,9 +273,13 @@ class SDMoviesProvider : MainAPI() {
                 foundLinks = true
                 loadExtractor(link, dotflixUrl, subtitleCallback) { extractedLink ->
                     callback.invoke(
-                        extractedLink.copy(
+                        ExtractorLink(
                             source = "SDMovies",
-                            name = "SDMovies ($qualityText - ${extractedLink.source})"
+                            name = "SDMovies ($qualityText - ${extractedLink.source})",
+                            url = extractedLink.url,
+                            referer = extractedLink.referer,
+                            quality = extractedLink.quality,
+                            isM3u8 = extractedLink.isM3u8
                         )
                     )
                 }
