@@ -201,23 +201,30 @@ class SDMoviesProvider : MainAPI() {
                 this.posterUrl = posterUrl
             }
         } else {
-            val firstForm = forms.firstOrNull()
-val payloadMap = firstForm?.select("input")?.associate {
-    it.attr("name") to it.attr("value")
-} ?: emptyMap()
+            val moviePayloads = forms.map { form ->
+    form.select("input").associate {
+        it.attr("name") to it.attr("value")
+    }
+}
 
-val movieData = payloadMap.toJson()
+Log.d(
+    "SDMovies",
+    "Movie forms preserved = ${moviePayloads.size}"
+)
+
+val movieData = moviePayloads.toJson()
 
 return newMovieLoadResponse(
     rawTitle,
     url,
     TvType.Movie,
     movieData
-){
+) {
     this.posterUrl = posterUrl
 }
+
         }
-    }
+    
 
     override suspend fun loadLinks(
     data: String,
@@ -231,390 +238,504 @@ return newMovieLoadResponse(
     Log.d("SDMovies", "================= LOAD LINKS =================")
     Log.d("SDMovies", "Received data length = ${data.length}")
 
-    val payloads = mapper.readValue<List<Map<String, String>>>(data)
+    // =========================================================
+    // PARSE PAYLOAD
+    //
+    // Movie:
+    // [
+    //   {"id":"...", "filename":"..."},
+    //   {"id":"...", "filename":"..."}
+    // ]
+    //
+    // Series:
+    // {"id":"...", "filename":"..."}
+    //
+    // Support both.
+    // =========================================================
+
+    val payloads: List<Map<String, String>> = try {
+
+        val root = mapper.readTree(data)
+
+        if (root.isArray) {
+
+            root.mapNotNull { node ->
+                mapper.convertValue<Map<String, String>>(node)
+            }
+
+        } else if (root.isObject) {
+
+            listOf(
+                mapper.convertValue<Map<String, String>>(root)
+            )
+
+        } else {
+
+            Log.e(
+                "SDMovies",
+                "Invalid payload JSON"
+            )
+
+            return false
+        }
+
     } catch (e: Exception) {
+
         Log.e(
             "SDMovies",
-            "Failed to parse payload: ${e.message}"
+            "Failed to parse payload: ${e.message}",
+            e
         )
+
         return false
     }
 
-    if (payloadMap.isEmpty()) {
+    if (payloads.isEmpty()) {
+
         Log.w(
             "SDMovies",
             "Payload is empty - no links to extract"
         )
-        return false
-    }
-
-    // =========================================================
-    // STEP A: Build Dotflix URL
-    // =========================================================
-
-    val domainPart = payloadMap["id"]?.trim('/') ?: run {
-        Log.w(
-            "SDMovies",
-            "Missing payload field = id"
-        )
-        return false
-    }
-
-    val filePart = payloadMap["filename"]?.trim('/') ?: run {
-        Log.w(
-            "SDMovies",
-            "Missing payload field = filename"
-        )
-        return false
-    }
-
-    val baseUrl = if (domainPart.startsWith("http", true)) {
-        domainPart
-    } else {
-        "https://$domainPart"
-    }
-
-    val dotflixUrl = "$baseUrl/$filePart"
-
-    Log.d(
-        "SDMovies",
-        "Generated Dotflix URL = $dotflixUrl"
-    )
-
-    // =========================================================
-    // STEP B: Fetch Dotflix page
-    // =========================================================
-
-    val headers = mapOf(
-        "User-Agent" to
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-            "AppleWebKit/537.36 (KHTML, like Gecko) " +
-            "Chrome/127.0.0.0 Mobile Safari/537.36"
-    )
-
-    val dotflixHtml = try {
-
-        app.get(
-            dotflixUrl,
-            headers = headers
-        ).text
-
-    } catch (e: Exception) {
-
-        Log.e(
-            "SDMovies",
-            "Failed to fetch Dotflix page: ${e.message}"
-        )
 
         return false
     }
 
     Log.d(
         "SDMovies",
-        "Dotflix HTML length = ${dotflixHtml.length}"
+        "Total payloads to process = ${payloads.size}"
     )
 
-// =========================================================
-// QUALITY FROM DOTFLIX PAGE
-// =========================================================
-
-val dotflixQuality = when {
-    Regex("""\b2160p\b""", RegexOption.IGNORE_CASE)
-        .containsMatchIn(dotflixHtml) -> Qualities.P2160.value
-
-    Regex("""\b1440p\b""", RegexOption.IGNORE_CASE)
-        .containsMatchIn(dotflixHtml) -> Qualities.P1440.value
-
-    Regex("""\b1080p\b""", RegexOption.IGNORE_CASE)
-        .containsMatchIn(dotflixHtml) -> Qualities.P1080.value
-
-    Regex("""\b720p\b""", RegexOption.IGNORE_CASE)
-        .containsMatchIn(dotflixHtml) -> Qualities.P720.value
-
-    Regex("""\b480p\b""", RegexOption.IGNORE_CASE)
-        .containsMatchIn(dotflixHtml) -> Qualities.P480.value
-
-    else -> Qualities.Unknown.value
-}
-
-val dotflixQualityText = when (dotflixQuality) {
-    Qualities.P2160.value -> "2160p"
-    Qualities.P1440.value -> "1440p"
-    Qualities.P1080.value -> "1080p"
-    Qualities.P720.value -> "720p"
-    Qualities.P480.value -> "480p"
-    else -> "HD"
-}
-
-Log.d(
-    "SDMovies",
-    "Dotflix detected quality = $dotflixQualityText"
-)
+    var foundLinks = false
 
     // =========================================================
-    // STEP C: Extract URLs from Next.js chunks
+    // PROCESS EVERY FORM
     // =========================================================
 
-    val pushRegex =
-        """self\.__next_f\.push\(\s*(\[.*?\])\s*\)"""
-            .toRegex(RegexOption.DOT_MATCHES_ALL)
+    payloads.forEachIndexed { index, payloadMap ->
 
-    val allExtractedLinks = mutableSetOf<String>()
+        Log.d(
+            "SDMovies",
+            "========================================"
+        )
 
-    for (block in pushRegex.findAll(dotflixHtml)) {
+        Log.d(
+            "SDMovies",
+            "PROCESSING FORM #${index + 1}"
+        )
 
-        val chunk = block.groupValues[1]
+        Log.d(
+            "SDMovies",
+            "Payload = $payloadMap"
+        )
+
+        // =====================================================
+        // STEP A: BUILD DOTFLIX URL
+        // =====================================================
+
+        val domainPart = payloadMap["id"]
+            ?.trim('/')
+            ?.takeIf { it.isNotBlank() }
+
+        val filePart = payloadMap["filename"]
+            ?.trim('/')
+            ?.takeIf { it.isNotBlank() }
+
+        if (domainPart == null) {
+
+            Log.w(
+                "SDMovies",
+                "Form #${index + 1}: missing id"
+            )
+
+            return@forEachIndexed
+        }
+
+        if (filePart == null) {
+
+            Log.w(
+                "SDMovies",
+                "Form #${index + 1}: missing filename"
+            )
+
+            return@forEachIndexed
+        }
+
+        val baseUrl = if (
+            domainPart.startsWith("http", ignoreCase = true)
+        ) {
+            domainPart
+        } else {
+            "https://$domainPart"
+        }
+
+        val dotflixUrl = "$baseUrl/$filePart"
+
+        Log.d(
+            "SDMovies",
+            "Generated Dotflix URL = $dotflixUrl"
+        )
+
+        // =====================================================
+        // STEP B: FETCH DOTFLIX
+        // =====================================================
+
+        val headers = mapOf(
+            "User-Agent" to
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+                "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                "Chrome/127.0.0.0 Mobile Safari/537.36"
+        )
+
+        val dotflixHtml = try {
+
+            app.get(
+                dotflixUrl,
+                headers = headers
+            ).text
+
+        } catch (e: Exception) {
+
+            Log.e(
+                "SDMovies",
+                "Form #${index + 1}: Dotflix page failed: ${e.message}"
+            )
+
+            return@forEachIndexed
+        }
+
+        Log.d(
+            "SDMovies",
+            "Form #${index + 1}: Dotflix HTML length = ${dotflixHtml.length}"
+        )
+
+        // =====================================================
+        // STEP C: QUALITY
+        // =====================================================
+
+        val dotflixQuality = when {
+
+            Regex(
+                """\b2160p\b""",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(dotflixHtml) ->
+                Qualities.P2160.value
+
+            Regex(
+                """\b1440p\b""",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(dotflixHtml) ->
+                Qualities.P1440.value
+
+            Regex(
+                """\b1080p\b""",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(dotflixHtml) ->
+                Qualities.P1080.value
+
+            Regex(
+                """\b720p\b""",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(dotflixHtml) ->
+                Qualities.P720.value
+
+            Regex(
+                """\b480p\b""",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(dotflixHtml) ->
+                Qualities.P480.value
+
+            else ->
+                Qualities.Unknown.value
+        }
+
+        val qualityText = when (dotflixQuality) {
+            Qualities.P2160.value -> "2160p"
+            Qualities.P1440.value -> "1440p"
+            Qualities.P1080.value -> "1080p"
+            Qualities.P720.value -> "720p"
+            Qualities.P480.value -> "480p"
+            else -> "HD"
+        }
+
+        Log.d(
+            "SDMovies",
+            "Form #${index + 1}: detected quality = $qualityText"
+        )
+
+        // =====================================================
+        // STEP D: NEXT.JS URL EXTRACTION
+        // =====================================================
+
+        val pushRegex =
+            """self\.__next_f\.push\(\s*(\[.*?\])\s*\)"""
+                .toRegex(RegexOption.DOT_MATCHES_ALL)
 
         val urlRegex =
             """(https?://[^\s'<>\\)]+)"""
                 .toRegex()
 
-        for (urlMatch in urlRegex.findAll(chunk)) {
+        val extractedLinks = linkedSetOf<String>()
 
-            val cleanUrl = urlMatch.value
-                .replace("\\", "")
-                .trimEnd(
-                    '"',
-                    '\'',
-                    '\\',
-                    ')',
-                    ','
-                )
+        for (block in pushRegex.findAll(dotflixHtml)) {
 
-            allExtractedLinks.add(cleanUrl)
+            val chunk = block.groupValues[1]
+
+            for (urlMatch in urlRegex.findAll(chunk)) {
+
+                val cleanUrl = urlMatch.value
+                    .replace("\\", "")
+                    .trimEnd(
+                        '"',
+                        '\'',
+                        '\\',
+                        ')',
+                        ','
+                    )
+
+                extractedLinks.add(cleanUrl)
+            }
         }
-    }
-
-    Log.d(
-        "SDMovies",
-        "Total extracted URLs = ${allExtractedLinks.size}"
-    )
-
-    if (allExtractedLinks.isEmpty()) {
-
-        Log.w(
-            "SDMovies",
-            "No URLs found inside Next.js chunks"
-        )
-
-        return false
-    }
-
-    var foundLinks = false
-
-    // =========================================================
-    // STEP D: Process extracted URLs
-    // =========================================================
-
-    for (link in allExtractedLinks) {
-
-        val lowerLink = link.lowercase()
 
         Log.d(
             "SDMovies",
-            "----------------------------------------"
+            "Form #${index + 1}: extracted URLs = ${extractedLinks.size}"
         )
 
-        Log.d(
-            "SDMovies",
-            "Processing URL = $link"
-        )
+        if (extractedLinks.isEmpty()) {
 
-        // =====================================================
-        // FILTER: Ads / trackers / useless URLs
-        // =====================================================
-
-        if (
-            lowerLink.contains("adsboosters") ||
-            lowerLink.contains("yonogames") ||
-            lowerLink.contains("w3.org") ||
-            lowerLink.contains("dtflix.ink/logo") ||
-            lowerLink.contains("t.me") ||
-            lowerLink.contains("telegram") ||
-            lowerLink.contains("googletagmanager.com") ||
-            lowerLink.contains("googlesyndication.com") ||
-            lowerLink == "https://dtflix.ink" ||
-            lowerLink == "https://dtflix.ink/share"
-        ) {
-
-            Log.d(
+            Log.w(
                 "SDMovies",
-                "FILTERED unwanted URL = $link"
+                "Form #${index + 1}: no URLs found"
             )
 
-            continue
+            return@forEachIndexed
         }
 
         // =====================================================
-        // QUALITY DETECTION
+        // STEP E: PROCESS LINKS
         // =====================================================
 
-        val qualityText = dotflixQualityText
-val qualityVal = dotflixQuality
+        for (link in extractedLinks) {
 
-        Log.d(
-            "SDMovies",
-            "Detected quality = $qualityText"
-        )
+            val lowerLink = link.lowercase()
 
-        // =====================================================
-        // 1. CLOUDFLARE R2 DIRECT CDN
-        // =====================================================
+            // -------------------------------------------------
+            // FILTER JUNK
+            // -------------------------------------------------
 
-        if (lowerLink.contains(".r2.dev/")) {
+            if (
+                lowerLink.contains("adsboosters") ||
+                lowerLink.contains("yonogames") ||
+                lowerLink.contains("w3.org") ||
+                lowerLink.contains("logo.png") ||
+                lowerLink.contains("dtflix.ink/logo") ||
+                lowerLink.contains("t.me") ||
+                lowerLink.contains("telegram") ||
+                lowerLink.contains("googletagmanager.com") ||
+                lowerLink.contains("googlesyndication.com") ||
+                lowerLink == "https://dtflix.ink" ||
+                lowerLink == "https://dtflix.ink/share"
+            ) {
 
-            Log.d(
-                "SDMovies",
-                "TYPE = R2 DIRECT CDN"
-            )
-
-            Log.d(
-                "SDMovies",
-                "URL = $link"
-            )
-
-            foundLinks = true
-
-            callback.invoke(
-                newExtractorLink(
-                    source = "SDMovies",
-                    name = "SDMovies ($qualityText - R2)",
-                    url = link,
-                    type = ExtractorLinkType.VIDEO
-                ) {
-                    this.referer = dotflixUrl
-                    this.quality = qualityVal
-                }
-            )
-
-            Log.d(
-                "SDMovies",
-                "SUCCESS - R2 link added"
-            )
-
-            continue
-        }
-
-        // =====================================================
-        // 2. GOOGLEUSERCONTENT DIRECT CDN
-        // =====================================================
-
-        if (lowerLink.contains("googleusercontent.com")) {
-
-            Log.d(
-                "SDMovies",
-                "TYPE = GOOGLE CDN"
-            )
-
-            Log.d(
-                "SDMovies",
-                "URL = $link"
-            )
-
-            foundLinks = true
-
-            callback.invoke(
-                newExtractorLink(
-                    source = "SDMovies",
-                    name = "SDMovies ($qualityText - Google CDN)",
-                    url = link,
-                    type = ExtractorLinkType.VIDEO
-                ) {
-                    this.referer = dotflixUrl
-                    this.quality = qualityVal
-                }
-            )
-
-            Log.d(
-                "SDMovies",
-                "SUCCESS - Google CDN link added"
-            )
-
-            continue
-        }
-
-        // =====================================================
-        // 3. PIXELDRAIN
-        // =====================================================
-
-        if (lowerLink.contains("pixeldrain")) {
-
-            Log.d(
-                "SDMovies",
-                "HOST = PIXELDRAIN"
-            )
-
-            Log.d(
-                "SDMovies",
-                "Trying built-in CloudStream extractor"
-            )
-
-            Log.d(
-                "SDMovies",
-                "URL = $link"
-            )
-
-            foundLinks = true
-
-            try {
-
-                loadExtractor(
-                    link,
-                    dotflixUrl,
-                    subtitleCallback
-                ) { extractedLink ->
-
-                    Log.d(
-                        "SDMovies",
-                        "SUCCESS - Pixeldrain extractor"
-                    )
-
-                    Log.d(
-                        "SDMovies",
-                        "Source = ${extractedLink.source}"
-                    )
-
-                    Log.d(
-                        "SDMovies",
-                        "Extracted URL = ${extractedLink.url}"
-                    )
-
-                    Log.d(
-                        "SDMovies",
-                        "Quality = ${extractedLink.quality}"
-                    )
-
-                    Log.d(
-                        "SDMovies",
-                        "M3U8 = ${extractedLink.isM3u8}"
-                    )
-
-                    callback.invoke(extractedLink)
-                }
-
-            } catch (e: Exception) {
-
-                Log.e(
+                Log.d(
                     "SDMovies",
-                    "Pixeldrain extraction failed: ${e.message}"
+                    "Filtered = $link"
                 )
+
+                continue
             }
 
-            continue
+            // -------------------------------------------------
+            // R2 DIRECT CDN
+            // -------------------------------------------------
+
+            if (lowerLink.contains(".r2.dev/")) {
+
+                foundLinks = true
+
+                Log.d(
+                    "SDMovies",
+                    "R2 [$qualityText] = $link"
+                )
+
+                callback.invoke(
+                    newExtractorLink(
+                        source = "SDMovies",
+                        name = "SDMovies ($qualityText - R2)",
+                        url = link,
+                        type = ExtractorLinkType.VIDEO
+                    ) {
+                        referer = dotflixUrl
+                        quality = dotflixQuality
+                    }
+                )
+
+                continue
+            }
+
+            // -------------------------------------------------
+            // GOOGLE CDN
+            // -------------------------------------------------
+
+            if (lowerLink.contains("googleusercontent.com")) {
+
+                foundLinks = true
+
+                Log.d(
+                    "SDMovies",
+                    "Google CDN [$qualityText]"
+                )
+
+                callback.invoke(
+                    newExtractorLink(
+                        source = "SDMovies",
+                        name = "SDMovies ($qualityText - Google CDN)",
+                        url = link,
+                        type = ExtractorLinkType.VIDEO
+                    ) {
+                        referer = dotflixUrl
+                        quality = dotflixQuality
+                    }
+                )
+
+                continue
+            }
+
+            // -------------------------------------------------
+            // PIXELDRAIN
+            // -------------------------------------------------
+
+            if (lowerLink.contains("pixeldrain")) {
+
+                Log.d(
+                    "SDMovies",
+                    "Pixeldrain [$qualityText] = $link"
+                )
+
+                try {
+
+                    loadExtractor(
+                        link,
+                        dotflixUrl,
+                        subtitleCallback
+                    ) { extractedLink ->
+
+                        foundLinks = true
+
+                        callback.invoke(
+                            extractedLink
+                        )
+
+                        Log.d(
+                            "SDMovies",
+                            "Pixeldrain extracted = ${extractedLink.url}"
+                        )
+                    }
+
+                } catch (e: Exception) {
+
+                    Log.e(
+                        "SDMovies",
+                        "Pixeldrain extraction failed: ${e.message}"
+                    )
+                }
+
+                continue
+            }
+
+            // -------------------------------------------------
+            // VIKINGFILE
+            // -------------------------------------------------
+
+            if (lowerLink.contains("vikingfile.com")) {
+
+                Log.d(
+                    "SDMovies",
+                    "Vikingfile [$qualityText] = $link"
+                )
+
+                try {
+
+                    loadExtractor(
+                        link,
+                        dotflixUrl,
+                        subtitleCallback
+                    ) { extractedLink ->
+
+                        foundLinks = true
+
+                        callback.invoke(
+                            extractedLink
+                        )
+
+                        Log.d(
+                            "SDMovies",
+                            "Vikingfile extracted = ${extractedLink.url}"
+                        )
+                    }
+
+                } catch (e: Exception) {
+
+                    Log.e(
+                        "SDMovies",
+                        "Vikingfile extraction failed: ${e.message}"
+                    )
+                }
+
+                continue
+            }
+
+            // -------------------------------------------------
+            // TRANSFER.IT
+            // -------------------------------------------------
+
+            if (lowerLink.contains("transfer.it")) {
+
+                Log.d(
+                    "SDMovies",
+                    "Transfer.it [$qualityText] = $link"
+                )
+
+                try {
+
+                    loadExtractor(
+                        link,
+                        dotflixUrl,
+                        subtitleCallback
+                    ) { extractedLink ->
+
+                        foundLinks = true
+
+                        callback.invoke(
+                            extractedLink
+                        )
+
+                        Log.d(
+                            "SDMovies",
+                            "Transfer.it extracted = ${extractedLink.url}"
+                        )
+                    }
+
+                } catch (e: Exception) {
+
+                    Log.e(
+                        "SDMovies",
+                        "Transfer.it extraction failed: ${e.message}"
+                    )
+                }
+
+                continue
+            }
+
+            Log.d(
+                "SDMovies",
+                "Unhandled URL = $link"
+            )
         }
-
-        // =====================================================
-        // VIKINGFILE / TRANSFER.IT / OTHER HOSTS
-        // =====================================================
-
-        Log.d(
-            "SDMovies",
-            "Not processed yet = $link"
-        )
     }
 
     // =========================================================
-    // FINAL RESULT
+    // FINAL
     // =========================================================
 
     Log.d(
@@ -629,7 +750,7 @@ val qualityVal = dotflixQuality
 
     Log.d(
         "SDMovies",
-        "Total URLs = ${allExtractedLinks.size}"
+        "Payloads processed = ${payloads.size}"
     )
 
     Log.d(
@@ -639,4 +760,4 @@ val qualityVal = dotflixQuality
 
     return foundLinks
 }
-  }
+ }
