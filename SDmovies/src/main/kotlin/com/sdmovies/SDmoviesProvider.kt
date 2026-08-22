@@ -150,7 +150,6 @@ class SDMoviesProvider : MainAPI() {
         }
     }
 
-    // 🎯 2. LOAD LINKS FUNCTION: Zero-POST Instant URL Stitching + Next.js Stream Extraction
     override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
@@ -166,45 +165,57 @@ class SDMoviesProvider : MainAPI() {
     val payloadMap = try {
         mapper.readValue<Map<String, String>>(data)
     } catch (e: Exception) {
-        Log.e("SDMovies", "Failed to parse payload: ${e.message}")
-        emptyMap()
-    }
-
-    if (payloadMap.isEmpty()) {
-        Log.w("SDMovies", "Payload is empty - no links to extract")
+        Log.e(
+            "SDMovies",
+            "Failed to parse payload: ${e.message}"
+        )
         return false
     }
 
-    // ---------------------------------------------------------
+    if (payloadMap.isEmpty()) {
+        Log.w(
+            "SDMovies",
+            "Payload is empty - no links to extract"
+        )
+        return false
+    }
+
+    // =========================================================
     // STEP A: Build Dotflix URL
-    // ---------------------------------------------------------
+    // =========================================================
 
     val domainPart = payloadMap["id"]?.trim('/') ?: run {
-        Log.w("SDMovies", "Missing payload field = id")
+        Log.w(
+            "SDMovies",
+            "Missing payload field = id"
+        )
         return false
     }
 
     val filePart = payloadMap["filename"]?.trim('/') ?: run {
-        Log.w("SDMovies", "Missing payload field = filename")
+        Log.w(
+            "SDMovies",
+            "Missing payload field = filename"
+        )
         return false
     }
 
-    val baseUrl =
-        if (!domainPart.startsWith("http")) {
-            "https://$domainPart"
-        } else {
-            domainPart
-        }
+    val baseUrl = if (domainPart.startsWith("http", true)) {
+        domainPart
+    } else {
+        "https://$domainPart"
+    }
 
     val dotflixUrl = "$baseUrl/$filePart"
 
-    Log.d("SDMovies", "Domain = $domainPart")
-    Log.d("SDMovies", "Filename = $filePart")
-    Log.d("SDMovies", "Generated URL = $dotflixUrl")
+    Log.d(
+        "SDMovies",
+        "Generated Dotflix URL = $dotflixUrl"
+    )
 
-    // ---------------------------------------------------------
+    // =========================================================
     // STEP B: Fetch Dotflix page
-    // ---------------------------------------------------------
+    // =========================================================
 
     val headers = mapOf(
         "User-Agent" to
@@ -214,67 +225,99 @@ class SDMoviesProvider : MainAPI() {
     )
 
     val dotflixHtml = try {
-        app.get(dotflixUrl, headers = headers).text
+
+        app.get(
+            dotflixUrl,
+            headers = headers
+        ).text
+
     } catch (e: Exception) {
-        Log.e("SDMovies", "Failed to fetch Dotflix page: ${e.message}")
+
+        Log.e(
+            "SDMovies",
+            "Failed to fetch Dotflix page: ${e.message}"
+        )
+
         return false
     }
 
-    Log.d("SDMovies", "Dotflix HTML length = ${dotflixHtml.length}")
+    Log.d(
+        "SDMovies",
+        "Dotflix HTML length = ${dotflixHtml.length}"
+    )
 
-    // ---------------------------------------------------------
+    // =========================================================
     // STEP C: Extract URLs from Next.js chunks
-    // ---------------------------------------------------------
+    // =========================================================
 
     val pushRegex =
         """self\.__next_f\.push\(\s*(\[.*?\])\s*\)"""
             .toRegex(RegexOption.DOT_MATCHES_ALL)
 
-    val pushBlocks = pushRegex.findAll(dotflixHtml)
-
     val allExtractedLinks = mutableSetOf<String>()
 
-    for (block in pushBlocks) {
+    for (block in pushRegex.findAll(dotflixHtml)) {
 
         val chunk = block.groupValues[1]
 
         val urlRegex =
-            """(https?://[^\s'<>\\)]+)""".toRegex()
+            """(https?://[^\s'<>\\)]+)"""
+                .toRegex()
 
         for (urlMatch in urlRegex.findAll(chunk)) {
 
             val cleanUrl = urlMatch.value
                 .replace("\\", "")
-                .trimEnd('"', '\'', '\\', ')')
+                .trimEnd(
+                    '"',
+                    '\'',
+                    '\\',
+                    ')',
+                    ','
+                )
 
             allExtractedLinks.add(cleanUrl)
         }
     }
 
-    Log.d("SDMovies", "Next.js push blocks found = ${pushBlocks.count()}")
-    Log.d("SDMovies", "Total extracted URLs = ${allExtractedLinks.size}")
+    Log.d(
+        "SDMovies",
+        "Total extracted URLs = ${allExtractedLinks.size}"
+    )
 
     if (allExtractedLinks.isEmpty()) {
-        Log.w("SDMovies", "No URLs found inside Next.js chunks")
+
+        Log.w(
+            "SDMovies",
+            "No URLs found inside Next.js chunks"
+        )
+
         return false
     }
 
     var foundLinks = false
 
-    // ---------------------------------------------------------
-    // STEP D: Process every extracted URL
-    // ---------------------------------------------------------
+    // =========================================================
+    // STEP D: Process extracted URLs
+    // =========================================================
 
     for (link in allExtractedLinks) {
 
         val lowerLink = link.lowercase()
 
-        Log.d("SDMovies", "----------------------------------------")
-        Log.d("SDMovies", "Processing URL = $link")
+        Log.d(
+            "SDMovies",
+            "----------------------------------------"
+        )
 
-        // -----------------------------------------------------
-        // FILTER
-        // -----------------------------------------------------
+        Log.d(
+            "SDMovies",
+            "Processing URL = $link"
+        )
+
+        // =====================================================
+        // FILTER: Ads / trackers / useless URLs
+        // =====================================================
 
         if (
             lowerLink.contains("adsboosters") ||
@@ -282,237 +325,240 @@ class SDMoviesProvider : MainAPI() {
             lowerLink.contains("w3.org") ||
             lowerLink.contains("dtflix.ink/logo") ||
             lowerLink.contains("t.me") ||
-            lowerLink.contains("telegram")
+            lowerLink.contains("telegram") ||
+            lowerLink.contains("googletagmanager.com") ||
+            lowerLink.contains("googlesyndication.com") ||
+            lowerLink == "https://dtflix.ink" ||
+            lowerLink == "https://dtflix.ink/share"
         ) {
-            Log.d("SDMovies", "FILTERED unwanted URL")
-            Log.d("SDMovies", "URL = $link")
+
+            Log.d(
+                "SDMovies",
+                "FILTERED unwanted URL = $link"
+            )
+
             continue
         }
 
-        // -----------------------------------------------------
-        // QUALITY
-        // -----------------------------------------------------
+        // =====================================================
+        // QUALITY DETECTION
+        // =====================================================
 
         val qualityText = when {
-            lowerLink.contains("1080p") -> "1080p"
-            lowerLink.contains("720p") -> "720p"
-            lowerLink.contains("480p") -> "480p"
-            else -> "HD"
+
+            lowerLink.contains("1080p") ->
+                "1080p"
+
+            lowerLink.contains("720p") ->
+                "720p"
+
+            lowerLink.contains("480p") ->
+                "480p"
+
+            else ->
+                "HD"
         }
 
         val qualityVal = when (qualityText) {
-            "1080p" -> Qualities.P1080.value
-            "720p" -> Qualities.P720.value
-            else -> Qualities.P720.value
+
+            "1080p" ->
+                Qualities.P1080.value
+
+            "720p" ->
+                Qualities.P720.value
+
+            "480p" ->
+                Qualities.P480.value
+
+            else ->
+                Qualities.Unknown.value
         }
 
-        Log.d("SDMovies", "Detected quality = $qualityText")
+        Log.d(
+            "SDMovies",
+            "Detected quality = $qualityText"
+        )
 
-        // -----------------------------------------------------
-        // 1. DIRECT CDN
-        // -----------------------------------------------------
+        // =====================================================
+        // 1. CLOUDFLARE R2 DIRECT CDN
+        // =====================================================
 
-        if (
-            lowerLink.contains("googleusercontent.com") ||
-            lowerLink.endsWith(".mkv") ||
-            lowerLink.endsWith(".mp4") ||
-            lowerLink.contains(".r2.dev")
-        ) {
+        if (lowerLink.contains(".r2.dev/")) {
 
-            Log.d("SDMovies", "TYPE = DIRECT CDN")
-            Log.d("SDMovies", "Extractor required = NO")
-            Log.d("SDMovies", "Sending direct video link")
+            Log.d(
+                "SDMovies",
+                "TYPE = R2 DIRECT CDN"
+            )
+
+            Log.d(
+                "SDMovies",
+                "URL = $link"
+            )
 
             foundLinks = true
 
             callback.invoke(
                 newExtractorLink(
                     source = "SDMovies",
-                    name = "SDMovies ($qualityText - Direct CDN)",
+                    name = "SDMovies ($qualityText - R2)",
                     url = link,
-                    referer = dotflixUrl,
-                    quality = qualityVal,
                     type = ExtractorLinkType.VIDEO
-                )
+                ) {
+                    this.referer = dotflixUrl
+                    this.quality = qualityVal
+                }
             )
 
-            Log.d("SDMovies", "SUCCESS - Direct CDN link added")
+            Log.d(
+                "SDMovies",
+                "SUCCESS - R2 link added"
+            )
+
+            continue
         }
 
-        // -----------------------------------------------------
-        // 2. PIXELDRAIN
-        // -----------------------------------------------------
+        // =====================================================
+        // 2. GOOGLEUSERCONTENT DIRECT CDN
+        // =====================================================
 
-        else if (lowerLink.contains("pixeldrain")) {
+        if (lowerLink.contains("googleusercontent.com")) {
 
-            Log.d("SDMovies", "HOST = PIXELDRAIN")
-            Log.d("SDMovies", "CloudStream extractor attempt STARTED")
-            Log.d("SDMovies", "URL = $link")
+            Log.d(
+                "SDMovies",
+                "TYPE = GOOGLE CDN"
+            )
+
+            Log.d(
+                "SDMovies",
+                "URL = $link"
+            )
 
             foundLinks = true
 
-            loadExtractor(
-                link,
-                dotflixUrl,
-                subtitleCallback
-            ) { extractedLink ->
+            callback.invoke(
+                newExtractorLink(
+                    source = "SDMovies",
+                    name = "SDMovies ($qualityText - Google CDN)",
+                    url = link,
+                    type = ExtractorLinkType.VIDEO
+                ) {
+                    this.referer = dotflixUrl
+                    this.quality = qualityVal
+                }
+            )
 
-                Log.d("SDMovies", "SUCCESS - Pixeldrain extractor")
-                Log.d("SDMovies", "Extractor source = ${extractedLink.source}")
-                Log.d("SDMovies", "Extracted URL = ${extractedLink.url}")
-                Log.d("SDMovies", "Quality = ${extractedLink.quality}")
-                Log.d("SDMovies", "M3U8 = ${extractedLink.isM3u8}")
+            Log.d(
+                "SDMovies",
+                "SUCCESS - Google CDN link added"
+            )
 
-                callback.invoke(
-                    newExtractorLink(
-                        source = "SDMovies",
-                        name = "SDMovies ($qualityText - Pixeldrain)",
-                        url = extractedLink.url,
-                        referer = extractedLink.referer,
-                        quality = extractedLink.quality,
-                        type = if (extractedLink.isM3u8) {
-                            ExtractorLinkType.M3U8
-                        } else {
-                            ExtractorLinkType.VIDEO
-                        }
-                    )
-                )
-
-                Log.d("SDMovies", "Pixeldrain link sent to CloudStream UI")
-            }
+            continue
         }
 
-        // -----------------------------------------------------
-        // 3. VIKINGFILE
-        // -----------------------------------------------------
+        // =====================================================
+        // 3. PIXELDRAIN
+        // =====================================================
 
-        else if (lowerLink.contains("vikingfile")) {
+        if (lowerLink.contains("pixeldrain")) {
 
-            Log.d("SDMovies", "HOST = VIKINGFILE")
-            Log.d("SDMovies", "CloudStream extractor attempt STARTED")
-            Log.d("SDMovies", "URL = $link")
+            Log.d(
+                "SDMovies",
+                "HOST = PIXELDRAIN"
+            )
+
+            Log.d(
+                "SDMovies",
+                "Trying built-in CloudStream extractor"
+            )
+
+            Log.d(
+                "SDMovies",
+                "URL = $link"
+            )
 
             foundLinks = true
 
-            loadExtractor(
-                link,
-                dotflixUrl,
-                subtitleCallback
-            ) { extractedLink ->
+            try {
 
-                Log.d("SDMovies", "SUCCESS - Vikingfile extractor")
-                Log.d("SDMovies", "Extractor source = ${extractedLink.source}")
-                Log.d("SDMovies", "Extracted URL = ${extractedLink.url}")
-                Log.d("SDMovies", "Quality = ${extractedLink.quality}")
-                Log.d("SDMovies", "M3U8 = ${extractedLink.isM3u8}")
+                loadExtractor(
+                    link,
+                    dotflixUrl,
+                    subtitleCallback
+                ) { extractedLink ->
 
-                callback.invoke(
-                    newExtractorLink(
-                        source = "SDMovies",
-                        name = "SDMovies ($qualityText - Vikingfile)",
-                        url = extractedLink.url,
-                        referer = extractedLink.referer,
-                        quality = extractedLink.quality,
-                        type = if (extractedLink.isM3u8) {
-                            ExtractorLinkType.M3U8
-                        } else {
-                            ExtractorLinkType.VIDEO
-                        }
+                    Log.d(
+                        "SDMovies",
+                        "SUCCESS - Pixeldrain extractor"
                     )
-                )
 
-                Log.d("SDMovies", "Vikingfile link sent to CloudStream UI")
-            }
-        }
-
-        // -----------------------------------------------------
-        // 4. TRANSFER.IT / DOOD / STREAMWISH
-        // -----------------------------------------------------
-
-        else if (
-            lowerLink.contains("transfer.it") ||
-            lowerLink.contains("dood") ||
-            lowerLink.contains("streamwish")
-        ) {
-
-            val detectedHost = when {
-                lowerLink.contains("transfer.it") -> "TRANSFER.IT"
-                lowerLink.contains("dood") -> "DOOD"
-                lowerLink.contains("streamwish") -> "STREAMWISH"
-                else -> "UNKNOWN"
-            }
-
-            Log.d("SDMovies", "HOST = $detectedHost")
-            Log.d("SDMovies", "CloudStream extractor attempt STARTED")
-            Log.d("SDMovies", "URL = $link")
-
-            foundLinks = true
-
-            loadExtractor(
-                link,
-                dotflixUrl,
-                subtitleCallback
-            ) { extractedLink ->
-
-                Log.d(
-                    "SDMovies", "SUCCESS - $detectedHost extractor"
-                )
-
-                Log.d(
-                    "SDMovies", "Extractor source = ${extractedLink.source}"
-                )
-
-                Log.d(
-                    "SDMovies", "Extracted URL = ${extractedLink.url}"
-                )
-
-                Log.d(
-                    "SDMovies", "Quality = ${extractedLink.quality}"
-                )
-
-                Log.d(
-                    "SDMovies", "M3U8 = ${extractedLink.isM3u8}"
-                )
-
-                callback.invoke(
-                    newExtractorLink(
-                        source = "SDMovies",
-                        name = "SDMovies ($qualityText - ${extractedLink.source})",
-                        url = extractedLink.url,
-                        referer = extractedLink.referer,
-                        quality = extractedLink.quality,
-                        type = if (extractedLink.isM3u8) {
-                            ExtractorLinkType.M3U8
-                        } else {
-                            ExtractorLinkType.VIDEO
-                        }
+                    Log.d(
+                        "SDMovies",
+                        "Source = ${extractedLink.source}"
                     )
-                )
 
-                Log.d(
-                    "SDMovies", "$detectedHost link sent to CloudStream UI"
+                    Log.d(
+                        "SDMovies",
+                        "Extracted URL = ${extractedLink.url}"
+                    )
+
+                    Log.d(
+                        "SDMovies",
+                        "Quality = ${extractedLink.quality}"
+                    )
+
+                    Log.d(
+                        "SDMovies",
+                        "M3U8 = ${extractedLink.isM3u8}"
+                    )
+
+                    callback.invoke(extractedLink)
+                }
+
+            } catch (e: Exception) {
+
+                Log.e(
+                    "SDMovies",
+                    "Pixeldrain extraction failed: ${e.message}"
                 )
             }
+
+            continue
         }
 
-        // -----------------------------------------------------
-        // 5. UNKNOWN HOST
-        // -----------------------------------------------------
+        // =====================================================
+        // VIKINGFILE / TRANSFER.IT / OTHER HOSTS
+        // =====================================================
 
-        else {
-
-            Log.w("SDMovies", "UNKNOWN HOST")
-            Log.w("SDMovies", "No CloudStream extractor mapping in this provider")
-            Log.w("SDMovies", "MANUAL EXTRACTOR MAY BE REQUIRED")
-            Log.w("SDMovies", "URL = $link")
-        }
+        Log.d(
+            "SDMovies",
+            "Not processed yet = $link"
+        )
     }
 
-    Log.d("SDMovies", "========================================")
-    Log.d("SDMovies", "Extraction finished")
-    Log.d("SDMovies", "Extracted URL count = ${allExtractedLinks.size}")
-    Log.d("SDMovies", "foundLinks = $foundLinks")
+    // =========================================================
+    // FINAL RESULT
+    // =========================================================
+
+    Log.d(
+        "SDMovies",
+        "========================================"
+    )
+
+    Log.d(
+        "SDMovies",
+        "Extraction finished"
+    )
+
+    Log.d(
+        "SDMovies",
+        "Total URLs = ${allExtractedLinks.size}"
+    )
+
+    Log.d(
+        "SDMovies",
+        "foundLinks = $foundLinks"
+    )
 
     return foundLinks
 }
-}
+  }
