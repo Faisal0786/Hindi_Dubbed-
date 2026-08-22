@@ -156,6 +156,12 @@ object SourceRegistry {
             executeAnime = { res, subCb, cb -> invokeBollyflix(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
         SourceProviderDef(
+            key = "p_sdmovies", displayName = "SDMovies", category = ProviderCategory.HINDI,
+            executeStandard = { res, subCb, cb -> invokeSdmovies(res.title, res.year, res.season, res.episode, subCb, cb) },
+            executeAnime = { res, subCb, cb -> invokeSdmovies(res.imdbTitle, res.imdbYear, res.imdbSeason, res.imdbEpisode, subCb, cb) }
+        ),
+
+        SourceProviderDef(
             key = "p_topmovies", displayName = "TopMovies", category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (res.isBollywood) invokeTopMovies(res.imdbId, res.season, res.episode, subCb, cb) }
         ),
