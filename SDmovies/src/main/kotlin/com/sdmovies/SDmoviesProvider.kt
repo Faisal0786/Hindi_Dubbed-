@@ -246,6 +246,43 @@ class SDMoviesProvider : MainAPI() {
         "Dotflix HTML length = ${dotflixHtml.length}"
     )
 
+// =========================================================
+// QUALITY FROM DOTFLIX PAGE
+// =========================================================
+
+val dotflixQuality = when {
+    Regex("""\b2160p\b""", RegexOption.IGNORE_CASE)
+        .containsMatchIn(dotflixHtml) -> Qualities.P2160.value
+
+    Regex("""\b1440p\b""", RegexOption.IGNORE_CASE)
+        .containsMatchIn(dotflixHtml) -> Qualities.P1440.value
+
+    Regex("""\b1080p\b""", RegexOption.IGNORE_CASE)
+        .containsMatchIn(dotflixHtml) -> Qualities.P1080.value
+
+    Regex("""\b720p\b""", RegexOption.IGNORE_CASE)
+        .containsMatchIn(dotflixHtml) -> Qualities.P720.value
+
+    Regex("""\b480p\b""", RegexOption.IGNORE_CASE)
+        .containsMatchIn(dotflixHtml) -> Qualities.P480.value
+
+    else -> Qualities.Unknown.value
+}
+
+val dotflixQualityText = when (dotflixQuality) {
+    Qualities.P2160.value -> "2160p"
+    Qualities.P1440.value -> "1440p"
+    Qualities.P1080.value -> "1080p"
+    Qualities.P720.value -> "720p"
+    Qualities.P480.value -> "480p"
+    else -> "HD"
+}
+
+Log.d(
+    "SDMovies",
+    "Dotflix detected quality = $dotflixQualityText"
+)
+
     // =========================================================
     // STEP C: Extract URLs from Next.js chunks
     // =========================================================
@@ -344,35 +381,8 @@ class SDMoviesProvider : MainAPI() {
         // QUALITY DETECTION
         // =====================================================
 
-        val qualityText = when {
-
-            lowerLink.contains("1080p") ->
-                "1080p"
-
-            lowerLink.contains("720p") ->
-                "720p"
-
-            lowerLink.contains("480p") ->
-                "480p"
-
-            else ->
-                "HD"
-        }
-
-        val qualityVal = when (qualityText) {
-
-            "1080p" ->
-                Qualities.P1080.value
-
-            "720p" ->
-                Qualities.P720.value
-
-            "480p" ->
-                Qualities.P480.value
-
-            else ->
-                Qualities.Unknown.value
-        }
+        val qualityText = dotflixQualityText
+val qualityVal = dotflixQuality
 
         Log.d(
             "SDMovies",
