@@ -6,6 +6,7 @@ import org.json.JSONObject
 import com.hindi.providers.BuildConfig
 
 // ── 1. Static APIs ──────────────────────────────────────────
+const val sdmoviesAPI = "https://sd2.sdmoviespoint.tours"
 const val malsyncAPI = "https://api.malsync.moe"
 const val tokyoInsiderAPI = "https://www.tokyoinsider.com"
 const val WYZIESubsAPI = "https://sub.wyzie.io"
@@ -101,3 +102,4 @@ val zinkmoviesAPI get() = api("zinkmovies")
 val animedaoAPI get() = api("animedao")
 val mlsbdAPI get() = api("mlsbd")
 val fibwatchBaseUrl get() = api("fibwatch")
+
