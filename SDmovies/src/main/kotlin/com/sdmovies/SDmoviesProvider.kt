@@ -1,5 +1,6 @@
 package com.sdmovies
 
+import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -159,18 +160,18 @@ class SDMoviesProvider : MainAPI() {
 
     val mapper = jacksonObjectMapper()
 
-    log.d("SDMovies: ================= LOAD LINKS =================")
-    log.d("SDMovies: Received data length = ${data.length}")
+    Log.d("SDMovies", "================= LOAD LINKS =================")
+    Log.d("SDMovies", "Received data length = ${data.length}")
 
     val payloadMap = try {
         mapper.readValue<Map<String, String>>(data)
     } catch (e: Exception) {
-        log.e("SDMovies: Failed to parse payload: ${e.message}")
+        Log.e("SDMovies", "Failed to parse payload: ${e.message}")
         emptyMap()
     }
 
     if (payloadMap.isEmpty()) {
-        log.w("SDMovies: Payload is empty - no links to extract")
+        Log.w("SDMovies", "Payload is empty - no links to extract")
         return false
     }
 
@@ -179,12 +180,12 @@ class SDMoviesProvider : MainAPI() {
     // ---------------------------------------------------------
 
     val domainPart = payloadMap["id"]?.trim('/') ?: run {
-        log.w("SDMovies: Missing payload field = id")
+        Log.w("SDMovies", "Missing payload field = id")
         return false
     }
 
     val filePart = payloadMap["filename"]?.trim('/') ?: run {
-        log.w("SDMovies: Missing payload field = filename")
+        Log.w("SDMovies", "Missing payload field = filename")
         return false
     }
 
@@ -197,9 +198,9 @@ class SDMoviesProvider : MainAPI() {
 
     val dotflixUrl = "$baseUrl/$filePart"
 
-    log.d("SDMovies: Domain = $domainPart")
-    log.d("SDMovies: Filename = $filePart")
-    log.d("SDMovies: Generated URL = $dotflixUrl")
+    Log.d("SDMovies", "Domain = $domainPart")
+    Log.d("SDMovies", "Filename = $filePart")
+    Log.d("SDMovies", "Generated URL = $dotflixUrl")
 
     // ---------------------------------------------------------
     // STEP B: Fetch Dotflix page
@@ -215,11 +216,11 @@ class SDMoviesProvider : MainAPI() {
     val dotflixHtml = try {
         app.get(dotflixUrl, headers = headers).text
     } catch (e: Exception) {
-        log.e("SDMovies: Failed to fetch Dotflix page: ${e.message}")
+        Log.e("SDMovies", "Failed to fetch Dotflix page: ${e.message}")
         return false
     }
 
-    log.d("SDMovies: Dotflix HTML length = ${dotflixHtml.length}")
+    Log.d("SDMovies", "Dotflix HTML length = ${dotflixHtml.length}")
 
     // ---------------------------------------------------------
     // STEP C: Extract URLs from Next.js chunks
@@ -250,11 +251,11 @@ class SDMoviesProvider : MainAPI() {
         }
     }
 
-    log.d("SDMovies: Next.js push blocks found = ${pushBlocks.count()}")
-    log.d("SDMovies: Total extracted URLs = ${allExtractedLinks.size}")
+    Log.d("SDMovies", "Next.js push blocks found = ${pushBlocks.count()}")
+    Log.d("SDMovies", "Total extracted URLs = ${allExtractedLinks.size}")
 
     if (allExtractedLinks.isEmpty()) {
-        log.w("SDMovies: No URLs found inside Next.js chunks")
+        Log.w("SDMovies", "No URLs found inside Next.js chunks")
         return false
     }
 
@@ -268,8 +269,8 @@ class SDMoviesProvider : MainAPI() {
 
         val lowerLink = link.lowercase()
 
-        log.d("SDMovies: ----------------------------------------")
-        log.d("SDMovies: Processing URL = $link")
+        Log.d("SDMovies", "----------------------------------------")
+        Log.d("SDMovies", "Processing URL = $link")
 
         // -----------------------------------------------------
         // FILTER
@@ -283,8 +284,8 @@ class SDMoviesProvider : MainAPI() {
             lowerLink.contains("t.me") ||
             lowerLink.contains("telegram")
         ) {
-            log.d("SDMovies: FILTERED unwanted URL")
-            log.d("SDMovies: URL = $link")
+            Log.d("SDMovies", "FILTERED unwanted URL")
+            Log.d("SDMovies", "URL = $link")
             continue
         }
 
@@ -305,7 +306,7 @@ class SDMoviesProvider : MainAPI() {
             else -> Qualities.P720.value
         }
 
-        log.d("SDMovies: Detected quality = $qualityText")
+        Log.d("SDMovies", "Detected quality = $qualityText")
 
         // -----------------------------------------------------
         // 1. DIRECT CDN
@@ -318,9 +319,9 @@ class SDMoviesProvider : MainAPI() {
             lowerLink.contains(".r2.dev")
         ) {
 
-            log.d("SDMovies: TYPE = DIRECT CDN")
-            log.d("SDMovies: Extractor required = NO")
-            log.d("SDMovies: Sending direct video link")
+            Log.d("SDMovies", "TYPE = DIRECT CDN")
+            Log.d("SDMovies", "Extractor required = NO")
+            Log.d("SDMovies", "Sending direct video link")
 
             foundLinks = true
 
@@ -335,7 +336,7 @@ class SDMoviesProvider : MainAPI() {
                 )
             )
 
-            log.d("SDMovies: SUCCESS - Direct CDN link added")
+            Log.d("SDMovies", "SUCCESS - Direct CDN link added")
         }
 
         // -----------------------------------------------------
@@ -344,9 +345,9 @@ class SDMoviesProvider : MainAPI() {
 
         else if (lowerLink.contains("pixeldrain")) {
 
-            log.d("SDMovies: HOST = PIXELDRAIN")
-            log.d("SDMovies: CloudStream extractor attempt STARTED")
-            log.d("SDMovies: URL = $link")
+            Log.d("SDMovies", "HOST = PIXELDRAIN")
+            Log.d("SDMovies", "CloudStream extractor attempt STARTED")
+            Log.d("SDMovies", "URL = $link")
 
             foundLinks = true
 
@@ -356,11 +357,11 @@ class SDMoviesProvider : MainAPI() {
                 subtitleCallback
             ) { extractedLink ->
 
-                log.d("SDMovies: SUCCESS - Pixeldrain extractor")
-                log.d("SDMovies: Extractor source = ${extractedLink.source}")
-                log.d("SDMovies: Extracted URL = ${extractedLink.url}")
-                log.d("SDMovies: Quality = ${extractedLink.quality}")
-                log.d("SDMovies: M3U8 = ${extractedLink.isM3u8}")
+                Log.d("SDMovies", "SUCCESS - Pixeldrain extractor")
+                Log.d("SDMovies", "Extractor source = ${extractedLink.source}")
+                Log.d("SDMovies", "Extracted URL = ${extractedLink.url}")
+                Log.d("SDMovies", "Quality = ${extractedLink.quality}")
+                Log.d("SDMovies", "M3U8 = ${extractedLink.isM3u8}")
 
                 callback.invoke(
                     newExtractorLink(
@@ -377,7 +378,7 @@ class SDMoviesProvider : MainAPI() {
                     )
                 )
 
-                log.d("SDMovies: Pixeldrain link sent to CloudStream UI")
+                Log.d("SDMovies", "Pixeldrain link sent to CloudStream UI")
             }
         }
 
@@ -387,9 +388,9 @@ class SDMoviesProvider : MainAPI() {
 
         else if (lowerLink.contains("vikingfile")) {
 
-            log.d("SDMovies: HOST = VIKINGFILE")
-            log.d("SDMovies: CloudStream extractor attempt STARTED")
-            log.d("SDMovies: URL = $link")
+            Log.d("SDMovies", "HOST = VIKINGFILE")
+            Log.d("SDMovies", "CloudStream extractor attempt STARTED")
+            Log.d("SDMovies", "URL = $link")
 
             foundLinks = true
 
@@ -399,11 +400,11 @@ class SDMoviesProvider : MainAPI() {
                 subtitleCallback
             ) { extractedLink ->
 
-                log.d("SDMovies: SUCCESS - Vikingfile extractor")
-                log.d("SDMovies: Extractor source = ${extractedLink.source}")
-                log.d("SDMovies: Extracted URL = ${extractedLink.url}")
-                log.d("SDMovies: Quality = ${extractedLink.quality}")
-                log.d("SDMovies: M3U8 = ${extractedLink.isM3u8}")
+                Log.d("SDMovies", "SUCCESS - Vikingfile extractor")
+                Log.d("SDMovies", "Extractor source = ${extractedLink.source}")
+                Log.d("SDMovies", "Extracted URL = ${extractedLink.url}")
+                Log.d("SDMovies", "Quality = ${extractedLink.quality}")
+                Log.d("SDMovies", "M3U8 = ${extractedLink.isM3u8}")
 
                 callback.invoke(
                     newExtractorLink(
@@ -420,7 +421,7 @@ class SDMoviesProvider : MainAPI() {
                     )
                 )
 
-                log.d("SDMovies: Vikingfile link sent to CloudStream UI")
+                Log.d("SDMovies", "Vikingfile link sent to CloudStream UI")
             }
         }
 
@@ -441,9 +442,9 @@ class SDMoviesProvider : MainAPI() {
                 else -> "UNKNOWN"
             }
 
-            log.d("SDMovies: HOST = $detectedHost")
-            log.d("SDMovies: CloudStream extractor attempt STARTED")
-            log.d("SDMovies: URL = $link")
+            Log.d("SDMovies", "HOST = $detectedHost")
+            Log.d("SDMovies", "CloudStream extractor attempt STARTED")
+            Log.d("SDMovies", "URL = $link")
 
             foundLinks = true
 
@@ -453,24 +454,24 @@ class SDMoviesProvider : MainAPI() {
                 subtitleCallback
             ) { extractedLink ->
 
-                log.d(
-                    "SDMovies: SUCCESS - $detectedHost extractor"
+                Log.d(
+                    "SDMovies", "SUCCESS - $detectedHost extractor"
                 )
 
-                log.d(
-                    "SDMovies: Extractor source = ${extractedLink.source}"
+                Log.d(
+                    "SDMovies", "Extractor source = ${extractedLink.source}"
                 )
 
-                log.d(
-                    "SDMovies: Extracted URL = ${extractedLink.url}"
+                Log.d(
+                    "SDMovies", "Extracted URL = ${extractedLink.url}"
                 )
 
-                log.d(
-                    "SDMovies: Quality = ${extractedLink.quality}"
+                Log.d(
+                    "SDMovies", "Quality = ${extractedLink.quality}"
                 )
 
-                log.d(
-                    "SDMovies: M3U8 = ${extractedLink.isM3u8}"
+                Log.d(
+                    "SDMovies", "M3U8 = ${extractedLink.isM3u8}"
                 )
 
                 callback.invoke(
@@ -488,8 +489,8 @@ class SDMoviesProvider : MainAPI() {
                     )
                 )
 
-                log.d(
-                    "SDMovies: $detectedHost link sent to CloudStream UI"
+                Log.d(
+                    "SDMovies", "$detectedHost link sent to CloudStream UI"
                 )
             }
         }
@@ -500,17 +501,17 @@ class SDMoviesProvider : MainAPI() {
 
         else {
 
-            log.w("SDMovies: UNKNOWN HOST")
-            log.w("SDMovies: No CloudStream extractor mapping in this provider")
-            log.w("SDMovies: MANUAL EXTRACTOR MAY BE REQUIRED")
-            log.w("SDMovies: URL = $link")
+            Log.w("SDMovies", "UNKNOWN HOST")
+            Log.w("SDMovies", "No CloudStream extractor mapping in this provider")
+            Log.w("SDMovies", "MANUAL EXTRACTOR MAY BE REQUIRED")
+            Log.w("SDMovies", "URL = $link")
         }
     }
 
-    log.d("SDMovies: ========================================")
-    log.d("SDMovies: Extraction finished")
-    log.d("SDMovies: Extracted URL count = ${allExtractedLinks.size}")
-    log.d("SDMovies: foundLinks = $foundLinks")
+    Log.d("SDMovies", "========================================")
+    Log.d("SDMovies", "Extraction finished")
+    Log.d("SDMovies", "Extracted URL count = ${allExtractedLinks.size}")
+    Log.d("SDMovies", "foundLinks = $foundLinks")
 
     return foundLinks
 }
