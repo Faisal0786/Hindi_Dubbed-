@@ -202,20 +202,20 @@ class SDMoviesProvider : MainAPI() {
             }
         } else {
             val firstForm = forms.firstOrNull()
-            val payloadMap = firstForm?.select("input")?.associate {
-                it.attr("name") to it.attr("value")
-            } ?: emptyMap()
+val payloadMap = firstForm?.select("input")?.associate {
+    it.attr("name") to it.attr("value")
+} ?: emptyMap()
 
-            val movieData = payloadMap.toJson()
+val movieData = payloadMap.toJson()
 
-            return newMovieLoadResponse(
-                rawTitle,
-                url,
-                TvType.Movie,
-                movieData
-            ) {
-                this.posterUrl = posterUrl
-            }
+return newMovieLoadResponse(
+    rawTitle,
+    url,
+    TvType.Movie,
+    movieData
+){
+    this.posterUrl = posterUrl
+}
         }
     }
 
@@ -231,8 +231,7 @@ class SDMoviesProvider : MainAPI() {
     Log.d("SDMovies", "================= LOAD LINKS =================")
     Log.d("SDMovies", "Received data length = ${data.length}")
 
-    val payloadMap = try {
-        mapper.readValue<Map<String, String>>(data)
+    val payloads = mapper.readValue<List<Map<String, String>>>(data)
     } catch (e: Exception) {
         Log.e(
             "SDMovies",
