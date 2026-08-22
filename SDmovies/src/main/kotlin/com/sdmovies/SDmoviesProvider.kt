@@ -48,9 +48,19 @@ class SDMoviesProvider : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-        "/wp-json/wp/v2/posts?per_page=30" to "Latest Uploads"
-    )
-
+    "/category/latestt/" to "Latest",
+    "/category/bollywood/" to "Bollywood",
+    "/category/hollywooddd/" to "Hollywood",
+    "/category/pakistan/" to "Pakistani",
+    "/category/punjabi/" to "Punjabi",
+    "/category/telugu/" to "Telugu",
+    "/category/tamil/" to "Tamil",
+    "/category/malayalam/" to "Malayalam",
+    "/category/kannada/" to "Kannada",
+    "/category/hd-movies-sdd/" to "HD Movies",
+    "/category/seasonss/" to "Seasons",
+    "/category/dual-audio/" to "Dual Audio"
+)
     override suspend fun search(query: String): List<SearchResponse> {
         val json = app.get("$mainUrl/wp-json/wp/v2/posts?search=$query").text
         val mapper = jacksonObjectMapper()
@@ -73,32 +83,91 @@ class SDMoviesProvider : MainAPI() {
     }
 
     override suspend fun getMainPage(
-        page: Int,
-        request: MainPageRequest
-    ): HomePageResponse {
-        val url = "$mainUrl${request.data}&page=$page"
-        val json = app.get(url).text
-        val mapper = jacksonObjectMapper()
+    page: Int,
+    request: MainPageRequest
+): HomePageResponse {
 
-        val posts: List<WpPost> = mapper.readValue(
-            json,
-            mapper.typeFactory.constructCollectionType(List::class.java, WpPost::class.java)
+    val basePath = request.data.trimEnd('/')
+
+    val url = if (page <= 1) {
+        "$mainUrl$basePath/"
+    } else {
+        "$mainUrl$basePath/page/$page/"
+    }
+
+    Log.d(
+        "SDMovies",
+        "Loading category: ${request.name}"
+    )
+
+    Log.d(
+        "SDMovies",
+        "Category URL: $url"
+    )
+
+    val document = try {
+        app.get(url).document
+    } catch (e: Exception) {
+        Log.e(
+            "SDMovies",
+            "Category load failed: ${e.message}"
         )
+        return newHomePageResponse(
+            request.name,
+            emptyList()
+        )
+    }
 
-        val home = posts.map {
-            val title = it.title?.get("rendered")?.toString() ?: ""
+    val home = document
+        .select("main#main .site-main h3 a")
+        .mapNotNull { titleLink ->
+
+            val postUrl = titleLink
+                .attr("href")
+                .trim()
+
+            val title = titleLink
+                .text()
+                .trim()
+
+            if (postUrl.isBlank() || title.isBlank()) {
+                return@mapNotNull null
+            }
+
+            val card = titleLink
+                .parent()
+                ?.parent()
+                ?.parent()
+
+            val poster = card
+                ?.selectFirst("img")
+                ?.attr("src")
+                ?.takeIf { it.isNotBlank() }
+                ?: ""
+
             newMovieSearchResponse(
                 title,
-                it.link,
-                if (isSeries(title)) TvType.TvSeries else TvType.Movie
+                postUrl,
+                if (isSeries(title)) {
+                    TvType.TvSeries
+                } else {
+                    TvType.Movie
+                }
             ) {
-                posterUrl = extractPoster(it.content?.get("rendered")?.toString() ?: "")
+                posterUrl = poster
             }
         }
 
-        return newHomePageResponse(request.name, home)
-    }
+    Log.d(
+        "SDMovies",
+        "${request.name}: ${home.size} items found"
+    )
 
+    return newHomePageResponse(
+        request.name,
+        home
+    )
+}
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
         val rawTitle = document.select("title").text().replace("Download ", "")
