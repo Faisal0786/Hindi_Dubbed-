@@ -225,7 +225,7 @@ return newMovieLoadResponse(
 
         }
     
-
+}
     override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
@@ -255,40 +255,49 @@ return newMovieLoadResponse(
 
     val payloads: List<Map<String, String>> = try {
 
-        val root = mapper.readTree(data)
+    val root = mapper.readTree(data)
 
-        if (root.isArray) {
+    if (root.isArray) {
 
-            root.mapNotNull { node ->
-                mapper.convertValue<Map<String, String>>(node)
+        root.mapNotNull { node ->
+
+            if (!node.isObject) {
+                return@mapNotNull null
             }
 
-        } else if (root.isObject) {
-
-            listOf(
-                mapper.convertValue<Map<String, String>>(root)
-            )
-
-        } else {
-
-            Log.e(
-                "SDMovies",
-                "Invalid payload JSON"
-            )
-
-            return false
+            node.fields().asSequence().associate { entry ->
+                entry.key to entry.value.asText()
+            }
         }
 
-    } catch (e: Exception) {
+    } else if (root.isObject) {
+
+        listOf(
+            root.fields().asSequence().associate { entry ->
+                entry.key to entry.value.asText()
+            }
+        )
+
+    } else {
 
         Log.e(
             "SDMovies",
-            "Failed to parse payload: ${e.message}",
-            e
+            "Invalid payload JSON"
         )
 
         return false
     }
+
+} catch (e: Exception) {
+
+    Log.e(
+        "SDMovies",
+        "Failed to parse payload: ${e.message}",
+        e
+    )
+
+    return false
+}
 
     if (payloads.isEmpty()) {
 
