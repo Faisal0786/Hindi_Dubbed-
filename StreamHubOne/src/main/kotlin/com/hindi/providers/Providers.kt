@@ -284,6 +284,131 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
         }
     }
 
+//Sdmoviepoint 
+    suspend fun invokeSdmovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        if (title == null) return
+
+        // 1. Search Query: HTML page se movie/series dhundna
+        val searchUrl = "$sdmoviesAPI/?s=${title.replace(" ", "+")}"
+        val searchDoc = app.get(searchUrl).document
+
+        // Match the exact title & year
+        val matchedUrl = searchDoc.select("h2.title > a, div.post-title > a, article a").firstOrNull {
+            val text = it.text().lowercase()
+            text.contains(title.lowercase()) && (year == null || text.contains(year.toString()))
+        }?.attr("href") ?: return
+
+        Log.d("SDMovies", "Matched URL: $matchedUrl")
+
+        // 2. Load Title Page
+        val document = app.get(matchedUrl).document
+        val forms = document.select("div.dlarea form")
+        
+        if (forms.isEmpty()) return
+
+        // 3. Filter Forms: (Movies ke liye saari, Series ke liye sirf specific episode ki form)
+        val targetForms = if (season == null) {
+            forms 
+        } else {
+            val epIndex = (episode ?: 1) - 1
+            forms.getOrNull(epIndex)?.let { listOf(it) } ?: emptyList()
+        }
+
+        // 4. Process Every Matched Form Parallelly
+        targetForms.safeAmap { form ->
+            val payloadMap = form.select("input").associate {
+                it.attr("name") to it.attr("value")
+            }
+
+            val domainPart = payloadMap["id"]?.trim('/')?.takeIf { it.isNotBlank() } ?: return@safeAmap
+            val filePart = payloadMap["filename"]?.trim('/')?.takeIf { it.isNotBlank() } ?: return@safeAmap
+
+            val baseUrl = if (domainPart.startsWith("http", ignoreCase = true)) domainPart else "https://$domainPart"
+            val dotflixUrl = "$baseUrl/$filePart"
+
+            val headers = mapOf("User-Agent" to USER_AGENT)
+
+            val dotflixHtml = try {
+                app.get(dotflixUrl, headers = headers).text
+            } catch (e: Exception) {
+                Log.e("SDMovies", "Dotflix fetch failed: ${e.message}")
+                return@safeAmap
+            }
+
+            // 5. Detect Quality
+            val dotflixQuality = when {
+                Regex("""\b2160p\b""", RegexOption.IGNORE_CASE).containsMatchIn(dotflixHtml) -> Qualities.P2160.value
+                Regex("""\b1440p\b""", RegexOption.IGNORE_CASE).containsMatchIn(dotflixHtml) -> Qualities.P1440.value
+                Regex("""\b1080p\b""", RegexOption.IGNORE_CASE).containsMatchIn(dotflixHtml) -> Qualities.P1080.value
+                Regex("""\b720p\b""", RegexOption.IGNORE_CASE).containsMatchIn(dotflixHtml) -> Qualities.P720.value
+                Regex("""\b480p\b""", RegexOption.IGNORE_CASE).containsMatchIn(dotflixHtml) -> Qualities.P480.value
+                else -> Qualities.Unknown.value
+            }
+
+            val qualityText = when (dotflixQuality) {
+                Qualities.P2160.value -> "2160p"
+                Qualities.P1440.value -> "1440p"
+                Qualities.P1080.value -> "1080p"
+                Qualities.P720.value -> "720p"
+                Qualities.P480.value -> "480p"
+                else -> "HD"
+            }
+
+            // 6. Extract Next.js Server Links
+            val pushRegex = """self\.__next_f\.push\(\s*(\[.*?\])\s*\)""".toRegex(RegexOption.DOT_MATCHES_ALL)
+            val urlRegex = """(https?://[^\s'<>\\)]+)""".toRegex()
+            val extractedLinks = linkedSetOf<String>()
+
+            for (block in pushRegex.findAll(dotflixHtml)) {
+                val chunk = block.groupValues[1]
+                for (urlMatch in urlRegex.findAll(chunk)) {
+                    val cleanUrl = urlMatch.value.replace("\\", "").trimEnd('"', '\'', '\\', ')', ',')
+                    extractedLinks.add(cleanUrl)
+                }
+            }
+
+            // 7. Resolve Final Links (Gofile, Pixeldrain, Vikingfile, R2, etc.)
+            for (link in extractedLinks) {
+                val lowerLink = link.lowercase()
+
+                // Filter out junk
+                if (lowerLink.contains("adsboosters") || lowerLink.contains("yonogames") ||
+                    lowerLink.contains("w3.org") || lowerLink.contains("logo.png") ||
+                    lowerLink.contains("dtflix.ink/logo") || lowerLink.contains("t.me") ||
+                    lowerLink.contains("telegram") || lowerLink.contains("googletagmanager.com") ||
+                    lowerLink.contains("googlesyndication.com") || lowerLink == "https://dtflix.ink" ||
+                    lowerLink == "https://dtflix.ink/share"
+                ) continue
+
+                // Direct Playable Links (R2 & Google CDN)
+                if (lowerLink.contains(".r2.dev/") || lowerLink.contains("googleusercontent.com")) {
+                    val sourceName = if (lowerLink.contains(".r2.dev/")) "R2" else "Google CDN"
+                    callback.invoke(
+                        newExtractorLink("SDMovies", "SDMovies ($qualityText - $sourceName)", link, ExtractorLinkType.VIDEO) {
+                            this.referer = dotflixUrl
+                            this.quality = dotflixQuality
+                        }
+                    )
+                    continue
+                }
+
+                // Call Extractor for File Hosts
+                if (lowerLink.contains("pixeldrain") || lowerLink.contains("vikingfile.com") || lowerLink.contains("transfer.it") || lowerLink.contains("gofile.io")) {
+                    loadSourceNameExtractor("SDMovies ($qualityText)", link, dotflixUrl, subtitleCallback, callback)
+                    continue
+                }
+            }
+        }
+    }
+
+
     suspend fun invokeShowbox(
         imdbId: String? = null,
         season: Int? = null,
