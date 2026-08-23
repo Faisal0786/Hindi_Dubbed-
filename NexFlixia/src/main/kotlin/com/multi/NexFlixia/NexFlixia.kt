@@ -12,8 +12,8 @@ import kotlinx.coroutines.coroutineScope
 import java.net.URLEncoder
 
 // Naye aur Purane Providers ko invoke karne ke liye Universal imports
-import com.hindi.providers.*
-import com.hindi.providers.SourceProviders.*
+import com.hindi.providers
+import com.hindi.providers.SourceProviders
 import com.hindi.providers.SourceProviders.invokeAllSources
 import com.hindi.providers.SourceProviders.invokeAllAnimeSources
 import com.hindi.providers.NewProviders.invokeAniStream
@@ -330,7 +330,7 @@ private val skipMap: MutableMap<String, Int> = mutableMapOf()
 
         if (res.isAnime) {
             val animeId = if (res.kitsuId != null) "kitsu:${res.kitsuId}" else res.imdbId
-            SourceProvider.invokeAllAnimeSources(
+            SourceProviders.invokeAllAnimeSources(
     AllLoadLinksData(
         title = res.title,
         imdbId = animeId,
