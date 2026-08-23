@@ -12,6 +12,7 @@ import kotlinx.coroutines.coroutineScope
 import java.net.URLEncoder
 
 // Naye aur Purane Providers ko invoke karne ke liye Universal imports
+import com.hindi.providers.*
 import com.hindi.providers.SourceProviders
 import com.hindi.providers.SourceProviders.invokeAllSources
 import com.hindi.providers.SourceProviders.invokeAllAnimeSources
