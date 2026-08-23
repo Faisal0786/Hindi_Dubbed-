@@ -167,11 +167,7 @@ private val skipMap: MutableMap<String, Int> = mutableMapOf()
     )
 }
 
-        return newHomePageResponse(
-            list = HomePageList(name = request.name, list = items),
-            hasNext = items.isNotEmpty()
-        )
-    }
+        
 
     override suspend fun search(query: String): List<SearchResponse> = coroutineScope {
         val searchQuery = query.trim().takeIf { it.isNotEmpty() } ?: return@coroutineScope emptyList()
