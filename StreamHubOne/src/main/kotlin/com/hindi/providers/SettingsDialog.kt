@@ -149,6 +149,8 @@ internal object SettingsDialog {
             addView(SettingsWidgets.divider(context))
             addView(buildToggleRow(context, "Crunchyroll", "Crunchyroll catalog",
                 Settings.PROVIDER_TMDB, true, pending, onCatalogChanged))
+            addView(buildToggleRow(context, "NexFlixia", "NexFlixia catalog",
+                                   Settings.PROVIDER_SIMKL, true, pending, onCatalogChanged))
         })
 
         // Providers card (delegated)
