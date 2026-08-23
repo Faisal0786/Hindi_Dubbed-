@@ -54,5 +54,15 @@ cloudstream {
 
 //Bridge
 dependencies {
-    implementation(project(":StreamHubOne"))
+    // 1. Isko implementation se hata kar compileOnly karein taaki IDE ko pata chale
+    compileOnly(project(":StreamHubOne"))
+}
+
+// 2. Ye block add karein taaki StreamHubOne ka code NexFlixia ke andar bundle ho jaye
+sourceSets {
+    getByName("main") {
+        java.srcDir(project(":StreamHubOne").file("src/main/kotlin"))
+        // Agar java files bhi hain toh ye line bhi add karein
+        // java.srcDir(project(":StreamHubOne").file("src/main/java"))
+    }
 }
