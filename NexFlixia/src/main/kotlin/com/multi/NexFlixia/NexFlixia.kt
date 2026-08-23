@@ -39,97 +39,131 @@ open class NexFlixiaProvider : MainAPI() {
     )
 
         override val mainPage = mainPageOf(
-        // Trending & Popular
-        "/catalog/movie/top/skip=###" to "🔥 Global Blockbusters",
-        "/catalog/series/top/skip=###" to "🍿 Binge-Worthy Masterpieces",
-        
-        // Modernized Action & Adventure
-        "/catalog/movie/top/genre=Action/skip=###" to "⚡ Adrenaline Rush & Explosions",
-        "/catalog/movie/top/genre=Adventure/skip=###" to "🏔️ Epic Expeditions & Survival",
-        "/catalog/series/top/genre=Action/skip=###" to "💥 High-Octane TV Series",
-        
-        // Thriller, Mystery & Crime
-        "/catalog/movie/top/genre=Thriller/skip=###" to "🔪 Edge-of-Your-Seat Thrills",
-        "/catalog/series/top/genre=Mystery/skip=###" to "🕵️ Mind-Bending Whodunits",
-        "/catalog/movie/top/genre=Crime/skip=###" to "🕶️ Underworld Chronicles & Cartels",
-        
-        // Sci-Fi & Fantasy
-        "/catalog/movie/top/genre=Sci-Fi/skip=###" to "🚀 Beyond the Cosmos",
-        "/catalog/series/top/genre=Fantasy/skip=###" to "🐉 Realms of Magic & Myth",
-        
-        // Horror
-        "/catalog/movie/top/genre=Horror/skip=###" to "🌑 Midnight Terrors & Nightmares",
-        
-        // Comedy & Romance
-        "/catalog/series/top/genre=Comedy/skip=###" to "😂 Pure Comedy Gold",
-        "/catalog/movie/top/genre=Romance/skip=###" to "💖 Heartstrings & Hopeless Romantics",
-        
-        // Drama & Emotional
-        "/catalog/series/top/genre=Drama/skip=###" to "🎭 Deep Dive & Critically Acclaimed",
-        
-        // Art, Animation & Family
-        "/catalog/movie/top/genre=Animation/skip=###" to "🎨 Visually Stunning Animation",
-        "/catalog/movie/top/genre=Family/skip=###" to "👨‍👩‍👧‍👦 Wholesome Movie Night",
-        
-        // Real Life, History & Documentaries
-        "/catalog/movie/top/genre=Biography/skip=###" to "📖 Incredible True Stories",
-        "/catalog/series/top/genre=History/skip=###" to "🏛️ Echoes of the Past",
-        "/catalog/movie/top/genre=Documentary/skip=###" to "🎥 Uncovering the Truth",
-        
-        // Action/Niche
-        "/catalog/movie/top/genre=War/skip=###" to "⚔️ Battlefield Epics",
-        "/catalog/movie/top/genre=Sport/skip=###" to "🏆 Gridiron, Glory & Sports",
-        "/catalog/movie/top/genre=Music/skip=###" to "🎵 Rhythm, Beats & Musicals"
-    )
+
+    // Trending
+    "$mainUrl/top/catalog/movie/top/skip=###" to "🔥 Global Blockbusters",
+    "$mainUrl/top/catalog/series/top/skip=###" to "🍿 Binge-Worthy Masterpieces",
+
+    // Action / Adventure
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=Action" to "⚡ Adrenaline Rush & Explosions",
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=Adventure" to "🏔️ Epic Expeditions & Survival",
+    "$mainUrl/top/catalog/series/top/skip=###&genre=Action" to "💥 High-Octane TV Series",
+
+    // Thriller / Mystery / Crime
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=Thriller" to "🔪 Edge-of-Your-Seat Thrills",
+    "$mainUrl/top/catalog/series/top/skip=###&genre=Mystery" to "🕵️ Mind-Bending Whodunits",
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=Crime" to "🕶️ Underworld Chronicles & Cartels",
+
+    // Sci-Fi / Fantasy
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=Sci-Fi" to "🚀 Beyond the Cosmos",
+    "$mainUrl/top/catalog/series/top/skip=###&genre=Fantasy" to "🐉 Realms of Magic & Myth",
+
+    // Horror
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=Horror" to "🌑 Midnight Terrors & Nightmares",
+
+    // Comedy / Romance
+    "$mainUrl/top/catalog/series/top/skip=###&genre=Comedy" to "😂 Pure Comedy Gold",
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=Romance" to "💖 Heartstrings & Hopeless Romantics",
+
+    // Drama
+    "$mainUrl/top/catalog/series/top/skip=###&genre=Drama" to "🎭 Deep Dive & Critically Acclaimed",
+
+    // Animation / Family
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=Animation" to "🎨 Visually Stunning Animation",
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=Family" to "👨‍👩‍👧‍👦 Wholesome Movie Night",
+
+    // History / Documentary
+    "$mainUrl/top/catalog/series/top/skip=###&genre=History" to "🏛️ Echoes of the Past",
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=Documentary" to "🎥 Uncovering the Truth",
+
+    // War / Sport / Music
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=War" to "⚔️ Battlefield Epics",
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=Sport" to "🏆 Gridiron, Glory & Sports",
+    "$mainUrl/top/catalog/movie/top/skip=###&genre=Music" to "🎵 Rhythm, Beats & Musicals"
+)
 
     private val api by lazy { NexFlixiaApi(this) }
     private val metadata by lazy { NexFlixiaMetadata(api) }
     private val animeResolver by lazy { NexFlixiaAnimeResolver(api) }
 
     override suspend fun getMainPage(
-        page: Int,
-        request: MainPageRequest
-    ): HomePageResponse {
+    page: Int,
+    request: MainPageRequest
+): HomePageResponse {
 
-        // BUG FIX: Removed skipMap. Math based pagination is 100% crash proof.
-        val skip = (page - 1) * 50
-        val endpoint = request.data.replace("###", skip.toString())
+    if (page == 1) {
+        skipMap[request.name] = 0
+    }
 
-        val response = api.get("$endpoint.json") ?: return newHomePageResponse(
-            list = HomePageList(name = request.name, list = emptyList()),
+    val skip = skipMap[request.name] ?: 0
+
+    val endpoint = request.data.replace(
+        "###",
+        skip.toString()
+    )
+
+    val response = api.get("$endpoint.json")
+        ?: return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = emptyList()
+            ),
             hasNext = false
         )
 
-        val result = tryParseJson<NexFlixiaSearchResult>(response)
-            ?: return newHomePageResponse(
-                list = HomePageList(name = request.name, list = emptyList()),
-                hasNext = false
-            )
+    val result = tryParseJson<NexFlixiaSearchResult>(response)
+        ?: return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = emptyList()
+            ),
+            hasNext = false
+        )
 
-        val items = result.metas.mapNotNull { item ->
-            val title = item.name?.takeIf { it.isNotBlank() }
-                ?: item.aliases?.firstOrNull { it.isNotBlank() }
+    val items = result.metas.mapNotNull { item ->
+
+        val title =
+            item.aliases?.firstOrNull { it.isNotBlank() }
+                ?: item.name?.takeIf { it.isNotBlank() }
                 ?: return@mapNotNull null
 
-            val type = when (item.type.lowercase()) {
-                "movie" -> TvType.Movie
-                "series", "tv" -> TvType.TvSeries
-                else -> return@mapNotNull null
-            }
+        val type = when (item.type.lowercase()) {
+            "movie" -> TvType.Movie
+            "series",
+            "tv" -> TvType.TvSeries
 
-            val id = item.id ?: return@mapNotNull null
-
-            newMovieSearchResponse(
-                name = title,
-                url = NexFlixiaSearchData(id = id, type = item.type).toJson(),
-                type = type
-            ) {
-                posterUrl = item.poster
-                item.imdbRating?.toString()?.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { rating ->
-                    score = Score.from10(rating)
-                }
-            }
+            else -> return@mapNotNull null
         }
+
+        val id = item.id ?: return@mapNotNull null
+
+        newMovieSearchResponse(
+            name = title,
+            url = NexFlixiaSearchData(
+                id = id,
+                type = item.type
+            ).toJson(),
+            type = type
+        ) {
+            posterUrl = item.poster
+
+            score = item.imdbRating
+                ?.toDoubleOrNull()
+                ?.takeIf { it > 0.0 }
+                ?.let { Score.from10(it) }
+        }
+    }
+
+    skipMap[request.name] = skip + result.metas.size
+
+    return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = items
+        ),
+        hasNext = result.metas.isNotEmpty()
+    )
+}
 
         return newHomePageResponse(
             list = HomePageList(name = request.name, list = items),
@@ -225,7 +259,7 @@ open class NexFlixiaProvider : MainAPI() {
             score = meta.imdbRating?.toString()?.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { Score.from10(it) }
             year = extractYear(meta.year ?: meta.releaseInfo)
             duration = extractRuntime(meta.runtime)
-            actors = buildActors(meta.cast)
+            actors = buildActors(meta.appExtras?.cast)
             contentRating = meta.certification
             addImdbId(ids.imdbId)
         }
