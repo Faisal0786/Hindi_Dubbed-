@@ -329,7 +329,7 @@ private val skipMap: MutableMap<String, Int> = mutableMapOf()
 
         if (res.isAnime) {
             val animeId = if (res.kitsuId != null) "kitsu:${res.kitsuId}" else res.imdbId
-            invokeAllAnimeSources(
+            SourceProvider.invokeAllAnimeSources(
     AllLoadLinksData(
         title = res.title,
         imdbId = animeId,
@@ -356,10 +356,10 @@ private val skipMap: MutableMap<String, Int> = mutableMapOf()
 )
             // Parallel call for AniStream if needed
             if(res.aniListId != null) {
-                invokeAniStream(res.aniListId, res.episode, subtitleCallback, callback)
+                SourceProviders.invokeAniStream(res.aniListId, res.episode, subtitleCallback, callback)
             }
         } else {
-            invokeAllSources(
+            SourceProviders.invokeAllSources(
     AllLoadLinksData(
         title = res.title,
         imdbId = res.imdbId,
