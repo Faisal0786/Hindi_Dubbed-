@@ -357,7 +357,7 @@ private val skipMap: MutableMap<String, Int> = mutableMapOf()
 )
             // Parallel call for AniStream if needed
             if(res.aniListId != null) {
-                SourceProviders.invokeAniStream(res.aniListId, res.episode, subtitleCallback, callback)
+                invokeAniStream(res.aniListId, res.episode, subtitleCallback, callback)
             }
         } else {
             SourceProviders.invokeAllSources(
