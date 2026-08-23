@@ -7,7 +7,7 @@ android {
         val properties = Properties()
         properties.load(project.rootProject.file("local.properties").inputStream())
 
-        android.buildFeatures.buildConfig = true
+        buildFeatures.buildConfig = true // "android." yahan zaroori nahi hai andar
 
         buildConfigField(
             "String",
@@ -26,6 +26,13 @@ android {
             "CC_COOKIE",
             "\"${properties.getProperty("CC_COOKIE")}\""
         )
+    }
+
+    // Bridge: Yahan SourceSets merge kar diya gaya hai
+    sourceSets {
+        getByName("main") {
+            java.srcDir(project(":StreamHubOne").file("src/main/kotlin"))
+        }
     }
 }
 
@@ -52,17 +59,6 @@ cloudstream {
     iconUrl = ""
 }
 
-//Bridge
 dependencies {
-    // 1. Isko implementation se hata kar compileOnly karein taaki IDE ko pata chale
     compileOnly(project(":StreamHubOne"))
-}
-
-// 2. Ye block add karein taaki StreamHubOne ka code NexFlixia ke andar bundle ho jaye
-sourceSets {
-    getByName("main") {
-        java.srcDir(project(":StreamHubOne").file("src/main/kotlin"))
-        // Agar java files bhi hain toh ye line bhi add karein
-        // java.srcDir(project(":StreamHubOne").file("src/main/java"))
-    }
 }
