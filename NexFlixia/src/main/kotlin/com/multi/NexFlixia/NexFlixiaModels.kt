@@ -33,6 +33,7 @@ data class NexFlixiaMeta(
     val awards: String? = null,
     val type: String? = null,
     val aliases: List<String>? = null,
+val certification: String? = null,
 
     val poster: String? = null,
     val logo: String? = null,
