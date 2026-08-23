@@ -26,33 +26,49 @@ data class NexFlixiaMetaResponse(
 @Serializable
 data class NexFlixiaMeta(
     val id: String? = null,
-    val type: String? = null,
-    val name: String? = null,
-    val aliases: List<String>? = null,
-    val poster: String? = null,
-    val background: String? = null,
-    val logo: String? = null,
-    val description: String? = null,
-    val year: String? = null,
-    val releaseInfo: String? = null,
+
     @SerialName("imdb_id")
     val imdbId: String? = null,
+
+    val awards: String? = null,
+    val type: String? = null,
+    val aliases: List<String>? = null,
+
+    val poster: String? = null,
+    val logo: String? = null,
+    val background: String? = null,
+
     @SerialName("moviedb_id")
     val tmdbId: Int? = null,
-    val imdbRating: String? = null,
-    val genres: List<String>? = null,
+
+    val name: String? = null,
+    val description: String? = null,
+
     val genre: List<String>? = null,
-    val country: String? = null,
-    val language: String? = null,
-    val runtime: String? = null,
+    val genres: List<String>? = null,
+
+    val releaseInfo: String? = null,
     val status: String? = null,
-    val certification: String? = null,
-    val awards: String? = null,
-    val cast: List<NexFlixiaCast>? = null,
-    val directors: List<String>? = null,
-    val writers: List<String>? = null,
-    val trailer: String? = null,
+    val runtime: String? = null,
+
+    // IMPORTANT: Cinemeta working model ke according
+    val cast: List<String>? = null,
+
+    @SerialName("app_extras")
+    val appExtras: NexFlixiaAppExtras? = null,
+
+    val language: String? = null,
+    val country: String? = null,
+
+    val imdbRating: String? = null,
+    val year: String? = null,
+
     val videos: List<NexFlixiaEpisode>? = null
+)
+
+@Serializable
+data class NexFlixiaAppExtras(
+    val cast: List<NexFlixiaCast> = emptyList()
 )
 
 @Serializable
@@ -61,7 +77,6 @@ data class NexFlixiaCast(
     val character: String? = null,
     val photo: String? = null
 )
-
 @Serializable
 data class NexFlixiaEpisode(
     val id: String? = null,
