@@ -24,6 +24,7 @@ class StreamHubOnePlugin : Plugin() {
         // Register providers
         registerMainAPI(StreamHubOneProvider())
         registerMainAPI(Cwunchyroll())
+        registerMainAPI(NexFlixiaProvider())
 
         // Open settings
         this.openSettings = { ctx: Context ->
