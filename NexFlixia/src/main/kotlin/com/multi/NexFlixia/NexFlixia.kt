@@ -86,6 +86,8 @@ open class NexFlixiaProvider : MainAPI() {
     private val metadata by lazy { NexFlixiaMetadata(api) }
     private val animeResolver by lazy { NexFlixiaAnimeResolver(api) }
 
+private val skipMap: MutableMap<String, Int> = mutableMapOf()
+
     override suspend fun getMainPage(
     page: Int,
     request: MainPageRequest
