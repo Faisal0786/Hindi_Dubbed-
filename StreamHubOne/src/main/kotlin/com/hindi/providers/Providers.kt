@@ -285,7 +285,7 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
     }
 
 //Sdmoviepoint 
-        suspend fun invokeSdmovies(
+            suspend fun invokeSdmovies(
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
@@ -300,22 +300,32 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
         val searchUrl = "$sdmoviesAPI/?s=${title.replace(" ", "+")}"
         Log.d("SDMovies", "🔍 Search URL: $searchUrl")
 
+        // 🔥 FIX 1: Using cfGet instead of app.get to bypass Cloudflare automatically
         val searchDoc = try {
-            app.get(searchUrl).document
+            cfGet(searchUrl).document
         } catch (e: Exception) {
             Log.e("SDMovies", "❌ Search failed: ${e.message}")
             return
         }
 
-        // Broaden the search selectors for SDMoviesPoint
-        val searchResults = searchDoc.select("h2.title > a, div.post-title > a, article a, h2 > a")
-        Log.d("SDMovies", "📄 Found ${searchResults.size} search results on page.")
+        Log.d("SDMovies", "📄 Search Page Title: ${searchDoc.title()}")
 
-        // Match Title (Year condition removed for better success rate)
+        // 🔥 FIX 2: Broadest possible selector. Grab ALL links on the page.
+        val searchResults = searchDoc.select("a[href]")
+        Log.d("SDMovies", "🔗 Total anchor tags found: ${searchResults.size}")
+
+        val titleLower = title.lowercase().trim()
+
+        // Find the first link that contains our title and is a valid post
         val matchedUrl = searchResults.firstOrNull {
-            val text = it.text().lowercase()
-            Log.d("SDMovies", "   -> Checking result text: '$text'")
-            text.contains(title.lowercase())
+            val text = it.text().lowercase().trim()
+            val href = it.attr("href")
+            
+            text.contains(titleLower) && 
+            href.startsWith("http") && 
+            !href.contains("?s=") && 
+            !href.contains("/category/") && 
+            !href.contains("/tag/")
         }?.attr("href")
 
         if (matchedUrl.isNullOrBlank()) {
@@ -327,7 +337,7 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
 
         // 2. Load Title Page
         val document = try {
-            app.get(matchedUrl).document
+            cfGet(matchedUrl).document // Using cfGet here too
         } catch (e: Exception) {
             Log.e("SDMovies", "❌ Failed to load matched URL: ${e.message}")
             return
@@ -439,7 +449,6 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
             }
         }
     }
-
 
 
     suspend fun invokeShowbox(
