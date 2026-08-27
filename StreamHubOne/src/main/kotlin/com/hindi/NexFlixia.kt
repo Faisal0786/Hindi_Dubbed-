@@ -318,8 +318,7 @@ private val skipMap: MutableMap<String, Int> = mutableMapOf()
         }
     }
 
-    // MISSING FEATURE ADDED: Universal loadLinks routing
-    override suspend fun loadLinks(
+    // MISSING FEATURE ADDED: Universal     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -330,64 +329,100 @@ private val skipMap: MutableMap<String, Int> = mutableMapOf()
         val yearInt = res.year?.substringBefore("-")?.toIntOrNull()
         val seasonYear = res.firstAired?.substringBefore("-")?.toIntOrNull() ?: yearInt
 
-        if (res.isAnime) {
-            val animeId = if (res.kitsuId != null) "kitsu:${res.kitsuId}" else res.imdbId
-            SourceProviders.invokeAllAnimeSources(
-    AllLoadLinksData(
-        title = res.title,
-        imdbId = animeId,
-        tmdbId = res.tmdbId,
-        anilistId = res.aniListId,
-        malId = res.malId,
-        kitsuId = res.kitsuId,
-        year = yearInt,
-        airedYear = seasonYear,
-        season = res.season,
-        episode = res.episode,
-        isAnime = true,
-        isBollywood = res.isBollywood,
-        isAsian = res.isAsian,
-        isCartoon = res.isCartoon,
-        originalTitle = null,
-        imdbTitle = null,
-        imdbSeason = res.imdbSeason,
-        imdbEpisode = res.imdbEpisode,
-        imdbYear = yearInt
-    ),
-    subtitleCallback,
-    callback
-)
-            // Parallel call for AniStream if needed
-            if(res.aniListId != null) {
-                invokeAniStream(res.aniListId, res.episode, subtitleCallback, callback)
+        // runAllAsync ka use karke Normal aur Anime sources ek sath parallel chalenge
+        runAllAsync(
+            {
+                // Block 1: Regular Movies / Web Series ke liye (No waiting)
+                SourceProviders.invokeAllSources(
+                    AllLoadLinksData(
+                        title = res.title,
+                        imdbId = res.imdbId,
+                        tmdbId = res.tmdbId,
+                        anilistId = null,
+                        malId = null,
+                        kitsuId = null,
+                        year = yearInt,
+                        airedYear = seasonYear,
+                        season = res.season,
+                        episode = res.episode,
+                        isAnime = false,
+                        isBollywood = res.isBollywood,
+                        isAsian = res.isAsian,
+                        isCartoon = res.isCartoon,
+                        originalTitle = null,
+                        imdbTitle = null,
+                        imdbSeason = res.imdbSeason,
+                        imdbEpisode = res.imdbEpisode,
+                        imdbYear = yearInt
+                    ),
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                // Block 2: Sirf tab chalega jab content Anime ho (Smart ID Conversion ke sath)
+                if (res.isAnime) {
+                    var finalAniId = res.aniListId
+                    var finalMalId = res.malId
+
+                    // Agar ID missing hai, toh hi IMDB/TMDB API call karke convert karega
+                    if (finalAniId == null && finalMalId == null) {
+                        val imdbResult = convertImdbToAnimeId(
+                            res.title,
+                            yearInt,
+                            res.firstAired,
+                            TvType.Anime 
+                        )
+                        finalAniId = imdbResult.id
+                        finalMalId = imdbResult.idMal
+
+                        if (finalAniId == null && finalMalId == null) {
+                            val tmdbResult = convertTmdbToAnimeId(
+                                res.title,
+                                yearInt?.toString(),
+                                res.firstAired,
+                                TvType.Anime
+                            )
+                            finalAniId = tmdbResult.id
+                            finalMalId = tmdbResult.idMal
+                        }
+                    }
+
+                    val animeId = if (res.kitsuId != null) "kitsu:${res.kitsuId}" else res.imdbId
+
+                    SourceProviders.invokeAllAnimeSources(
+                        AllLoadLinksData(
+                            title = res.title,
+                            imdbId = animeId,
+                            tmdbId = res.tmdbId,
+                            anilistId = finalAniId,
+                            malId = finalMalId,
+                            kitsuId = res.kitsuId,
+                            year = yearInt,
+                            airedYear = seasonYear,
+                            season = res.season,
+                            episode = res.episode,
+                            isAnime = true,
+                            isBollywood = res.isBollywood,
+                            isAsian = res.isAsian,
+                            isCartoon = res.isCartoon,
+                            originalTitle = null,
+                            imdbTitle = null,
+                            imdbSeason = res.imdbSeason,
+                            imdbEpisode = res.imdbEpisode,
+                            imdbYear = yearInt
+                        ),
+                        subtitleCallback,
+                        callback
+                    )
+
+                    // AniStream call (Agar converted ya original aniListId mil gaya)
+                    if (finalAniId != null) {
+                        invokeAniStream(finalAniId, res.episode, subtitleCallback, callback)
+                    }
+                }
             }
-        } else {
-            SourceProviders.invokeAllSources(
-    AllLoadLinksData(
-        title = res.title,
-        imdbId = res.imdbId,
-        tmdbId = res.tmdbId,
-        anilistId = null,
-        malId = null,
-        kitsuId = null,
-        year = yearInt,
-        airedYear = seasonYear,
-        season = res.season,
-        episode = res.episode,
-        isAnime = false,
-        isBollywood = res.isBollywood,
-        isAsian = res.isAsian,
-        isCartoon = res.isCartoon,
-        originalTitle = null,
-        imdbTitle = null,
-        imdbSeason = res.imdbSeason,
-        imdbEpisode = res.imdbEpisode,
-        imdbYear = yearInt
-    ),
-    subtitleCallback,
-    callback
-)
-        }
+        )
         return true
     }
 
