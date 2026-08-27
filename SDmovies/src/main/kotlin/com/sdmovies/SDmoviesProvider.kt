@@ -26,7 +26,7 @@ data class WpPost(
 
 class SDMoviesProvider : MainAPI() {
 
-    override var mainUrl = "https://sd2.sdmoviespoint.tours"
+    override var mainUrl = "https://sd3.sdmoviespoint.tours"
     override var name = "SDMovies"
     override val hasMainPage = true
     override var lang = "hi"
