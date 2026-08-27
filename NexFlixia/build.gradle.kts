@@ -1,6 +1,6 @@
 import java.util.Properties
 
-version = 6
+version = 7
 
 android {
     defaultConfig {
