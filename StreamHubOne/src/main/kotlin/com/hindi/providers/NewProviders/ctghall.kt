@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.network.CloudflareKiller
 // Core Cloudstream Imports
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.newExtractorLink
+import com.lagradost.cloudstream3.utils.newExtractorLink
 
 // Cloudstream Utils & Extractors
 import com.lagradost.cloudstream3.utils.ExtractorLink
