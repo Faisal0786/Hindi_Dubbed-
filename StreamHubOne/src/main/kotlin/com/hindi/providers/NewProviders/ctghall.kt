@@ -48,7 +48,6 @@ val isMovie = season == null
 
        var internalId = ""
 
-val endpoint = if (isMovie) "movies" else "tv-shows"
 val listUrl = "$ctgHallAPI/api/$endpoint"
 
 try {
