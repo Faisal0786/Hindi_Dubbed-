@@ -19,6 +19,12 @@ object NewSourceRegistry {
             }
         ),
         SourceProviderDef(
+            key = "p_ctghall", displayName = "CtgHall", category = ProviderCategory.HINDI,
+            executeStandard = { res, subCb, cb -> invokeCtghall(res.title, res.tmdbId, res.season, res.episode, subCb, cb) },
+            executeAnime = { res, subCb, cb -> invokeCtghall(res.imdbTitle, res.tmdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
+        ),
+
+        SourceProviderDef(
             key = "p_cinemacity",
             displayName = "CinemaOS",
             category = ProviderCategory.HINDI,
