@@ -2,18 +2,18 @@ package com.hindi.providers.NewProviders
 
 import com.hindi.providers.*
 
-// 1. Core Cloudstream Imports
+// Core Cloudstream Imports
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.newExtractorLink
 
-// 2. Cloudstream Utils & Extractors
+// Cloudstream Utils & Extractors
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 
-// 3. Logging & JSON
+// Logging & JSON
 import com.lagradost.api.Log
 import org.json.JSONObject
 import org.json.JSONArray
