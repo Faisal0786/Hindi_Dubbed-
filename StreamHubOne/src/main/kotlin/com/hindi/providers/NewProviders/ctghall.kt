@@ -2,6 +2,8 @@ package com.hindi.providers.NewProviders
 
 import com.hindi.providers.*
 
+import com.lagradost.cloudstream3.network.CloudflareKiller
+
 // Core Cloudstream Imports
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.SubtitleFile
