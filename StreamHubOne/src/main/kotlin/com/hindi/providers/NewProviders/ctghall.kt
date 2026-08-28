@@ -1,3 +1,7 @@
+package com.hindi.providers.NewProviders
+
+import com.hindi.providers.*
+
 // 1. Core Cloudstream Imports
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.SubtitleFile
@@ -13,11 +17,12 @@ import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.api.Log
 import org.json.JSONObject
 import org.json.JSONArray
-
-
 import com.hindi.providers.SourceProviders 
 
-    suspend fun invokeCtghall(
+private const val ctgHallAPI = "https://www.ctghall.com"
+private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
+
+    suspend fun SourceProviders.invokeCtghall(
         title: String? = null,
         tmdbId: Int? = null,
         season: Int? = null,
