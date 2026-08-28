@@ -42,34 +42,72 @@ private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleW
 
         Log.d("Ctghall", "🚀 Starting CtgHall for: $title")
 
-        // 1. Search for Internal Movie/Series ID (Auto-extracts like 33486)
-        var internalId = ""
-        val searchUrl = "$ctgHallAPI/search?q=${title.replace(" ", "+")}"
-        try {
-            // Using cfGet to bypass any Cloudflare blocks
-            val searchDoc = cfGet(searchUrl).document
-            val matchedLink = searchDoc.select("a[href*=/movie/], a[href*=/tv-show/], a[href*=/tv/]").firstOrNull {
-                it.text().contains(title, true)
-            }?.attr("href")
+       var internalId = ""
 
-            if (matchedLink != null) {
-                val idMatch = Regex("""/(?:movie|tv-show|tv|series)/(\d+)""").find(matchedLink)
-                if (idMatch != null) {
-                    internalId = idMatch.groupValues[1]
-                    Log.d("Ctghall", "✅ Found Internal ID from Search: $internalId")
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("Ctghall", "⚠️ Search failed: ${e.message}")
+val endpoint = if (isMovie) "movies" else "tv-shows"
+val listUrl = "$ctgHallAPI/api/$endpoint"
+
+try {
+    val jsonResponse = app.get(
+        listUrl,
+        headers = headers
+    ).text
+
+    Log.d("Ctghall", "📥 Category API response length: ${jsonResponse.length}")
+
+    val jsonArray = if (jsonResponse.trim().startsWith("[")) {
+        JSONArray(jsonResponse)
+    } else {
+        val root = JSONObject(jsonResponse)
+
+        root.optJSONArray("data")
+            ?: root.optJSONArray("results")
+            ?: JSONArray()
+    }
+
+    Log.d("Ctghall", "📋 Category items found: ${jsonArray.length()}")
+
+    for (i in 0 until jsonArray.length()) {
+        val item = jsonArray.optJSONObject(i) ?: continue
+
+        val itemName = item.optString(
+            "title",
+            item.optString("name", "")
+        ).trim()
+
+        val itemId = item.optString("id", "").trim()
+
+        if (
+            itemName.contains(title, ignoreCase = true) ||
+            title.contains(itemName, ignoreCase = true)
+        ) {
+            internalId = itemId
+
+            Log.d(
+                "Ctghall",
+                "✅ Found Internal ID: $internalId | Title: $itemName"
+            )
+
+            break
         }
+    }
 
-        if (internalId.isBlank()) {
-            Log.e("Ctghall", "❌ No Internal ID found, aborting.")
-            return
-        }
+} catch (e: Exception) {
+    Log.e(
+        "Ctghall",
+        "❌ API List Search failed: ${e.message}"
+    )
+}
 
+if (internalId.isBlank()) {
+    Log.e(
+        "Ctghall",
+        "❌ No Internal ID found for title: $title"
+    )
+    return
+}
         val isMovie = season == null
-        val type = if (isMovie) "movies" else "tv-shows"
+val type = if (isMovie) "movies" else "tv-shows"
         
         // 2. Fetch the JSON Data
         val apiUrl = if (isMovie) {
