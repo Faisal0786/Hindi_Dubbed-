@@ -42,6 +42,10 @@ private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleW
 
         Log.d("Ctghall", "🚀 Starting CtgHall for: $title")
 
+val isMovie = season == null
+    val endpoint = if (isMovie) "movies" else "tv-shows"
+    val type = endpoint
+
        var internalId = ""
 
 val endpoint = if (isMovie) "movies" else "tv-shows"
@@ -106,8 +110,7 @@ if (internalId.isBlank()) {
     )
     return
 }
-        val isMovie = season == null
-val type = if (isMovie) "movies" else "tv-shows"
+        
         
         // 2. Fetch the JSON Data
         val apiUrl = if (isMovie) {
