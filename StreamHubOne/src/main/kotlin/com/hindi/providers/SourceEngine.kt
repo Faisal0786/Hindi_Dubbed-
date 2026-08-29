@@ -127,7 +127,7 @@ val SPEC_OPTIONS = mapOf(
 )
 
 private val SIZE_REGEX = """(\d+(?:\.\d+)?\s?(?:MB|GB))""".toRegex(RegexOption.IGNORE_CASE)
-private val CATEGORY_ORDER = listOf("language", "audio", "hdr", "codec",
+private val CATEGORY_ORDER = listOf("language", "audio", "hdr", "codec", "quality")
 
 fun getSimplifiedTitle(title: String): String {
     var remainingTitle = title
