@@ -29,7 +29,7 @@ object NewSourceRegistry {
             executeAnime = { res, subCb, cb -> 
                 invokeCtgStream(res.imdbTitle ?: res.title, res.imdbSeason, res.imdbEpisode, subCb, cb) 
             }
-        )
+        ),
 
         SourceProviderDef(
             key = "p_ctghall", displayName = "CtgHall", category = ProviderCategory.HINDI,
