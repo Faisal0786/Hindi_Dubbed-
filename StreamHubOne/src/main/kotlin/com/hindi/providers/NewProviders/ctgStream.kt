@@ -188,7 +188,7 @@ suspend fun invokeCtgStream(
                 for ((qualityName, qualityVal, bitrate) in bitrates) {
                     val hlsUrl = "$mainUrl/emby/videos/$targetItemId/master.m3u8?DeviceId=$deviceId&MediaSourceId=$sourceId&PlaySessionId=$playSessionId&api_key=$embyToken&VideoCodec=hevc,h264,av1&AudioCodec=mp3,aac&TranscodingMaxAudioChannels=2&SegmentContainer=ts&MinSegments=1&BreakOnNonKeyFrames=False&ManifestSubtitles=vtt&MaxStreamingBitrate=$bitrate$audioParam"
                     
-                    callback.invoke(newExtractorLink("CtgStream", "$audioName - $qualityName", hlsUrl, ExtractorLinkType.M3U8) {
+                    callback.invoke(newExtractorLink("CtgStream", "CtgStream >> $audioName - $qualityName", hlsUrl, ExtractorLinkType.M3U8) {
                         this.headers = embyHeaders
                         this.quality = qualityVal
                     })
