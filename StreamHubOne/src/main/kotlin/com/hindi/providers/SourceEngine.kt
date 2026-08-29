@@ -142,6 +142,19 @@ fun getSimplifiedTitle(title: String): String {
         }
     }
 
+
+
+    val sizeMatch = SIZE_REGEX.find(title)?.value?.uppercase()
+
+     
+    val result = listOfNotNull(
+        matchedLabels.distinct().joinToString(" • ").takeIf { it.isNotEmpty() },
+        sizeMatch
+    ).joinToString(" • ")
+
+    return if (result.isEmpty()) "" else " • $result"
+}
+
 fun extractPremiumTags(title: String): Pair<String, String> {
     var remainingTitle = title
     val languages = mutableListOf<String>()
@@ -171,17 +184,6 @@ fun extractPremiumTags(title: String): Pair<String, String> {
     )
 }
 
-
-    val sizeMatch = SIZE_REGEX.find(title)?.value?.uppercase()
-
-    // 🔴 Pipes (|) ki jagah Dots (•) use kiya hai premium look ke liye
-    val result = listOfNotNull(
-        matchedLabels.distinct().joinToString(" • ").takeIf { it.isNotEmpty() },
-        sizeMatch
-    ).joinToString(" • ")
-
-    return if (result.isEmpty()) "" else " • $result"
-}
 
 
 val languageMap = mapOf(
