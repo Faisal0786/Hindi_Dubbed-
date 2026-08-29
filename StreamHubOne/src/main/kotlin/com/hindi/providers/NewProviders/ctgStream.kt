@@ -163,14 +163,25 @@ suspend fun invokeCtgStream(
             }
             if (audioStreams.isEmpty()) audioStreams.add(Pair("Default Audio", -1))
 
-            // Bitrate Links
-            val bitrates = listOf(
-                Triple("Auto (Adaptive)", Qualities.Unknown.value, 140000000L),
+     
+ // Bitrate Links 
+          
+  val bitrates = listOf(
+                Triple("Auto (Adaptive)", Qualities.Unknown.value, 140000000L), // No Cap, player adjust karega
+                Triple("1080p - 60 Mbps", Qualities.P1080.value, 60000000L),
+                Triple("1080p - 40 Mbps", Qualities.P1080.value, 40000000L),
                 Triple("1080p - 20 Mbps", Qualities.P1080.value, 20000000L),
+                Triple("1080p - 12 Mbps", Qualities.P1080.value, 12000000L),
                 Triple("1080p - 8 Mbps",  Qualities.P1080.value, 8000000L),
+                Triple("1080p - 4 Mbps",  Qualities.P1080.value, 4000000L),
                 Triple("720p - 4 Mbps",   Qualities.P720.value,  4000000L),
-                Triple("480p - 720 kbps", Qualities.P480.value,  720000L)
+                Triple("720p - 2 Mbps",   Qualities.P720.value,  2000000L),
+                Triple("720p - 1 Mbps",   Qualities.P720.value,  1000000L),
+                Triple("480p - 720 kbps", Qualities.P480.value,  720000L),
+                Triple("480p - 420 kbps", Qualities.P480.value,  420000L),
+                Triple("360p",            Qualities.P360.value,  400000L)
             )
+
 
             for ((audioName, audioIndex) in audioStreams) {
                 val audioParam = if (audioIndex != -1) "&AudioStreamIndex=$audioIndex" else ""
