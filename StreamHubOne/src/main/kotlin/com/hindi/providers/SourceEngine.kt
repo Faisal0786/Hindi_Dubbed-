@@ -758,22 +758,14 @@ suspend fun loadSourceNameExtractor(
                     ?.replace("GB", " GB")?.replace("MB", " MB")?.replace(Regex("\\s+"), " ") ?: ""
             }
             
-            // 1. Pehle original host ko safe tarike se clean karo (brackets aur extra spaces hatao)
-            val rawHost = link.source.replace(Regex("\\[|\\]|\\(|\\)"), " ")
-                                     .trim()
-                                     .replace(Regex("\\s+"), " ")
+            // Host name clean karo taaki brackets proper rahen (jaise Hubcloud(Pixeldrain))
+            val hostName = link.source.trim().replace(Regex("\\s+"), " ")
 
-            // 2. Agar provider ka naam duplicate ho raha hai toh hatao, LEKIN agar sab kuch udd jaye toh original rawHost hi use karo
-            var cleanHost = rawHost.replace(source, "", ignoreCase = true).trim()
-            if (cleanHost.isBlank()) {
-                cleanHost = rawHost.ifBlank { "Server" }
-            }
-
-            val hostBold = cleanHost.toSansSerifBold()
+            // 🔥 TOP TEXT (Format: Moviesdrive >> Hubcloud(Pixeldrain))
             val topText = if (isDownload) {
-                "Download » $hostBold"
+                "Download >> $hostName"
             } else {
-                "$source » $hostBold"
+                if (hostName.contains(source, ignoreCase = true)) hostName else "$source >> $hostName"
             }
 
             val italicTech = if (techSpecs.isNotEmpty()) techSpecs.toSansSerifItalic() else ""
