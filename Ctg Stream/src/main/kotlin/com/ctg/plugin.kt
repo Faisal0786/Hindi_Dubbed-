@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 
 @CloudstreamPlugin
-class PlusboxPlugin : Plugin() {
+class CtgstreamPlugin : Plugin() {
     override fun load(context: Context) {
         // Register your provider here
         registerMainAPI(CtgStreamProvider())
