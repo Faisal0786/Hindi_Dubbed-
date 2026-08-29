@@ -1,2 +1,30 @@
-Learning 
-credit : Sourabh Kaperwen 
+CloudStream Extensions
+A curated collection of extensions for CloudStream, bringing various video streaming sources, movies, anime, and TV shows right to your app.
+✨ Features
+ * Multi-Source Support: Integrates various providers for movies, TV series, anime, and live content.
+ * Auto-Updates: Extensions are structured to support seamless updates within the CloudStream ecosystem.
+ * Lightweight & Fast: Optimized for smooth performance and quick content loading.
+📥 Installation
+ * Open the CloudStream app on your device.
+ * Go to the Extensions tab from the bottom navigation menu.
+ * Tap on the Add Repository (or (+)) button.
+ * Paste the repository URL below:
+   YOUR_REPO_URL_HERE
+
+ * Tap Add and install the desired extensions.
+📂 Available Extensions
+| Extension Name | Type | Status | Description |
+|---|---|---|---|
+| StreamHub One | Movies / TV | Working | High-quality links and multi-language support. |
+| Nexflixia | Anime | Working | Subbed and dubbed anime streaming. |
+🛠️ Building & Contributing
+If you want to contribute or build the extensions locally:
+ * Clone the repository:
+   git clone https://github.com/Faisal0786/Hindi_Dubbed-.git
+
+ * Open the project in Android Studio.
+ * Build the project using Gradle to generate the plugin .cs3 files.
+🤝 Contributing
+Contributions, bug reports, and feature requests are always welcome! Feel free to open an issue or submit a pull request.
+⚠️ Disclaimer
+This repository is for educational and personal use only. The developer(s) of this repository do not host, upload, or control any of the content displayed through these extensions. All content is scraped from third-party websites publicly available on the internet.
