@@ -59,7 +59,6 @@ class PlusboxProvider : MainAPI() {
         return newLiveStreamLoadResponse(channelObj.name, url, url) {
             this.posterUrl = channelObj.poster
             this.plot = "Live 24x7 streaming channel via Plusbox."
-            this.tvType = TvType.Live
         }
     }
 
