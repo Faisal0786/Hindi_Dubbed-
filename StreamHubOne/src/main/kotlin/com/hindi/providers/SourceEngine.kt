@@ -747,38 +747,16 @@ suspend fun loadSourceNameExtractor(
         launch(Dispatchers.IO) {
             val isDownload = link.source.contains("Download", ignoreCase = true) ||
                              link.url.contains("video-downloads.googleusercontent")
-            
-            val cleanNameForTags = link.name.replace(Regex("(?i)(1080p|720p|480p|360p|4k|2160p|H\\.?264|AVC)"), "")
-            
-            val (langs, techSpecs) = extractPremiumTags(cleanNameForTags)
-            
-            var finalSize = size.trim()
-            if (finalSize.isEmpty()) {
-                finalSize = SIZE_REGEX.find(link.name)?.value?.uppercase()
-                    ?.replace("GB", " GB")?.replace("MB", " MB")?.replace(Regex("\\s+"), " ") ?: ""
-            }
-            
-            // Host name clean karo taaki brackets proper rahen (jaise Hubcloud(Pixeldrain))
-            val hostName = link.source.trim().replace(Regex("\\s+"), " ")
-
-            // 🔥 TOP TEXT (Format: Moviesdrive >> Hubcloud(Pixeldrain))
-            val topText = if (isDownload) {
-                "Download >> $hostName"
-            } else {
-                if (hostName.contains(source, ignoreCase = true)) hostName else "$source >> $hostName"
-            }
-
-            val italicTech = if (techSpecs.isNotEmpty()) techSpecs.toSansSerifItalic() else ""
-            
-            val bottomText = listOfNotNull(
-                finalSize.takeIf { it.isNotEmpty() },
-                langs.takeIf { it.isNotEmpty() },
-                italicTech.takeIf { it.isNotEmpty() }
-            ).joinToString(" • ").trim().replace(Regex("•\\s*•"), "•")
+            val simplifiedTitle = getSimplifiedTitle(link.name)
+            val combined = if (source.contains("(Combined)")) " (Combined)" else ""
+            val fixSize = if (size.isNotEmpty()) " $size" else ""
+            val sourceBold = "$source [${link.source}]".toSansSerifBold()
+            val newSourceName = if (isDownload) "Download$combined" else "${link.source}$combined"
+            val newName = "$sourceBold $simplifiedTitle$fixSize".trim()
 
             val newLink = newExtractorLink(
-                topText,
-                bottomText.ifEmpty { "Stream" },
+                newSourceName,
+                newName,
                 link.url,
                 type = link.type
             ) {
