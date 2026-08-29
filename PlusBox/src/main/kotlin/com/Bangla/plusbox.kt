@@ -10,7 +10,6 @@ class PlusboxProvider : MainAPI() {
     override var hasMainPage = true
     override var supportedTypes = setOf(TvType.Live)
 
-    // Yahan tum apne saare channels ki list add kar sakte ho
     private data class Channel(val name: String, val slug: String, val poster: String)
     
     private val channels = listOf(
@@ -30,7 +29,7 @@ class PlusboxProvider : MainAPI() {
             }
         }
 
-        return HomePageResponse(
+        return newHomePageResponse(
             listOf(
                 HomePageList(
                     name = "Live TV Channels",
@@ -54,13 +53,13 @@ class PlusboxProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        // url format: https://backend.plusbox.tv/SonyMaxHD/embed.html
         val slug = url.split("/")[3]
         val channelObj = channels.find { it.slug == slug } ?: Channel("Live Channel", slug, "")
         
-        return newLiveStreamLoadResponse(channelObj.name, url, TvType.Live, url) {
+        return newLiveStreamLoadResponse(channelObj.name, url, url) {
             this.posterUrl = channelObj.poster
             this.plot = "Live 24x7 streaming channel via Plusbox."
+            this.tvType = TvType.Live
         }
     }
 
@@ -70,10 +69,7 @@ class PlusboxProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // data se slug extract kar lo
         val slug = data.split("/")[3]
-        
-        // Token aur stream URL setup
         val token = "cd2d94f385a6eadee0222b66dbb6447765ecf4f7-5cce5c0acfb916db758656ff90653b3e-1787998755-1787987955"
         val streamUrl = "$mainUrl/$slug/index.fmp4.m3u8?token=$token"
 
