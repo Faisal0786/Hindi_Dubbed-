@@ -73,123 +73,56 @@ class SpecOption(searchTerms: List<String>, val label: String) {
 
 val SPEC_OPTIONS = mapOf(
     "quality" to listOf(
-        SpecOption("UHD BluRay", "4K UHD BluRay 💿"),
-        SpecOption("BluRay", "BluRay 💿"),
-        SpecOption("BluRay REMUX", "BluRay REMUX 💾"),
-        SpecOption("BDRip", "BDRip 💿"),
-        SpecOption("BRRip", "BRRip 💿"),
-        SpecOption("DVD", "DVD Full/ISO 📀"),
-        SpecOption("DVDRip", "DVDRip 📀"),
-        SpecOption("DVD5", "DVD5 📀"),
-        SpecOption("DVD9", "DVD9 📀"),
-        SpecOption("HD-DVD", "HD-DVD 📀"),
-        SpecOption("WEB-DL", "WEB-DL ☁️"),
-        SpecOption("WEBRip", "WEBRip 🌐"),
-        SpecOption("HDRip", "HDRip ✨"),
-        SpecOption("HDTV", "HDTV 📺"),
-        SpecOption("PDTV", "PDTV 📺"),
-        SpecOption("SDTV", "SDTV 📺"),
-        SpecOption("PPV", "PPV 🎫"),
-        SpecOption("SATRip", "SATRip 📡"),
-        SpecOption("DSR", "DSRip 📡"),
-        SpecOption("TVRip", "TVRip 📺"),
+        SpecOption("UHD BluRay", "4K UHD BluRay"),
+        SpecOption("BluRay", "BluRay"),
+        SpecOption("BluRay REMUX", "BluRay REMUX"),
+        SpecOption("BDRip", "BDRip"),
+        SpecOption("BRRip", "BRRip"),
+        SpecOption("DVD", "DVD Full/ISO"),
+        SpecOption("DVDRip", "DVDRip"),
+        SpecOption("WEB-DL", "WEB-DL"),
+        SpecOption("WEBRip", "WEBRip"),
+        SpecOption("HDRip", "HDRip"),
+        SpecOption("HDTV", "HDTV"),
         SpecOption("CAM", "CAM 📹"),
         SpecOption("TeleSync", "TeleSync 📹"),
         SpecOption("TS", "TS 🚫"),
-        SpecOption("TC", "TeleCine 🎞️"),
-        SpecOption("SCR", "SCR 📼"),
-        SpecOption("DVDScr", "DVDScr 📼"),
-        SpecOption("R5", "R5 ⁵"),
-        SpecOption("VHS", "VHS 📼"),
-        SpecOption("LaserDisc", "LaserDisc 💿")
+        SpecOption("DVDScr", "DVDScr 📼")
     ),
     "codec" to listOf(
-        SpecOption("av1", "AV1 🚀"),
-        SpecOption(listOf("x265", "h.265", "hevc"), "HEVC ⚡"),
-        SpecOption("vp9", "VP9 🧪"),
-        SpecOption("vp8", "VP8 🧪"),
-        SpecOption(listOf("x264", "h.264", "H264", "avc"), "H.264 📦"),
-        SpecOption("vc-1", "VC-1 📼"),
-        SpecOption("mpeg-2", "MPEG-2 🎞️"),
-        SpecOption("mpeg-4", "MPEG-4 🎞️"),
-        SpecOption("xvid", "XviD 🧩"),
-        SpecOption("divx", "DivX 🧩"),
-        SpecOption("wmv", "WMV 🪟"),
-        SpecOption("theora", "Theora 🦦"),
-        SpecOption("realvideo", "RealVideo 🎥"),
-        SpecOption("h.263", "H.263 📱")
+        SpecOption("av1", "AV1"),
+        SpecOption(listOf("x265", "h.265", "hevc"), "HEVC"),
+        SpecOption(listOf("x264", "h.264", "H264", "avc"), "H.264")
     ),
     "bitdepth" to listOf(
-        SpecOption("12bit", "12bit 🌈"),
-        SpecOption("10bit", "10bit 🎨"),
-        SpecOption("Hi10P", "Hi10P (10bit) 🎨"),
-        SpecOption("8bit", "8bit 🖍️"),
-        SpecOption("3D", "3D 👓"),
-        SpecOption("SBS", "3D SBS ↔️"),
-        SpecOption("OU", "3D Over/Under ↕️"),
-        SpecOption("IMAX", "IMAX 🏟️")
+        SpecOption("12bit", "12bit"),
+        SpecOption("10bit", "10bit"),
+        SpecOption("3D", "3D 👓")
     ),
     "audio" to listOf(
-        SpecOption("TrueHD", "Dolby TrueHD 🔊"),
-        SpecOption("Atmos", "Dolby Atmos 🌌"),
-        SpecOption(listOf("DDP5.1", "DDP 5.1"), "DD+ 5.1 🔉"),
-        SpecOption("7.1", "7.1 Ch 🔊"),
-        SpecOption("5.1", "5.1 Ch 🔉"),
-        SpecOption("DTS-HD MA", "DTS-HD MA 🔊"),
-        SpecOption("DTS-HD", "DTS-HD 🔊"),
-        SpecOption("DTS:X", "DTS:X 🔊"),
-        SpecOption("DTS Lossless", "DTS Lossless 🎼"),
-        SpecOption("DTS-ES", "DTS-ES 🔉"),
-        SpecOption("PCM", "LPCM/PCM 💿"),
-        SpecOption("FLAC", "FLAC 🎹"),
-        SpecOption("ALAC", "ALAC 🍏"),
-        SpecOption("WAV", "WAV 🌊"),
-        SpecOption("AIFF", "AIFF 🎼"),
-        SpecOption(listOf("AAC2.0", "AAC 2.0"), "AAC 2.0 🎧"),
-        SpecOption("DD2.0", "DD 2.0 🎧"),
-        SpecOption(listOf("E-AC3", "DD+", "Dolby Digital Plus"), "DD+ 🔉"),
-        SpecOption("AC3", "AC3 (Dolby Digital) 🔈"),
-        SpecOption("DD5.1", "Dolby Digital 5.1 🔈"),
-        SpecOption("DTS", "DTS 🔈"),
-        SpecOption("AAC", "AAC 🎧"),
-        SpecOption("HE-AAC", "HE-AAC 🎧"),
-        SpecOption("OPUS", "Opus 🎙️"),
-        SpecOption("VORBIS", "Vorbis 🌀"),
-        SpecOption("MP3", "MP3 🎵"),
-        SpecOption("WMA", "WMA 🎵"),
-        SpecOption("OGG", "OGG 🌀"),
-        SpecOption("MP2", "MP2 📻")
+        SpecOption("TrueHD", "Dolby TrueHD"),
+        SpecOption("Atmos", "Dolby Atmos"),
+        SpecOption(listOf("DDP5.1", "DDP 5.1"), "DD+ 5.1"),
+        SpecOption("7.1", "7.1 Ch"),
+        SpecOption("5.1", "5.1 Ch"),
+        SpecOption("DTS-HD MA", "DTS-HD MA"),
+        SpecOption("DTS-HD", "DTS-HD"),
+        SpecOption(listOf("E-AC3", "DD+", "Dolby Digital Plus"), "DD+"),
+        SpecOption("AC3", "AC3")
     ),
     "hdr" to listOf(
-        SpecOption(listOf("DV", "DoVi", "DOLBYVISION", "Dolby Vision"), "Dolby Vision 👁️"),
-        SpecOption("HDR10+", "HDR10+ 🔆"),
-        SpecOption("HDR10", "HDR10 🔆"),
-        SpecOption("HLG", "HLG 📡"),
-        SpecOption("HDR", "HDR 🔆"),
-        SpecOption("SDR", "SDR 🔅")
+        SpecOption(listOf("DV", "DoVi", "DOLBYVISION", "Dolby Vision"), "Dolby Vision"),
+        SpecOption("HDR10+", "HDR10+"),
+        SpecOption("HDR10", "HDR10"),
+        SpecOption("HDR", "HDR")
     ),
     "language" to listOf(
-        SpecOption(listOf("HIN", "Hindi"), "Hindi 🇮🇳"),
-        SpecOption("Tamil", "Tamil 🇮🇳"),
-        SpecOption("Telugu", "Telugu 🇮🇳"),
-        SpecOption("Malayalam", "Malayalam 🇮🇳"),
-        SpecOption("Kannada", "Kannada 🇮🇳"),
-        SpecOption("Bengali", "Bengali 🇮🇳"),
-        SpecOption("Punjabi", "Punjabi 🇮🇳"),
-        SpecOption(listOf("ENG", "English"), "English 🇺🇸"),
-        SpecOption(listOf("KOR", "Korean"), "Korean 🇰🇷"),
-        SpecOption(listOf("JPN", "Japanese"), "Japanese 🇯🇵"),
-        SpecOption(listOf("CHN", "Chinese"), "Chinese 🇨🇳"),
-        SpecOption("Spanish", "Spanish 🇪🇸"),
-        SpecOption("French", "French 🇫🇷"),
-        SpecOption("German", "German 🇩🇪"),
-        SpecOption("Italian", "Italian 🇮🇹"),
-        SpecOption("Russian", "Russian 🇷🇺"),
-        SpecOption("Arabic", "Arabic 🇸🇦"),
-        SpecOption(listOf("Multi-Audio", "Multi Audio", "Multi.Audio"), "Multi Audio 🌍"),
-        SpecOption(listOf("Dual.Audio", "Dual Audio", "Dual"), "Dual Audio 🌗"),
-        SpecOption(listOf("Multi-Sub", "MultiSub", "Multi Sub"), "Multi Subs 💬"),
-        SpecOption("ESub", "English Subs 🇺🇸")
+        SpecOption(listOf("HIN", "Hindi"), "Hindi"),
+        SpecOption(listOf("ENG", "English"), "English"),
+        SpecOption(listOf("Multi-Audio", "Multi Audio", "Multi.Audio"), "Multi-Audio 🔊"),
+        SpecOption(listOf("Dual.Audio", "Dual Audio", "Dual"), "Dual-Audio 🔊"),
+        SpecOption(listOf("Multi-Sub", "MultiSub", "Multi Sub"), "Multi-Sub 💬"),
+        SpecOption("ESub", "ESub")
     )
 )
 
@@ -210,15 +143,16 @@ fun getSimplifiedTitle(title: String): String {
     }
 
     val sizeMatch = SIZE_REGEX.find(title)?.value?.uppercase()
-    val size = sizeMatch?.let { "$it 💾" }
 
+    // 🔴 Pipes (|) ki jagah Dots (•) use kiya hai premium look ke liye
     val result = listOfNotNull(
-        matchedLabels.distinct().joinToString(" | ").takeIf { it.isNotEmpty() },
-        size
-    ).joinToString(" | ")
+        matchedLabels.distinct().joinToString(" • ").takeIf { it.isNotEmpty() },
+        sizeMatch
+    ).joinToString(" • ")
 
-    return if (result.isEmpty()) "" else "\n$result"
+    return if (result.isEmpty()) "" else " • $result"
 }
+
 
 val languageMap = mapOf(
     "Afrikaans" to listOf("af", "afr"),
@@ -782,11 +716,14 @@ suspend fun loadSourceNameExtractor(
             val isDownload = link.source.contains("Download", ignoreCase = true) ||
                              link.url.contains("video-downloads.googleusercontent")
             val simplifiedTitle = getSimplifiedTitle(link.name)
-            val combined = if (source.contains("(Combined)")) " (Combined)" else ""
-            val fixSize = if (size.isNotEmpty()) " $size" else ""
-            val sourceBold = "$source [${link.source}]".toSansSerifBold()
-            val newSourceName = if (isDownload) "Download$combined" else "${link.source}$combined"
-            val newName = "$sourceBold $simplifiedTitle$fixSize".trim()
+            val fixSize = if (size.isNotEmpty()) " • $size" else ""
+            
+            // 🔴 Yeh line brackets [HubCloud[FSL]] ko hata kar clean (HubCloud FSL) banayegi
+            val cleanSourceLink = link.source.replace(Regex("\\[|\\]"), " ").trim().replace(Regex("\\s+"), " ")
+            val sourceBold = "$source ($cleanSourceLink)".toSansSerifBold()
+            
+            val newSourceName = if (isDownload) "Download" else cleanSourceLink
+            val newName = "$sourceBold$simplifiedTitle$fixSize".trim().replace(Regex("•\\s*•"), "•")
 
             val newLink = newExtractorLink(
                 newSourceName,
@@ -803,6 +740,7 @@ suspend fun loadSourceNameExtractor(
             callback(newLink)
         }
     }
+    
 
     when {
         url.contains("hubcloud.") || url.contains("vcloud.") -> HubCloud().getUrl(url, referer, subtitleCallback, processLink)
