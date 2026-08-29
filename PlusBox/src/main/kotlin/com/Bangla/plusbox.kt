@@ -1,7 +1,8 @@
-package com.Bangla
+package com.hindi.providers
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.api.Log
 
 class PlusboxProvider : MainAPI() {
     override var name = "Plusbox"
@@ -12,10 +13,11 @@ class PlusboxProvider : MainAPI() {
 
     private data class Channel(val name: String, val slug: String, val poster: String)
     
+    // Yahan aage aage aur bhi channels add kar sakte ho
     private val channels = listOf(
-        Channel("Sony Max HD", "SonyMaxHD", "https://images.indianexpress.com/2020/08/sony-max-hd.jpg"),
-        Channel("Sony SAB HD", "SonySABHD", "https://upload.wikimedia.org/wikipedia/en/thumb/8/86/Sony_SAB_Logo.svg/512px-Sony_SAB_Logo.svg.png"),
-        Channel("Sony Pix", "SonyPix", "https://upload.wikimedia.org/wikipedia/en/0/07/Sony_PIX_Logo.png")
+        Channel("Sony Max HD", "SonyMaxHD", "https://i.imgur.com/uRkOQ8s.png"),
+        Channel("Sony SAB HD", "SonySABHD", "https://i.imgur.com/O6Ld4Yn.png"),
+        Channel("Sony Pix", "SonyPix", "https://i.imgur.com/PZcT8oD.png")
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -63,13 +65,38 @@ class PlusboxProvider : MainAPI() {
     }
 
     override suspend fun loadLinks(
-        data: String,
+        data: String, // data is something like https://backend.plusbox.tv/SonyMaxHD/embed.html
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        // 1. Channel ka exact naam (slug) nikalo (e.g., SonyMaxHD)
         val slug = data.split("/")[3]
-        val token = "cd2d94f385a6eadee0222b66dbb6447765ecf4f7-5cce5c0acfb916db758656ff90653b3e-1787998755-1787987955"
+        
+        Log.d("Plusbox", "🔄 Fetching fresh token for channel: $slug")
+
+        // 2. Original website ki API ko POST request bhej kar naya Token nikalo
+        val tokenUrl = "https://plusbox.tv/token.php"
+        val token = app.post(
+            url = tokenUrl,
+            headers = mapOf(
+                "Accept" to "*/*",
+                "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
+                "Referer" to "https://plusbox.tv/",
+                "X-Requested-With" to "XMLHttpRequest",
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
+            ),
+            data = mapOf("ch_name" to slug)
+        ).text.trim()
+
+        if (token.isEmpty()) {
+            Log.e("Plusbox", "❌ Token fetch failed!")
+            return false
+        }
+
+        Log.d("Plusbox", "✅ Fresh Token Fetched: $token")
+
+        // 3. Token use karke Final M3U8 link banao
         val streamUrl = "$mainUrl/$slug/index.fmp4.m3u8?token=$token"
 
         val headers = mapOf(
@@ -79,6 +106,7 @@ class PlusboxProvider : MainAPI() {
             "Range" to "bytes=0-"
         )
 
+        // 4. Player ko video bhej do
         callback.invoke(
             newExtractorLink(
                 name,
