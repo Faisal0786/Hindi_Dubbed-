@@ -182,7 +182,7 @@ class CtgStreamProvider : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(
+        override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -190,9 +190,7 @@ class CtgStreamProvider : MainAPI() {
     ): Boolean {
         authenticate()
         
-        // 🔥 Fix 3: Safeguard extractor id for episodes as well
         val itemId = data.split("/").last() 
-        
         val playbackUrl = "$mainUrl/emby/Items/$itemId/PlaybackInfo?UserId=$userId&IsPlayback=true&AutoOpenLiveStream=true"
         
         try {
@@ -207,31 +205,71 @@ class CtgStreamProvider : MainAPI() {
                     val sourceId = source.optString("Id", itemId)
                     val directUrl = source.optString("DirectStreamUrl", "")
 
+                    // 1. Direct Play (Original quality from server)
                     if (directUrl.isNotEmpty()) {
                         val fullUrl = if (directUrl.startsWith("http")) directUrl else "$mainUrl$directUrl"
-                        callback.invoke(newExtractorLink(name, "Direct Play ⚡", fullUrl, INFER_TYPE) {
+                        callback.invoke(newExtractorLink(name, "Direct Play (Original) ⚡", fullUrl, INFER_TYPE) {
                             this.headers = getEmbyHeaders()
                             this.quality = Qualities.P1080.value
                         })
                     }
 
-                    val hlsUrl = "$mainUrl/emby/videos/$itemId/master.m3u8?DeviceId=$deviceId&MediaSourceId=$sourceId&PlaySessionId=$playSessionId&api_key=$embyToken&VideoCodec=hevc,h264,av1&AudioCodec=mp3,aac&TranscodingMaxAudioChannels=2&SegmentContainer=ts&MinSegments=1&BreakOnNonKeyFrames=False&ManifestSubtitles=vtt"
-                    callback.invoke(newExtractorLink(name, "Emby HLS Stream ⚡", hlsUrl, ExtractorLinkType.M3U8) {
-                        this.headers = getEmbyHeaders()
-                        this.quality = Qualities.P720.value 
-                    })
-                    
+                    // 2. Audio Tracks Extract Karenge
+                    val audioStreams = mutableListOf<Pair<String, Int>>()
                     val streams = source.optJSONArray("MediaStreams")
+                    
                     if (streams != null) {
                         for (j in 0 until streams.length()) {
                             val stream = streams.getJSONObject(j)
-                            if (stream.optString("Type") == "Subtitle") {
+                            val type = stream.optString("Type")
+                            val index = stream.optInt("Index")
+                            val lang = stream.optString("Language", "Unknown")
+                            
+                            if (type == "Audio") {
+                                val title = stream.optString("DisplayTitle", lang)
+                                audioStreams.add(Pair(title, index))
+                            } 
+                            else if (type == "Subtitle") {
                                 val codec = stream.optString("Codec", "srt")
-                                val index = stream.optInt("Index")
-                                val lang = stream.optString("Language", "Unknown")
                                 val subUrl = "$mainUrl/emby/videos/$itemId/$sourceId/Subtitles/$index/0/Stream.$codec?api_key=$embyToken"
                                 subtitleCallback.invoke(SubtitleFile(lang, subUrl))
                             }
+                        }
+                    }
+
+                    if (audioStreams.isEmpty()) {
+                        audioStreams.add(Pair("Default Audio", -1))
+                    }
+
+                    // 3. Exact Website Bitrates Mapping (Triple = Name, Quality Category, Bitrate in bps)
+                    val bitrates = listOf(
+                        Triple("Auto (Adaptive)", Qualities.Unknown.value, 140000000L), // No Cap, player adjust karega
+                        Triple("1080p - 60 Mbps", Qualities.P1080.value, 60000000L),
+                        Triple("1080p - 40 Mbps", Qualities.P1080.value, 40000000L),
+                        Triple("1080p - 20 Mbps", Qualities.P1080.value, 20000000L),
+                        Triple("1080p - 12 Mbps", Qualities.P1080.value, 12000000L),
+                        Triple("1080p - 8 Mbps",  Qualities.P1080.value, 8000000L),
+                        Triple("1080p - 4 Mbps",  Qualities.P1080.value, 4000000L),
+                        Triple("720p - 4 Mbps",   Qualities.P720.value,  4000000L),
+                        Triple("720p - 2 Mbps",   Qualities.P720.value,  2000000L),
+                        Triple("720p - 1 Mbps",   Qualities.P720.value,  1000000L),
+                        Triple("480p - 720 kbps", Qualities.P480.value,  720000L),
+                        Triple("480p - 420 kbps", Qualities.P480.value,  420000L),
+                        Triple("360p",            Qualities.P360.value,  400000L)
+                    )
+
+                    // 4. Generate links for every audio track & quality combo
+                    for ((audioName, audioIndex) in audioStreams) {
+                        val audioParam = if (audioIndex != -1) "&AudioStreamIndex=$audioIndex" else ""
+                        
+                        for ((qualityName, qualityVal, bitrate) in bitrates) {
+                            val hlsUrl = "$mainUrl/emby/videos/$itemId/master.m3u8?DeviceId=$deviceId&MediaSourceId=$sourceId&PlaySessionId=$playSessionId&api_key=$embyToken&VideoCodec=hevc,h264,av1&AudioCodec=mp3,aac&TranscodingMaxAudioChannels=2&SegmentContainer=ts&MinSegments=1&BreakOnNonKeyFrames=False&ManifestSubtitles=vtt&MaxStreamingBitrate=$bitrate$audioParam"
+                            
+                            // Link ka naam ab "Hindi - 1080p - 60 Mbps" jaisa dikhega
+                            callback.invoke(newExtractorLink(name, "$audioName - $qualityName", hlsUrl, ExtractorLinkType.M3U8) {
+                                this.headers = getEmbyHeaders()
+                                this.quality = qualityVal
+                            })
                         }
                     }
                 }
