@@ -1,4 +1,4 @@
-package com.hindi.providers
+package com.Bangla
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
