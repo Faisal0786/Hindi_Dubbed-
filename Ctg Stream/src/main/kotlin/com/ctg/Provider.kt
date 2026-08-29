@@ -64,27 +64,37 @@ class CtgStreamProvider : MainAPI() {
         return "$mainUrl/emby/Items/$itemId/Images/Primary?quality=90"
     }
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         authenticate()
         val homeItems = mutableListOf<HomePageList>()
 
-        val moviesUrl = "$mainUrl/emby/Users/$userId/Items?IncludeItemTypes=Movie&SortBy=DateCreated&SortOrder=Descending&Limit=20&Recursive=true"
         try {
-            val moviesRes = app.get(moviesUrl, headers = getEmbyHeaders()).text
-            val moviesList = parseEmbyItems(moviesRes)
-            if (moviesList.isNotEmpty()) {
-                homeItems.add(HomePageList("Latest Movies", moviesList))
-            }
-        } catch (e: Exception) { Log.e("CtgStream", "Movies Error: ${e.message}") }
+            // 1. Server se saari Categories (Views/Libraries) mangwao
+            val viewsUrl = "$mainUrl/emby/Users/$userId/Views"
+            val viewsRes = app.get(viewsUrl, headers = getEmbyHeaders()).text
+            val viewsArray = JSONObject(viewsRes).optJSONArray("Items")
 
-        val seriesUrl = "$mainUrl/emby/Users/$userId/Items?IncludeItemTypes=Series&SortBy=DateCreated&SortOrder=Descending&Limit=20&Recursive=true"
-        try {
-            val seriesRes = app.get(seriesUrl, headers = getEmbyHeaders()).text
-            val seriesList = parseEmbyItems(seriesRes)
-            if (seriesList.isNotEmpty()) {
-                homeItems.add(HomePageList("Latest TV Shows", seriesList))
+            if (viewsArray != null) {
+                // 2. Har Category (Jaise: Bollywood, Anime, TV Shows) ko loop karo
+                for (i in 0 until viewsArray.length()) {
+                    val viewItem = viewsArray.getJSONObject(i)
+                    val viewId = viewItem.optString("Id")
+                    val viewName = viewItem.optString("Name")
+
+                    // 3. API Filter: Sirf Movies aur Series mangwao (Folders/Studios skip karo)
+                    val itemsUrl = "$mainUrl/emby/Users/$userId/Items?ParentId=$viewId&IncludeItemTypes=Movie,Series&SortBy=DateCreated&SortOrder=Descending&Limit=20&Recursive=true"
+                    val itemsRes = app.get(itemsUrl, headers = getEmbyHeaders()).text
+                    val itemsList = parseEmbyItems(itemsRes)
+
+                    // 4. Agar category mein items hain, toh homepage list mein add kardo
+                    if (itemsList.isNotEmpty()) {
+                        homeItems.add(HomePageList(viewName, itemsList))
+                    }
+                }
             }
-        } catch (e: Exception) { Log.e("CtgStream", "Series Error: ${e.message}") }
+        } catch (e: Exception) {
+            Log.e("CtgStream", "Main Page Error: ${e.message}")
+        }
 
         return newHomePageResponse(homeItems)
     }
