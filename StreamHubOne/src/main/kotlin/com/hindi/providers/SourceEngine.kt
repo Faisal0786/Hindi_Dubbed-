@@ -718,15 +718,38 @@ suspend fun loadSourceNameExtractor(
         launch(Dispatchers.IO) {
             val isDownload = link.source.contains("Download", ignoreCase = true) ||
                              link.url.contains("video-downloads.googleusercontent")
+            
             val simplifiedTitle = getSimplifiedTitle(link.name)
             val fixSize = if (size.isNotEmpty()) " • $size" else ""
-            
-            // 🔴 Yeh line brackets [HubCloud[FSL]] ko hata kar clean (HubCloud FSL) banayegi
+
+            // Original Source Name ko clean kiya
             val cleanSourceLink = link.source.replace(Regex("\\[|\\]"), " ").trim().replace(Regex("\\s+"), " ")
-            val sourceBold = "$source ($cleanSourceLink)".toSansSerifBold()
             
+            // 1. Main Name Bold me (e.g., **MoviesDrive**)
+            val sourceBold = source.toSansSerifBold()
+
+            // 2. HubCloud aur Server Name Normal me (e.g., Hub-Cloud (FSL Server))
+            val parts = cleanSourceLink.split(" ", limit = 2)
+            val hostName = parts.getOrNull(0) ?: cleanSourceLink
+            val serverName = parts.getOrNull(1)?.let { "($it)" } ?: ""
+            val formattedServer = if (serverName.isNotEmpty()) "$hostName $serverName" else hostName
+
+            // 3. Details Italic me (e.g., *Hindi • ESub • H.264 • 1080p*)
+            val rawDetails = "$simplifiedTitle$fixSize"
+                .replace(Regex("•\\s*•"), "•")
+                .trim()
+                .removePrefix("•")
+                .trim()
+            val detailsItalic = rawDetails.toSansSerifItalic()
+
             val newSourceName = if (isDownload) "Download" else cleanSourceLink
-            val newName = "$sourceBold$simplifiedTitle$fixSize".trim().replace(Regex("•\\s*•"), "•")
+            
+            // Final Formatting ko combine kiya gaya hai
+            val newName = if (detailsItalic.isNotEmpty()) {
+                "$sourceBold >> $formattedServer • $detailsItalic"
+            } else {
+                "$sourceBold >> $formattedServer"
+            }
 
             val newLink = newExtractorLink(
                 newSourceName,
@@ -743,7 +766,7 @@ suspend fun loadSourceNameExtractor(
             callback(newLink)
         }
     }
-    
+
     when {
         url.contains("hubcloud.") || url.contains("vcloud.") -> HubCloud().getUrl(url, referer, subtitleCallback, processLink)
         url.contains("gdflix.") || url.contains("gdlink.") -> GDFlix().getUrl(url, referer, subtitleCallback, processLink)
@@ -756,6 +779,7 @@ suspend fun loadSourceNameExtractor(
         else -> loadExtractor(url, referer, subtitleCallback, processLink)
     }
 }
+
 
 suspend fun loadCustomExtractor(
     name: String? = null,
