@@ -748,30 +748,27 @@ suspend fun loadSourceNameExtractor(
             val isDownload = link.source.contains("Download", ignoreCase = true) ||
                              link.url.contains("video-downloads.googleusercontent")
             
-            // 1. Unwanted resolution text hatao (Cloudstream ka native badge aayega)
             val cleanNameForTags = link.name.replace(Regex("(?i)(1080p|720p|480p|360p|4k|2160p|H\\.?264|AVC)"), "")
             
-            // 2. Tags ko Premium format mein nikalna
             val (langs, techSpecs) = extractPremiumTags(cleanNameForTags)
             
-            // 3. Size ko format karna (GB/MB space ke sath)
             var finalSize = size.trim()
             if (finalSize.isEmpty()) {
                 finalSize = SIZE_REGEX.find(link.name)?.value?.uppercase()
                     ?.replace("GB", " GB")?.replace("MB", " MB")?.replace(Regex("\\s+"), " ") ?: ""
             }
             
-            // 4. Source Name Filter (🔥 Yahan server ka naam rakha hai, bas brackets hataye hain)
-            var cleanHost = link.source.replace(Regex("\\[|\\]|\\(|\\)"), " ")
-                                       .trim()
-                                       .replace(Regex("\\s+"), " ")
-            
-            // Agar Source Name (jaise MoviesDrive) string mein already hai, toh usko remove karo taaki double na dikhe
-            cleanHost = cleanHost.replace(source, "", ignoreCase = true).trim()
-            
-            if (cleanHost.isBlank()) cleanHost = "Server"
+            // 1. Pehle original host ko safe tarike se clean karo (brackets aur extra spaces hatao)
+            val rawHost = link.source.replace(Regex("\\[|\\]|\\(|\\)"), " ")
+                                     .trim()
+                                     .replace(Regex("\\s+"), " ")
 
-            // 🔥 TOP TEXT (Provider » Bold Host Name)
+            // 2. Agar provider ka naam duplicate ho raha hai toh hatao, LEKIN agar sab kuch udd jaye toh original rawHost hi use karo
+            var cleanHost = rawHost.replace(source, "", ignoreCase = true).trim()
+            if (cleanHost.isBlank()) {
+                cleanHost = rawHost.ifBlank { "Server" }
+            }
+
             val hostBold = cleanHost.toSansSerifBold()
             val topText = if (isDownload) {
                 "Download » $hostBold"
@@ -779,7 +776,6 @@ suspend fun loadSourceNameExtractor(
                 "$source » $hostBold"
             }
 
-            // 🔥 BOTTOM TEXT (Size -> Languages -> Italic Tech Specs)
             val italicTech = if (techSpecs.isNotEmpty()) techSpecs.toSansSerifItalic() else ""
             
             val bottomText = listOfNotNull(
@@ -803,8 +799,6 @@ suspend fun loadSourceNameExtractor(
             callback(newLink)
         }
     }
-
-    
 
     when {
         url.contains("hubcloud.") || url.contains("vcloud.") -> HubCloud().getUrl(url, referer, subtitleCallback, processLink)
