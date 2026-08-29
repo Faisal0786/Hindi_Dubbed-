@@ -14,12 +14,10 @@ class CtgStreamProvider : MainAPI() {
     override var hasMainPage = true
     override var supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
-    // Variables for Auto-Login
     private var embyToken = ""
     private var userId = ""
-    private val deviceId by lazy { UUID.randomUUID().toString() } // Har baar ek unique device ID generate karega
+    private val deviceId by lazy { UUID.randomUUID().toString() }
 
-    // Dynamic Headers generator
     private fun getEmbyHeaders(): Map<String, String> {
         return mapOf(
             "X-Emby-Token" to embyToken,
@@ -31,40 +29,31 @@ class CtgStreamProvider : MainAPI() {
         )
     }
 
-    // 🔥 AUTO-LOGIN LOGIC 🔥
     private suspend fun authenticate() {
-        if (embyToken.isNotEmpty() && userId.isNotEmpty()) return // Agar pehle se login hai toh dobara nahi karega
+        if (embyToken.isNotEmpty() && userId.isNotEmpty()) return
 
         Log.d("CtgStream", "🔄 Starting Auto-Login...")
         try {
-            // 1. Server se puchega ki kaunse accounts public/guest hain
             val publicUsersRes = app.get("$mainUrl/emby/Users/Public").text
             val usersArray = JSONArray(publicUsersRes)
             
             if (usersArray.length() > 0) {
-                // Pehla guest account utha lo (Jisko tum browser mein touch karte ho)
                 val guestUser = usersArray.getJSONObject(0)
                 val username = guestUser.optString("Name")
                 
-                Log.d("CtgStream", "👤 Found Guest Account: $username")
-
-                // 2. Us account se bina password ke login request bhej do
                 val authUrl = "$mainUrl/emby/Users/AuthenticateByName"
                 val authHeaders = mapOf(
                     "X-Emby-Authorization" to "MediaBrowser Client=\"Cloudstream\", Device=\"Android\", DeviceId=\"$deviceId\", Version=\"4.9.1.90\"",
                     "Accept" to "application/json",
                     "Content-Type" to "application/json"
                 )
-                val authBody = mapOf("Username" to username, "Pw" to "") // Blank password
+                val authBody = mapOf("Username" to username, "Pw" to "")
 
                 val authRes = app.post(authUrl, headers = authHeaders, json = authBody).text
                 val authJson = JSONObject(authRes)
 
-                // 3. Naya fresh Token aur UserId save kar lo
                 embyToken = authJson.optString("AccessToken")
                 userId = authJson.optJSONObject("User")?.optString("Id") ?: ""
-
-                Log.d("CtgStream", "✅ Auto-Login Success! New Token: $embyToken")
             }
         } catch (e: Exception) {
             Log.e("CtgStream", "❌ Auto-Login Failed: ${e.message}")
@@ -76,7 +65,7 @@ class CtgStreamProvider : MainAPI() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        authenticate() // Har baar data laane se pehle check karega ki login hai ya nahi
+        authenticate()
         val homeItems = mutableListOf<HomePageList>()
 
         val moviesUrl = "$mainUrl/emby/Users/$userId/Items?IncludeItemTypes=Movie&SortBy=DateCreated&SortOrder=Descending&Limit=20&Recursive=true"
@@ -119,13 +108,16 @@ class CtgStreamProvider : MainAPI() {
                 val poster = getImageUrl(id)
                 val year = item.optInt("ProductionYear", -1).takeIf { it > 0 }
 
+                // 🔥 Fix 1: Properly formatted URL pass karenge 
+                val fullUrl = "$mainUrl/$id"
+
                 if (type == "Series") {
-                    results.add(newTvSeriesSearchResponse(title, id, TvType.TvSeries) {
+                    results.add(newTvSeriesSearchResponse(title, fullUrl, TvType.TvSeries) {
                         this.posterUrl = poster
                         this.year = year
                     })
                 } else if (type == "Movie") {
-                    results.add(newMovieSearchResponse(title, id, TvType.Movie) {
+                    results.add(newMovieSearchResponse(title, fullUrl, TvType.Movie) {
                         this.posterUrl = poster
                         this.year = year
                     })
@@ -137,7 +129,10 @@ class CtgStreamProvider : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         authenticate()
-        val itemId = url 
+        
+        // 🔥 Fix 2: URL me se original ID wapas extract karenge
+        val itemId = url.split("/").last() 
+        
         val detailsUrl = "$mainUrl/emby/Users/$userId/Items/$itemId"
         val response = app.get(detailsUrl, headers = getEmbyHeaders()).text
         val item = JSONObject(response)
@@ -163,7 +158,7 @@ class CtgStreamProvider : MainAPI() {
                         val sNum = epItem.optInt("ParentIndexNumber", 1)
                         val eNum = epItem.optInt("IndexNumber", 1)
 
-                        epList.add(newEpisode(epId) {
+                        epList.add(newEpisode(epId) { // Data URL
                             this.name = epName
                             this.season = sNum
                             this.episode = eNum
@@ -173,13 +168,13 @@ class CtgStreamProvider : MainAPI() {
                 }
             } catch (e: Exception) { }
 
-            return newTvSeriesLoadResponse(title, itemId, TvType.TvSeries, epList) {
+            return newTvSeriesLoadResponse(title, url, TvType.TvSeries, epList) {
                 this.posterUrl = poster
                 this.plot = plot
                 this.year = year
             }
         } else {
-            return newMovieLoadResponse(title, itemId, TvType.Movie, itemId) {
+            return newMovieLoadResponse(title, url, TvType.Movie, itemId) { // Pass itemId as loadLinks payload
                 this.posterUrl = poster
                 this.plot = plot
                 this.year = year
@@ -194,7 +189,10 @@ class CtgStreamProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         authenticate()
-        val itemId = data 
+        
+        // 🔥 Fix 3: Safeguard extractor id for episodes as well
+        val itemId = data.split("/").last() 
+        
         val playbackUrl = "$mainUrl/emby/Items/$itemId/PlaybackInfo?UserId=$userId&IsPlayback=true&AutoOpenLiveStream=true"
         
         try {
