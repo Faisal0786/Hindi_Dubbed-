@@ -18,6 +18,19 @@ object NewSourceRegistry {
                 invokePvrMoviebox(res.imdbTitle ?: res.title, res.tmdbId, res.imdbId, res.imdbYear ?: res.year, res.imdbSeason, res.imdbEpisode, subCb, cb)
             }
         ),
+
+        SourceProviderDef(
+            key = "p_ctgstream",
+            displayName = "CtgStream",
+            category = ProviderCategory.HINDI,
+            executeStandard = { res, subCb, cb -> 
+                invokeCtgStream(res.title, res.season, res.episode, subCb, cb) 
+            },
+            executeAnime = { res, subCb, cb -> 
+                invokeCtgStream(res.imdbTitle ?: res.title, res.imdbSeason, res.imdbEpisode, subCb, cb) 
+            }
+        )
+
         SourceProviderDef(
             key = "p_ctghall", displayName = "CtgHall", category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeCtghall(res.title, res.tmdbId, res.season, res.episode, subCb, cb) },
