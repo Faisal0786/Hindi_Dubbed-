@@ -126,6 +126,7 @@ val SPEC_OPTIONS = mapOf(
     )
 )
 
+
 private val SIZE_REGEX = """(\d+(?:\.\d+)?\s?(?:MB|GB))""".toRegex(RegexOption.IGNORE_CASE)
 private val CATEGORY_ORDER = listOf("language", "audio", "hdr", "codec", "quality")
 
@@ -142,11 +143,9 @@ fun getSimplifiedTitle(title: String): String {
         }
     }
 
-
-
     val sizeMatch = SIZE_REGEX.find(title)?.value?.uppercase()
 
-     
+    // 🔴 Pipes (|) ki jagah Dots (•) use kiya hai premium look ke liye
     val result = listOfNotNull(
         matchedLabels.distinct().joinToString(" • ").takeIf { it.isNotEmpty() },
         sizeMatch
@@ -155,34 +154,6 @@ fun getSimplifiedTitle(title: String): String {
     return if (result.isEmpty()) "" else " • $result"
 }
 
-fun extractPremiumTags(title: String): Pair<String, String> {
-    var remainingTitle = title
-    val languages = mutableListOf<String>()
-    val techSpecs = mutableListOf<String>()
-
-    // 1. Languages extract karo (Comma se jodenge)
-    SPEC_OPTIONS["language"]?.forEach { spec ->
-        if (spec.regex.containsMatchIn(remainingTitle)) {
-            languages.add(spec.label)
-            remainingTitle = spec.regex.replace(remainingTitle, " ")
-        }
-    }
-
-    // 2. Technical specs extract karo (Dots se jodenge)
-    listOf("audio", "hdr", "codec", "quality").forEach { category ->
-        SPEC_OPTIONS[category]?.forEach { spec ->
-            if (spec.regex.containsMatchIn(remainingTitle)) {
-                techSpecs.add(spec.label)
-                remainingTitle = spec.regex.replace(remainingTitle, " ")
-            }
-        }
-    }
-
-    return Pair(
-        languages.distinct().joinToString(", "), 
-        techSpecs.distinct().joinToString(" • ")
-    )
-}
 
 
 
@@ -748,11 +719,14 @@ suspend fun loadSourceNameExtractor(
             val isDownload = link.source.contains("Download", ignoreCase = true) ||
                              link.url.contains("video-downloads.googleusercontent")
             val simplifiedTitle = getSimplifiedTitle(link.name)
-            val combined = if (source.contains("(Combined)")) " (Combined)" else ""
-            val fixSize = if (size.isNotEmpty()) " $size" else ""
-            val sourceBold = "$source [${link.source}]".toSansSerifBold()
-            val newSourceName = if (isDownload) "Download$combined" else "${link.source}$combined"
-            val newName = "$sourceBold $simplifiedTitle$fixSize".trim()
+            val fixSize = if (size.isNotEmpty()) " • $size" else ""
+            
+            // 🔴 Yeh line brackets [HubCloud[FSL]] ko hata kar clean (HubCloud FSL) banayegi
+            val cleanSourceLink = link.source.replace(Regex("\\[|\\]"), " ").trim().replace(Regex("\\s+"), " ")
+            val sourceBold = "$source ($cleanSourceLink)".toSansSerifBold()
+            
+            val newSourceName = if (isDownload) "Download" else cleanSourceLink
+            val newName = "$sourceBold$simplifiedTitle$fixSize".trim().replace(Regex("•\\s*•"), "•")
 
             val newLink = newExtractorLink(
                 newSourceName,
@@ -769,7 +743,7 @@ suspend fun loadSourceNameExtractor(
             callback(newLink)
         }
     }
-
+    
     when {
         url.contains("hubcloud.") || url.contains("vcloud.") -> HubCloud().getUrl(url, referer, subtitleCallback, processLink)
         url.contains("gdflix.") || url.contains("gdlink.") -> GDFlix().getUrl(url, referer, subtitleCallback, processLink)
