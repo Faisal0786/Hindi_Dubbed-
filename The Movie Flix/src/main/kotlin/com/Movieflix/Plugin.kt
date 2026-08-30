@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 
 @CloudstreamPlugin
-class Sdplugin : Plugin() {
+class TheMovieFlixplugin : Plugin() {
 
     override fun load(context: Context) {
         registerMainAPI(TheMoviesFlixProvider())
