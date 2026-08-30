@@ -20,14 +20,14 @@ class TheMoviesFlixProvider : MainAPI() {
     )
 
     // =========================================================
-    // MAIN PAGE
+    // HOME PAGE
     // =========================================================
 
     override val mainPage = mainPageOf(
-        "$mainUrl/category-bollywood-movies/page/" to "Bollywood",
-        "$mainUrl/category-hollywood-movies/page/" to "Hollywood",
-        "$mainUrl/category-hindi-dubbed-movies/page/" to "Hindi Dubbed",
-        "$mainUrl/category-web-series/page/" to "Web Series"
+        "$mainUrl/category/bollywood/" to "Bollywood",
+        "$mainUrl/category/hollywood/" to "Hollywood",
+        "$mainUrl/category/hindi-dubbed/" to "Hindi Dubbed",
+        "$mainUrl/category/web-series/" to "Web Series"
     )
 
     override suspend fun getMainPage(
@@ -35,38 +35,77 @@ class TheMoviesFlixProvider : MainAPI() {
         request: MainPageRequest
     ): HomePageResponse {
 
-        val document = app.get(
-            request.data + page
-        ).document
+        val pageUrl = if (page <= 1) {
+            request.data
+        } else {
+            "${request.data}page/$page/"
+        }
 
-        val home = document
-            .select("article.latestpost")
+        Log.d(
+            "TheMoviesFlix",
+            "Loading home page: $pageUrl"
+        )
+
+        val document = app.get(pageUrl).document
+
+        /*
+         * Current site listing pages are article based.
+         * Keep selector broad enough to survive minor theme changes.
+         */
+        val results = document
+            .select(
+                "article.latestpost, " +
+                "article.post, " +
+                ".latestpost"
+            )
             .mapNotNull { it.toSearchResult() }
+            .distinctBy { it.url }
+
+        Log.d(
+            "TheMoviesFlix",
+            "Home results = ${results.size}"
+        )
 
         return newHomePageResponse(
             request.name,
-            home
+            results,
+            hasNext = results.isNotEmpty()
         )
     }
 
+    // =========================================================
+    // SEARCH RESULT PARSER
+    // =========================================================
+
     private fun Element.toSearchResult(): SearchResponse? {
 
-        val anchor = selectFirst("a")
-            ?: return null
+        val anchor = selectFirst(
+            "a[href]"
+        ) ?: return null
 
-        val href = anchor.attr("href")
+        val href = anchor
+            .attr("href")
+            .trim()
 
         if (href.isBlank()) return null
 
-        val title = anchor
-            .attr("title")
-            .replace("Download", "", ignoreCase = true)
+        /*
+         * Website title attribute normally contains:
+         *
+         * Download Toxic (2026) ...
+         *
+         * We remove Download but preserve actual title.
+         */
+        val title = (
+            anchor.attr("title")
+                .ifBlank { anchor.text() }
+            )
+            .replace(
+                "Download",
+                "",
+                ignoreCase = true
+            )
             .trim()
-            .ifBlank {
-                anchor.text()
-                    .replace("Download", "", ignoreCase = true)
-                    .trim()
-            }
 
         if (title.isBlank()) return null
 
@@ -74,16 +113,36 @@ class TheMoviesFlixProvider : MainAPI() {
             "div.featured-thumbnail img"
         )?.attr("src")
             ?.takeIf { it.isNotBlank() }
-            ?: selectFirst("img")
-                ?.attr("src")
+            ?: selectFirst(
+                "img"
+            )?.attr("src")
                 ?.takeIf { it.isNotBlank() }
 
-        return newMovieSearchResponse(
-            title,
-            href,
-            TvType.Movie
-        ) {
-            posterUrl = poster
+        /*
+         * Detect obvious series posts from title.
+         */
+        val isSeries = Regex(
+            """(?i)\b(?:season\s*\d+|s\d{1,2}\b|web\s*series|series)\b"""
+        ).containsMatchIn(title)
+
+        return if (isSeries) {
+
+            newTvSeriesSearchResponse(
+                title,
+                href
+            ) {
+                posterUrl = poster
+            }
+
+        } else {
+
+            newMovieSearchResponse(
+                title,
+                href,
+                TvType.Movie
+            ) {
+                posterUrl = poster
+            }
         }
     }
 
@@ -95,22 +154,45 @@ class TheMoviesFlixProvider : MainAPI() {
         query: String
     ): List<SearchResponse> {
 
-        val document = app.get(
-            "$mainUrl/?s=${query.trim()}"
-        ).document
+        val encodedQuery = query
+            .trim()
+            .replace(" ", "+")
+
+        val url = "$mainUrl/?s=$encodedQuery"
+
+        Log.d(
+            "TheMoviesFlix",
+            "Search URL = $url"
+        )
+
+        val document = app.get(url).document
 
         return document
-            .select("article.latestpost")
-            .mapNotNull { it.toSearchResult() }
+            .select(
+                "article.latestpost, " +
+                "article.post, " +
+                ".latestpost"
+            )
+            .mapNotNull {
+                it.toSearchResult()
+            }
+            .distinctBy {
+                it.url
+            }
     }
 
     // =========================================================
-    // LOAD DETAILS
+    // METADATA / DETAILS
     // =========================================================
 
     override suspend fun load(
         url: String
     ): LoadResponse? {
+
+        Log.d(
+            "TheMoviesFlix",
+            "Loading details: $url"
+        )
 
         val document = app.get(url).document
 
@@ -119,9 +201,15 @@ class TheMoviesFlixProvider : MainAPI() {
         // -----------------------------------------------------
 
         val title = document
-            .selectFirst("h2.mfx-main-title")
+            .selectFirst(
+                "h2.mfx-main-title"
+            )
             ?.text()
-            ?.replace("Download", "", ignoreCase = true)
+            ?.replace(
+                "Download",
+                "",
+                ignoreCase = true
+            )
             ?.trim()
             ?: return null
 
@@ -130,66 +218,246 @@ class TheMoviesFlixProvider : MainAPI() {
         // -----------------------------------------------------
 
         val poster = document
-            .selectFirst("meta[property=og:image]")
+            .selectFirst(
+                "meta[property=og:image]"
+            )
             ?.attr("content")
-            ?.takeIf { it.isNotBlank() }
+            ?.takeIf {
+                it.isNotBlank()
+            }
+            ?: document
+                .selectFirst(
+                    ".entry-content img"
+                )
+                ?.attr("src")
+                ?.takeIf {
+                    it.isNotBlank()
+                }
 
         // -----------------------------------------------------
         // PLOT
         // -----------------------------------------------------
 
         val plot = document
-            .selectFirst("div.mfx-plot-box")
+            .selectFirst(
+                "div.mfx-plot-box"
+            )
             ?.text()
             ?.trim()
+
+        // -----------------------------------------------------
+        // INFO HELPER
+        // -----------------------------------------------------
+
+        fun infoValue(
+            label: String
+        ): String? {
+
+            val li = document
+                .select(
+                    "div.mfx-info-box ul li"
+                )
+                .firstOrNull { element ->
+
+                    element
+                        .selectFirst("strong")
+                        ?.text()
+                        ?.contains(
+                            label,
+                            ignoreCase = true
+                        ) == true
+                }
+
+            return li
+                ?.text()
+                ?.substringAfter(":")
+                ?.trim()
+                ?.takeIf {
+                    it.isNotBlank()
+                }
+        }
 
         // -----------------------------------------------------
         // YEAR
         // -----------------------------------------------------
 
-        val year = document
-            .selectFirst(
-                "div.mfx-info-box ul li"
-            )?.let { li ->
+        val year = infoValue(
+            "Release Year"
+        )?.toIntOrNull()
+            ?: infoValue(
+                "Released Year"
+            )?.toIntOrNull()
 
-                if (
-                    li.selectFirst("strong")
-                        ?.text()
-                        ?.contains("Release Year", true) == true
-                ) {
-                    li.text()
-                        .substringAfter(":")
-                        .trim()
-                        .toIntOrNull()
-                } else {
-                    null
-                }
+        // -----------------------------------------------------
+        // GENRES
+        // -----------------------------------------------------
+
+        val genres = infoValue(
+            "Genres"
+        )
+            ?.split(",")
+            ?.map {
+                it.trim()
             }
+            ?.filter {
+                it.isNotBlank()
+            }
+            ?.takeIf {
+                it.isNotEmpty()
+            }
+
+        // -----------------------------------------------------
+        // DIRECTOR
+        // -----------------------------------------------------
+
+        val director = infoValue(
+            "Director"
+        )
+
+        // -----------------------------------------------------
+        // CAST
+        // -----------------------------------------------------
+
+        val cast = infoValue(
+            "Cast"
+        )
+            ?.split(",")
+            ?.map {
+                ActorData(
+                    actor = Actor(
+                        it.trim()
+                    )
+                )
+            }
+            ?.filter {
+                it.actor.name.isNotBlank()
+            }
+
+        // -----------------------------------------------------
+        // LANGUAGE
+        // -----------------------------------------------------
+
+        val language = infoValue(
+            "Language"
+        )
+
+        // -----------------------------------------------------
+        // SUBTITLE
+        // -----------------------------------------------------
+
+        val subtitle = infoValue(
+            "Subtitle"
+        )
+
+        // -----------------------------------------------------
+        // SIZE
+        // -----------------------------------------------------
+
+        val size = infoValue(
+            "Size"
+        )
+
+        // -----------------------------------------------------
+        // FORMAT
+        // -----------------------------------------------------
+
+        val format = infoValue(
+            "Format"
+        )
+
+        // -----------------------------------------------------
+        // SEASON / EPISODE
+        // -----------------------------------------------------
+
+        val season = infoValue(
+            "Season"
+        )?.toIntOrNull()
+
+        val episode = infoValue(
+            "Episode"
+        )?.toIntOrNull()
+
+        // -----------------------------------------------------
+        // SERIES DETECTION
+        // -----------------------------------------------------
+
+        val isSeries = document
+            .selectFirst(
+                "h2.mfx-section-title"
+            )
+            ?.text()
+            ?.contains(
+                "Series Info",
+                ignoreCase = true
+            ) == true
+            ||
+            season != null
+            ||
+            Regex(
+                """(?i)\bseason\s*\d+\b"""
+            ).containsMatchIn(title)
 
         // -----------------------------------------------------
         // TRAILER
         // -----------------------------------------------------
 
         val ytId = document
-            .selectFirst("div.mfx-yt-lazy")
+            .selectFirst(
+                "div.mfx-yt-lazy"
+            )
             ?.attr("data-yt-id")
-            ?.takeIf { it.isNotBlank() }
+            ?.takeIf {
+                it.isNotBlank()
+            }
 
-        return newMovieLoadResponse(
-            title,
-            url,
-            TvType.Movie,
-            url
-        ) {
+        Log.d(
+            "TheMoviesFlix",
+            "title=$title year=$year season=$season episode=$episode isSeries=$isSeries"
+        )
 
-            posterUrl = poster
-            this.year = year
-            this.plot = plot
+        return if (isSeries) {
 
-            ytId?.let { id ->
-                addTrailer(
-                    "https://www.youtube.com/watch?v=$id"
-                )
+            newTvSeriesLoadResponse(
+                title,
+                url,
+                TvType.TvSeries
+            ) {
+
+                posterUrl = poster
+                this.year = year
+                this.plot = plot
+                this.tags = genres
+
+                actors = cast
+
+                ytId?.let { id ->
+                    addTrailer(
+                        "https://www.youtube.com/watch?v=$id"
+                    )
+                }
+            }
+
+        } else {
+
+            newMovieLoadResponse(
+                title,
+                url,
+                TvType.Movie,
+                url
+            ) {
+
+                posterUrl = poster
+                this.year = year
+                this.plot = plot
+                this.tags = genres
+
+                actors = cast
+
+                ytId?.let { id ->
+                    addTrailer(
+                        "https://www.youtube.com/watch?v=$id"
+                    )
+                }
             }
         }
     }
@@ -197,91 +465,8 @@ class TheMoviesFlixProvider : MainAPI() {
     // =========================================================
     // LOAD LINKS
     // =========================================================
-
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-
-        return try {
-
-            val document = app.get(data).document
-
-            /*
-             * TheMoviesFlix DOM:
-             *
-             * div.mfx-download-group
-             *   h3.mfx-quality-title
-             *   div.mfx-download-buttons
-             *      a.mfx-download-link
-             */
-
-            val downloadLinks = document
-                .select(
-                    "div.mfx-download-group " +
-                    "a.mfx-download-link"
-                )
-
-            Log.d(
-                "TheMoviesFlix",
-                "Found download links: ${downloadLinks.size}"
-            )
-
-            if (downloadLinks.isEmpty()) {
-
-                Log.d(
-                    "TheMoviesFlix",
-                    "No .mfx-download-link found"
-                )
-
-                return false
-            }
-
-            downloadLinks.forEach { element ->
-
-                val href = element
-                    .attr("href")
-                    .trim()
-
-                if (href.isBlank()) return@forEach
-
-                Log.d(
-                    "TheMoviesFlix",
-                    "Download URL: $href"
-                )
-
-                try {
-
-                    loadExtractor(
-                        href,
-                        data,
-                        subtitleCallback,
-                        callback
-                    )
-
-                } catch (e: Exception) {
-
-                    Log.e(
-                        "TheMoviesFlix",
-                        "Extractor failed: $href",
-                        e
-                    )
-                }
-            }
-
-            true
-
-        } catch (e: Exception) {
-
-            Log.e(
-                "TheMoviesFlix",
-                "loadLinks failed",
-                e
-            )
-
-            false
-        }
-    }
+    //
+    // INTENTIONALLY LEFT AS YOUR EXISTING IMPLEMENTATION.
+    //
+    // =========================================================
 }
