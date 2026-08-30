@@ -418,10 +418,11 @@ class TheMoviesFlixProvider : MainAPI() {
         return if (isSeries) {
 
             newTvSeriesLoadResponse(
-                title,
-                url,
-                TvType.TvSeries
-            ) {
+    title,
+    url,
+    TvType.TvSeries,
+    emptyList()
+) {
 
                 posterUrl = poster
                 this.year = year
