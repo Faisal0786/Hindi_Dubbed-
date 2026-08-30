@@ -197,9 +197,9 @@ override suspend fun getMainPage(
 private fun Element.toSearchResult(): SearchResponse? {
 
     val anchor = selectFirst(
-        ".entry-title a[href], a[title][href]"
+        ".entry-title a[href]"
     ) ?: selectFirst(
-        "a[href]"
+        "a[title][href]"
     ) ?: return null
 
     val href = anchor
@@ -208,59 +208,48 @@ private fun Element.toSearchResult(): SearchResponse? {
 
     if (href.isBlank()) return null
 
-    val rawTitle =
-        anchor.attr("title")
-            .ifBlank {
-                selectFirst(".entry-title a")?.text()
-            }
-            .ifBlank {
-                anchor.text()
-            }
+    val rawTitle = when {
+        anchor.attr("title").isNotBlank() -> {
+            anchor.attr("title")
+        }
+
+        selectFirst(".entry-title a")?.text()?.isNotBlank() == true -> {
+            selectFirst(".entry-title a")!!.text()
+        }
+
+        anchor.text().isNotBlank() -> {
+            anchor.text()
+        }
+
+        else -> {
+            return null
+        }
+    }
 
     val title = rawTitle
         .replace(
-            Regex("(?i)^\\s*download\\s+"),
+            Regex("""(?i)^\s*download\s+"""),
             ""
         )
         .replace(
-            Regex("\\s+"),
+            Regex("""\s+"""),
             " "
         )
         .trim()
 
     if (title.isBlank()) return null
 
-    val poster =
-        selectFirst(
-            ".featured-thumbnail img"
-        )
-            ?.let { img ->
-                img.attr("data-src")
-                    .ifBlank { img.attr("src") }
-            }
+    val poster = selectFirst(
+        ".featured-thumbnail img"
+    )?.attr("src")
+        ?.takeIf { it.isNotBlank() }
+        ?: selectFirst(
+            "img"
+        )?.attr("src")
             ?.takeIf { it.isNotBlank() }
-            ?: selectFirst(
-                "img"
-            )
-                ?.let { img ->
-                    img.attr("data-src")
-                        .ifBlank { img.attr("src") }
-                }
-                ?.takeIf { it.isNotBlank() }
-
-    /*
-     * Detect TV/web-series posts.
-     */
 
     val isSeries = Regex(
-        """(?i)\b(
-            season\s*\d+ |
-            s\d{1,2}\b |
-            web[\s-]*series |
-            tv[\s-]*series |
-            korean[\s-]*drama |
-            series
-        )\b""".trimIndent()
+        """(?i)\b(?:season\s*\d+|s\d{1,2}\b|web\s*series|series)\b"""
     ).containsMatchIn(title)
 
     return if (isSeries) {
