@@ -1,4 +1,4 @@
-package com.hindi.providers.NewProviders // Apne folder ke hisaab se package name check kar lena
+package com.Movieflix
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
