@@ -56,159 +56,270 @@ class TheMoviesFlixProvider : MainAPI() {
         TvType.TvSeries
     )
 
-    // =========================================================
-    // HOME PAGE
-    // =========================================================
+  // =========================================================
+// HOME PAGE CATEGORIES
+// =========================================================
 
-    override val mainPage = mainPageOf(
-        "$mainUrl/category/bollywood/" to "Bollywood",
-        "$mainUrl/category/hollywood/" to "Hollywood",
-        "$mainUrl/category/hindi-dubbed/" to "Hindi Dubbed",
-        "$mainUrl/category/web-series/" to "Web Series"
+override val mainPage = mainPageOf(
+
+    // Main categories
+    "$mainUrl/category/english/" to "Hollywood",
+    "$mainUrl/category/bollywood/" to "Bollywood",
+    "$mainUrl/category/hindi-dubbed-movies/" to "Hindi Dubbed",
+    "$mainUrl/category/dual-audio-movies/" to "Dual Audio",
+    "$mainUrl/category/web-series/" to "Web Series",
+    "$mainUrl/category/korean-series/" to "Korean Drama",
+
+    // Genres
+    "$mainUrl/category/drama/" to "Drama",
+    "$mainUrl/category/action/" to "Action",
+    "$mainUrl/category/comedy/" to "Comedy",
+    "$mainUrl/category/thriller/" to "Thriller",
+    "$mainUrl/category/romance/" to "Romance",
+    "$mainUrl/category/adventure/" to "Adventure",
+    "$mainUrl/category/crime/" to "Crime",
+    "$mainUrl/category/horror/" to "Horror",
+    "$mainUrl/category/mystery/" to "Mystery",
+    "$mainUrl/category/fantasy/" to "Fantasy",
+    "$mainUrl/category/sci-fi/" to "Sci-Fi",
+    "$mainUrl/category/animation/" to "Animation",
+    "$mainUrl/category/family/" to "Family",
+    "$mainUrl/category/sport/" to "Sport"
+)
+
+// =========================================================
+// HOME PAGE
+// =========================================================
+
+override suspend fun getMainPage(
+    page: Int,
+    request: MainPageRequest
+): HomePageResponse {
+
+    val baseCategoryUrl = request.data.trimEnd('/')
+
+    val pageUrl = if (page <= 1) {
+        "$baseCategoryUrl/"
+    } else {
+        "$baseCategoryUrl/page/$page/"
+    }
+
+    Log.d(
+        "TheMoviesFlix",
+        "Loading category: ${request.name}"
     )
 
-    override suspend fun getMainPage(
-        page: Int,
-        request: MainPageRequest
-    ): HomePageResponse {
+    Log.d(
+        "TheMoviesFlix",
+        "Page: $page"
+    )
 
-        val pageUrl = if (page <= 1) {
-            request.data
-        } else {
-            "${request.data}page/$page/"
-        }
+    Log.d(
+        "TheMoviesFlix",
+        "URL: $pageUrl"
+    )
 
-        Log.d(
-            "TheMoviesFlix",
-            "Loading home page: $pageUrl"
-        )
+    return try {
 
-        val document = app.get(pageUrl).document
+        val document = app.get(
+            pageUrl,
+            timeout = 30L
+        ).document
 
         /*
-         * Current site listing pages are article based.
-         * Keep selector broad enough to survive minor theme changes.
+         * Actual site structure:
+         *
+         * .post-cards
+         *     └── .latestpost
+         *          └── .featured-thumbnail img
+         *          └── .entry-title a
+         *
+         * Primary selector is intentionally specific.
          */
+
         val results = document
             .select(
-                "article.latestpost, " +
-                "article.post, " +
-                ".latestpost"
+                ".post-cards > .latestpost, " +
+                ".post-cards article.latestpost, " +
+                "article.latestpost"
             )
             .mapNotNull { it.toSearchResult() }
             .distinctBy { it.url }
 
+        /*
+         * WordPress page navigation exposes:
+         *
+         * <link rel="next" ...>
+         *
+         * So don't assume that every non-empty page
+         * has another page.
+         */
+
+        val hasNextPage =
+            document.selectFirst("link[rel=next]") != null ||
+            document.selectFirst(
+                "a.next, " +
+                ".next a, " +
+                ".pagination .next, " +
+                ".posts-navigation .next"
+            ) != null
+
         Log.d(
             "TheMoviesFlix",
-            "Home results = ${results.size}"
+            "${request.name} page=$page results=${results.size} hasNext=$hasNextPage"
         )
 
-        return newHomePageResponse(
+        newHomePageResponse(
             request.name,
             results,
-            hasNext = results.isNotEmpty()
+            hasNext = hasNextPage
+        )
+
+    } catch (e: Exception) {
+
+        Log.e(
+            "TheMoviesFlix",
+            "Category load failed: ${request.name} : ${e.message}"
+        )
+
+        newHomePageResponse(
+            request.name,
+            emptyList(),
+            hasNext = false
         )
     }
+}
 
     // =========================================================
-    // SEARCH RESULT PARSER
-    // =========================================================
+// SEARCH RESULT PARSER
+// =========================================================
 
-    private fun Element.toSearchResult(): SearchResponse? {
+private fun Element.toSearchResult(): SearchResponse? {
 
-        val anchor = selectFirst(
-            "a[href]"
-        ) ?: return null
+    val anchor = selectFirst(
+        ".entry-title a[href], a[title][href]"
+    ) ?: selectFirst(
+        "a[href]"
+    ) ?: return null
 
-        val href = anchor
-            .attr("href")
-            .trim()
+    val href = anchor
+        .attr("href")
+        .trim()
 
-        if (href.isBlank()) return null
+    if (href.isBlank()) return null
 
-        /*
-         * Website title attribute normally contains:
-         *
-         * Download Toxic (2026) ...
-         *
-         * We remove Download but preserve actual title.
-         */
-        val title = (
-            anchor.attr("title")
-                .ifBlank { anchor.text() }
-            )
-            .replace(
-                "Download",
-                "",
-                ignoreCase = true
-            )
-            .trim()
+    val rawTitle =
+        anchor.attr("title")
+            .ifBlank {
+                selectFirst(".entry-title a")?.text()
+            }
+            .ifBlank {
+                anchor.text()
+            }
 
-        if (title.isBlank()) return null
+    val title = rawTitle
+        .replace(
+            Regex("(?i)^\\s*download\\s+"),
+            ""
+        )
+        .replace(
+            Regex("\\s+"),
+            " "
+        )
+        .trim()
 
-        val poster = selectFirst(
-            "div.featured-thumbnail img"
-        )?.attr("src")
+    if (title.isBlank()) return null
+
+    val poster =
+        selectFirst(
+            ".featured-thumbnail img"
+        )
+            ?.let { img ->
+                img.attr("data-src")
+                    .ifBlank { img.attr("src") }
+            }
             ?.takeIf { it.isNotBlank() }
             ?: selectFirst(
                 "img"
-            )?.attr("src")
+            )
+                ?.let { img ->
+                    img.attr("data-src")
+                        .ifBlank { img.attr("src") }
+                }
                 ?.takeIf { it.isNotBlank() }
 
-        /*
-         * Detect obvious series posts from title.
-         */
-        val isSeries = Regex(
-            """(?i)\b(?:season\s*\d+|s\d{1,2}\b|web\s*series|series)\b"""
-        ).containsMatchIn(title)
+    /*
+     * Detect TV/web-series posts.
+     */
 
-        return if (isSeries) {
+    val isSeries = Regex(
+        """(?i)\b(
+            season\s*\d+ |
+            s\d{1,2}\b |
+            web[\s-]*series |
+            tv[\s-]*series |
+            korean[\s-]*drama |
+            series
+        )\b""".trimIndent()
+    ).containsMatchIn(title)
 
-            newTvSeriesSearchResponse(
-                title,
-                href
-            ) {
-                posterUrl = poster
-            }
+    return if (isSeries) {
 
-        } else {
+        newTvSeriesSearchResponse(
+            title,
+            href
+        ) {
+            posterUrl = poster
+        }
 
-            newMovieSearchResponse(
-                title,
-                href,
-                TvType.Movie
-            ) {
-                posterUrl = poster
-            }
+    } else {
+
+        newMovieSearchResponse(
+            title,
+            href,
+            TvType.Movie
+        ) {
+            posterUrl = poster
         }
     }
-
+}
     // =========================================================
     // SEARCH
     // =========================================================
 
-    override suspend fun search(
-        query: String
-    ): List<SearchResponse> {
+    // =========================================================
+// SEARCH
+// =========================================================
 
-        val encodedQuery = query
-            .trim()
-            .replace(" ", "+")
+override suspend fun search(
+    query: String
+): List<SearchResponse> {
 
-        val url = "$mainUrl/?s=$encodedQuery"
-
-        Log.d(
-            "TheMoviesFlix",
-            "Search URL = $url"
+    val encodedQuery = java.net.URLEncoder
+        .encode(
+            query.trim(),
+            "UTF-8"
         )
 
-        val document = app.get(url).document
+    val url = "$mainUrl/?s=$encodedQuery"
 
-        return document
+    Log.d(
+        "TheMoviesFlix",
+        "Search URL = $url"
+    )
+
+    return try {
+
+        val document = app.get(
+            url,
+            timeout = 30L
+        ).document
+
+        document
             .select(
-                "article.latestpost, " +
-                "article.post, " +
-                ".latestpost"
+                ".post-cards > .latestpost, " +
+                ".post-cards article.latestpost, " +
+                "article.latestpost"
             )
             .mapNotNull {
                 it.toSearchResult()
@@ -216,7 +327,17 @@ class TheMoviesFlixProvider : MainAPI() {
             .distinctBy {
                 it.url
             }
+
+    } catch (e: Exception) {
+
+        Log.e(
+            "TheMoviesFlix",
+            "Search failed: ${e.message}"
+        )
+
+        emptyList()
     }
+}
 
     // =========================================================
     // METADATA / DETAILS
