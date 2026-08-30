@@ -29,108 +29,422 @@ suspend fun SourceProviders.invokePlusNet(
 ) {
     if (title.isNullOrBlank()) return
 
-    val isTvShow = season != null
     val baseUrl = "http://fs.plus.net.bd"
+    val isTvShow = season != null
+
+    Log.d(
+        "PlusNet",
+        "Searching title=$title year=$year season=$season episode=$episode"
+    )
+
     var matchedFolder: String? = null
 
-    // 1. FOLDER DHOONDNA (Shows & Movies)
+    // ---------------------------------------------------------
+    // 1. FIND MOVIE / TV SHOW FOLDER
+    // ---------------------------------------------------------
+
     if (isTvShow) {
-        val showCategories = listOf("/Shows/Indian-Web-Series/", "/Shows/Tv-Shows/", "/Shows/Anime-Shows/")
-        for (cat in showCategories) {
-            val fullPath = "$baseUrl$cat"
+
+        val searchPaths = listOf(
+            "/Shows/Indian-Web-Series/",
+            "/Shows/Tv-Shows/",
+            "/Shows/Anime-Shows/"
+        )
+
+        for (path in searchPaths) {
+
+            val categoryUrl = "$baseUrl$path"
+
+            Log.d("PlusNet", "Checking show category: $categoryUrl")
+
             try {
-                val doc = app.get(fullPath).document
-                for (a in doc.select("a")) {
-                    val href = a.attr("href")
-                    val folderName = java.net.URLDecoder.decode(href.trimEnd('/'), "UTF-8")
-                    if (folderName.contains(title, ignoreCase = true) && href != "/") {
-                        matchedFolder = if (href.startsWith("http")) href else "$fullPath$href"
+                val doc = app.get(
+                    categoryUrl,
+                    headers = mapOf("User-Agent" to USER_AGENT),
+                    timeout = 30L
+                ).document
+
+                for (a in doc.select("a[href]")) {
+
+                    val href = a.attr("href").trim()
+
+                    if (href.isBlank() || href == "/") continue
+
+                    val folderName = try {
+                        java.net.URLDecoder.decode(
+                            href.trimEnd('/'),
+                            "UTF-8"
+                        )
+                    } catch (_: Exception) {
+                        href.trimEnd('/')
+                    }
+
+                    Log.d(
+                        "PlusNet",
+                        "Checking folder: $folderName"
+                    )
+
+                    if (
+                        folderName.contains(
+                            title,
+                            ignoreCase = true
+                        )
+                    ) {
+
+                        matchedFolder = java.net.URI(
+                            categoryUrl
+                        ).resolve(href).toString()
+
+                        Log.d(
+                            "PlusNet",
+                            "MATCHED SHOW FOLDER = $matchedFolder"
+                        )
+
                         break
                     }
                 }
+
                 if (matchedFolder != null) break
-            } catch (e: Exception) {}
-        }
-    } else {
-        val movieCategories = listOf("/Movies/Hindi/", "/Movies/English/", "/Movies/Asian-Anime/", "/Movies/South-Indian/", "/Movies/Indian-Bangla/")
-        for (cat in movieCategories) {
-            val pathsToCheck = mutableListOf<String>()
-            val yearFolder = getPlusNetYearFolder(year, cat)
-            if (yearFolder != null) {
-                pathsToCheck.add("$baseUrl$cat$yearFolder")
+
+            } catch (e: Exception) {
+                Log.e(
+                    "PlusNet",
+                    "Category failed: ${e.message}"
+                )
             }
-            pathsToCheck.add("$baseUrl$cat")
+        }
+
+    } else {
+
+        val categories = listOf(
+            "/Movies/Hindi/",
+            "/Movies/English/",
+            "/Movies/Asian-Anime/",
+            "/Movies/South-Indian/",
+            "/Movies/Indian-Bangla/"
+        )
+
+        for (category in categories) {
+
+            val pathsToCheck = mutableListOf<String>()
+
+            val yearFolder =
+                getPlusNetYearFolder(year, category)
+
+            if (!yearFolder.isNullOrBlank()) {
+                pathsToCheck.add(
+                    "$baseUrl$category$yearFolder"
+                )
+            }
+
+            pathsToCheck.add(
+                "$baseUrl$category"
+            )
 
             for (path in pathsToCheck) {
+
+                Log.d(
+                    "PlusNet",
+                    "Checking movie path: $path"
+                )
+
                 try {
-                    val doc = app.get(path).document
-                    for (a in doc.select("a")) {
-                        val href = a.attr("href")
-                        val folderName = java.net.URLDecoder.decode(href.trimEnd('/'), "UTF-8")
-                        if (folderName.contains(title, ignoreCase = true) && href != "/") {
-                            matchedFolder = if (href.startsWith("http")) href else "$path$href"
+
+                    val doc = app.get(
+                        path,
+                        headers = mapOf(
+                            "User-Agent" to USER_AGENT
+                        ),
+                        timeout = 30L
+                    ).document
+
+                    for (a in doc.select("a[href]")) {
+
+                        val href = a.attr("href").trim()
+
+                        if (href.isBlank() || href == "/") continue
+
+                        val folderName = try {
+                            java.net.URLDecoder.decode(
+                                href.trimEnd('/'),
+                                "UTF-8"
+                            )
+                        } catch (_: Exception) {
+                            href.trimEnd('/')
+                        }
+
+                        Log.d(
+                            "PlusNet",
+                            "Checking folder: $folderName"
+                        )
+
+                        if (
+                            folderName.contains(
+                                title,
+                                ignoreCase = true
+                            )
+                        ) {
+
+                            matchedFolder =
+                                java.net.URI(path)
+                                    .resolve(href)
+                                    .toString()
+
+                            Log.d(
+                                "PlusNet",
+                                "MATCHED MOVIE FOLDER = $matchedFolder"
+                            )
+
                             break
                         }
                     }
+
                     if (matchedFolder != null) break
-                } catch (e: Exception) {}
+
+                } catch (e: Exception) {
+
+                    Log.e(
+                        "PlusNet",
+                        "Movie path failed: ${e.message}"
+                    )
+                }
             }
+
             if (matchedFolder != null) break
         }
     }
 
-    if (matchedFolder == null) return
-    var currentFolder = matchedFolder
+    // ---------------------------------------------------------
+    // 2. NO FOLDER
+    // ---------------------------------------------------------
 
-    // 2. SEASON FOLDER MEIN JANA (Agar TV Show hai)
+    if (matchedFolder.isNullOrBlank()) {
+
+        Log.d(
+            "PlusNet",
+            "NO MATCHED FOLDER FOUND"
+        )
+
+        return
+    }
+
+    var currentFolder = matchedFolder!!
+
+    // ---------------------------------------------------------
+    // 3. ENTER SEASON FOLDER
+    // ---------------------------------------------------------
+
     if (isTvShow && season != null) {
+
+        Log.d(
+            "PlusNet",
+            "Looking for Season $season in $currentFolder"
+        )
+
         try {
-            val doc = app.get(currentFolder!!).document
-            val seasonStr1 = "Season $season"
-            val seasonStr2 = "Season ${season.toString().padStart(2, '0')}"
-            for (a in doc.select("a")) {
-                val href = a.attr("href")
-                val sFolder = java.net.URLDecoder.decode(href.trimEnd('/'), "UTF-8")
-                if ((sFolder.contains(seasonStr1, ignoreCase = true) || sFolder.contains(seasonStr2, ignoreCase = true)) && href != "/") {
-                    currentFolder = if (href.startsWith("http")) href else "$currentFolder$href"
+
+            val doc = app.get(
+                currentFolder,
+                headers = mapOf(
+                    "User-Agent" to USER_AGENT
+                ),
+                timeout = 30L
+            ).document
+
+            val seasonNames = listOf(
+                "Season $season",
+                "Season ${season.toString().padStart(2, '0')}"
+            )
+
+            for (a in doc.select("a[href]")) {
+
+                val href = a.attr("href").trim()
+
+                if (href.isBlank() || href == "/") continue
+
+                val folderName = try {
+                    java.net.URLDecoder.decode(
+                        href.trimEnd('/'),
+                        "UTF-8"
+                    )
+                } catch (_: Exception) {
+                    href.trimEnd('/')
+                }
+
+                if (
+                    seasonNames.any {
+                        folderName.contains(
+                            it,
+                            ignoreCase = true
+                        )
+                    }
+                ) {
+
+                    currentFolder =
+                        java.net.URI(currentFolder)
+                            .resolve(href)
+                            .toString()
+
+                    Log.d(
+                        "PlusNet",
+                        "SEASON FOLDER = $currentFolder"
+                    )
+
                     break
                 }
             }
-        } catch (e: Exception) {}
+
+        } catch (e: Exception) {
+
+            Log.e(
+                "PlusNet",
+                "Season navigation failed: ${e.message}"
+            )
+        }
     }
 
-    // 3. LINKS NIKALNA AUR DAHMERMOVIES WALE PATTERN SE EMIT KARNA
-    val request = try {
-        app.get(currentFolder!!, timeout = 60L)
-    } catch (e: Exception) { return }
-    if (!request.isSuccessful) return
+    // ---------------------------------------------------------
+    // 4. GET FINAL DIRECTORY
+    // ---------------------------------------------------------
 
-    val paths = request.document.select("a").map {
-        it.text() to it.attr("href")
-    }.filter {
-        // Sirf video files
-        it.second.endsWith(".mkv", true) || it.second.endsWith(".mp4", true) || it.second.endsWith(".avi", true)
-    }.filter {
-        // Episode filter
-        if (isTvShow && episode != null) {
-            val epRegex = Regex("(?i)E0?$episode\\b")
-            epRegex.containsMatchIn(it.first)
-        } else {
-            true
+    Log.d(
+        "PlusNet",
+        "Extracting files from: $currentFolder"
+    )
+
+    val document = try {
+
+        app.get(
+            currentFolder,
+            headers = mapOf(
+                "User-Agent" to USER_AGENT
+            ),
+            timeout = 60L
+        ).document
+
+    } catch (e: Exception) {
+
+        Log.e(
+            "PlusNet",
+            "Final folder request failed: ${e.message}"
+        )
+
+        return
+    }
+
+    // ---------------------------------------------------------
+    // 5. FIND VIDEO FILES
+    // ---------------------------------------------------------
+
+    val videoFiles = document
+        .select("a[href]")
+        .mapNotNull { a ->
+
+            val href = a.attr("href").trim()
+
+            if (href.isBlank()) return@mapNotNull null
+            if (href == "../" || href == "/") return@mapNotNull null
+
+            val pathPart = try {
+                java.net.URI(href).path ?: href
+            } catch (_: Exception) {
+                href.substringBefore("?")
+            }
+
+            val isVideo =
+                pathPart.endsWith(".mkv", true) ||
+                pathPart.endsWith(".mp4", true) ||
+                pathPart.endsWith(".avi", true)
+
+            if (!isVideo) return@mapNotNull null
+
+            val fileName = try {
+                java.net.URLDecoder.decode(
+                    pathPart.substringAfterLast('/'),
+                    "UTF-8"
+                )
+            } catch (_: Exception) {
+                pathPart.substringAfterLast('/')
+            }
+
+            href to fileName
         }
-    }.ifEmpty { return }
 
-    // DAHMER MOVIES JAISA EXACT IMPLEMENTATION
-    paths.safeAmap {
-        val quality = getIndexQuality(it.first) 
-        val tags = getIndexQualityTags(it.first)
-        val href = if (it.second.startsWith("http")) it.second else "$currentFolder${it.second}"
+    Log.d(
+        "PlusNet",
+        "Video files found = ${videoFiles.size}"
+    )
+
+    if (videoFiles.isEmpty()) {
+        Log.d(
+            "PlusNet",
+            "NO VIDEO FILES FOUND"
+        )
+        return
+    }
+
+    // ---------------------------------------------------------
+    // 6. EPISODE FILTER
+    // ---------------------------------------------------------
+
+    val filteredFiles = if (
+        isTvShow &&
+        episode != null
+    ) {
+
+        val epRegex = Regex(
+            """(?i)\bE0?$episode\b"""
+        )
+
+        videoFiles.filter { (_, fileName) ->
+            epRegex.containsMatchIn(fileName)
+        }
+
+    } else {
+        videoFiles
+    }
+
+    Log.d(
+        "PlusNet",
+        "Files after episode filter = ${filteredFiles.size}"
+    )
+
+    if (filteredFiles.isEmpty()) return
+
+    // ---------------------------------------------------------
+    // 7. EMIT ALL MATCHED LINKS
+    // ---------------------------------------------------------
+
+    filteredFiles.safeAmap { (href, fileName) ->
+
+        val finalUrl = try {
+
+            java.net.URI(currentFolder)
+                .resolve(href)
+                .toString()
+
+        } catch (_: Exception) {
+
+            if (href.startsWith("http", true)) {
+                href
+            } else {
+                "$currentFolder/${href.trimStart('/')}"
+            }
+        }
+
+        val quality = getIndexQuality(fileName)
+        val tags = getIndexQualityTags(fileName)
+
+        Log.d(
+            "PlusNet",
+            "FINAL LINK = $finalUrl"
+        )
 
         callback.invoke(
             newExtractorLink(
                 "PlusNet",
-                "[PlusNet]".toSansSerifBold() + " $tags",
-                href,
+                "[PlusNet] $tags",
+                finalUrl,
                 ExtractorLinkType.VIDEO
             ) {
                 this.quality = quality
