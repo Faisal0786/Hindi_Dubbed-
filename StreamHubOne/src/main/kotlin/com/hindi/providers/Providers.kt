@@ -354,17 +354,22 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
         downloadButtons.safeAmap(concurrency = 8) { btn ->
             val link = btn.attr("href") ?: return@safeAmap
 
-            if (link.contains("mobilejsr.rest")) {
+                        if (link.contains("mobilejsr.rest")) {
                 try {
-                    Log.d(logTag, "🛡️ MobileJSR Detected! Hitting with cfGet: $link")
-                    // cfGet is very important here for invisible Captchas
-                    val jsrHtml = cfGet(link, headers = mapOf("Referer" to matchedUrl)).text
+                    Log.d(logTag, "🛡️ MobileJSR Detected! Hitting with WebViewResolver: $link")
+                    
+                    // 🔥 FIX: cfGet/OkHttp is failing fingerprint checks. 
+                    // We use WebViewResolver to extract the HTML directly from the Android WebView!
+                    val jsrHtml = app.get(
+                        link, 
+                        headers = mapOf("Referer" to matchedUrl),
+                        interceptor = com.lagradost.cloudstream3.network.WebViewResolver(Regex("""encoded\s*="""))
+                    ).text
                     
                     val base64Regex = Regex("""const\s+encoded\s*=\s*["']([^"']+)["']""")
                     val matchResult = base64Regex.find(jsrHtml)
 
                     if (matchResult != null) {
-                        // Decode using Cloudstream's Utils
                         val decodedHtml = base64Decode(matchResult.groupValues[1])
                         val decodedDoc = Jsoup.parse(decodedHtml)
                         val finalLinks = decodedDoc.select("a[href]")
@@ -375,17 +380,17 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
                             val finalUrl = finalBtn.attr("href")
                             if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
                                 Log.d(logTag, "🚀 Routing MobileJSR Link -> $finalUrl")
-                                // Code 4 ka router jo automatically TMF ko HubCloud/Gofile wagaira pe bhejega
                                 loadSourceNameExtractor("TheMoviesFlix", finalUrl, matchedUrl, subtitleCallback, callback)
                             }
                         }
                     } else {
-                        Log.d(logTag, "❌ Base64 not found in MobileJSR page.")
+                        Log.d(logTag, "❌ Base64 not found even in WebView. DOM might be different.")
                     }
                 } catch (e: Exception) {
                     Log.e(logTag, "❌ MobileJSR Bypass Failed: ${e.message}")
                 }
             } 
+
             else if (link.contains(tmfUrl) && link.contains("/links/")) {
                 // Internal Fast Server redirect pages
                 try {
