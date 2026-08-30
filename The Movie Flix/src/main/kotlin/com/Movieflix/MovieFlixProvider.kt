@@ -1,9 +1,12 @@
 package com.Movieflix
 
-import android.util.Log // 👈 MISSING IMPORT ADDED
+import android.util.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
+
+// 👇 YAHAN HAI ASLI JADU (Specific import for addTrailer from your reference code)
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class TheMoviesFlixProvider : MainAPI() {
     override var mainUrl = "https://moviesflixi.com"
@@ -33,7 +36,7 @@ class TheMoviesFlixProvider : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val a = this.selectFirst("a") ?: return null
         val title = a.attr("title").replace("Download", "", true).trim()
-        val href = a.attr("href")
+        val href = a.attr("href") ?: return null
 
         val poster = this.selectFirst("div.featured-thumbnail img")?.attr("src") 
                      ?: this.selectFirst("img")?.attr("src")
@@ -44,7 +47,7 @@ class TheMoviesFlixProvider : MainAPI() {
     }
 
     // ==========================================
-    // 2. SEARCH LOGIC (?s=Batman)
+    // 2. SEARCH LOGIC
     // ==========================================
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?s=$query").document
@@ -54,14 +57,13 @@ class TheMoviesFlixProvider : MainAPI() {
     }
 
     // ==========================================
-    // 3. MOVIE DETAILS LOGIC (Info, Plot, Trailer)
+    // 3. MOVIE DETAILS LOGIC (Fixed addTrailer)
     // ==========================================
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
 
         val title = document.selectFirst("h2.mfx-main-title")?.text()?.replace("Download", "", true)?.trim() ?: return null
         val poster = document.selectFirst("meta[property=og:image]")?.attr("content")
-
         val plot = document.selectFirst("div.mfx-plot-box")?.text()
 
         val yearText = document.selectFirst("div.mfx-info-box ul li:contains(Release Year)")?.text()
@@ -74,9 +76,9 @@ class TheMoviesFlixProvider : MainAPI() {
             this.year = year
             this.plot = plot
             
-            // 👈 FIX: Null trailer ki error ko theek kiya gaya hai
-            if (ytId != null) {
-                addTrailer("https://www.youtube.com/embed/$ytId")
+            // 👇 FIX: Use .let{} to safely add trailer using the correct import
+            ytId?.let { 
+                addTrailer("https://www.youtube.com/embed/$it") 
             }
         }
     }
@@ -97,22 +99,26 @@ class TheMoviesFlixProvider : MainAPI() {
             it.hasClass("maxbutton") || href.contains("url=") || href.contains("/links/") || href.contains("gdflix") || href.contains("techzblog")
         }
 
-        // 👈 FIX: amap ko apmap se replace kiya gaya hai
-        downloadButtons.apmap { btn ->
-            val link = btn.attr("href")
+        // 👇 FIX: `amap` ki jagah standard `forEach` use kiya hai. Cloudstream versions badalne par standard Kotlin loops kabhi error nahi dete.
+        downloadButtons.forEach { btn ->
+            val link = btn.attr("href") ?: return@forEach
 
             if (link.contains(mainUrl) && link.contains("/links/")) {
                 try {
                     val innerDoc = app.get(link).document
                     innerDoc.select("a.btn, a.button, a.maxbutton, a[href*='techz'], a[href*='gdflix']").forEach { innerBtn ->
                         val finalUrl = innerBtn.attr("href")
-                        loadExtractor(finalUrl, subtitleCallback, callback)
+                        if (!finalUrl.isNullOrBlank()) {
+                            loadExtractor(finalUrl, subtitleCallback, callback)
+                        }
                     }
                 } catch (e: Exception) {
                     Log.d("TheMoviesFlix", "Error loading inner link: ${e.message}")
                 }
             } else {
-                loadExtractor(link, subtitleCallback, callback)
+                if (link.isNotBlank()) {
+                    loadExtractor(link, subtitleCallback, callback)
+                }
             }
         }
         return true
