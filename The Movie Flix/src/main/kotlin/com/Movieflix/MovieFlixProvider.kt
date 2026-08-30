@@ -4,8 +4,6 @@ import android.util.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
-
-// 👇 YAHAN HAI ASLI JADU (Specific import for addTrailer from your reference code)
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class TheMoviesFlixProvider : MainAPI() {
@@ -41,8 +39,13 @@ class TheMoviesFlixProvider : MainAPI() {
         val poster = this.selectFirst("div.featured-thumbnail img")?.attr("src") 
                      ?: this.selectFirst("img")?.attr("src")
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = poster
+        // Series ya Anime detect karne ke liye keyword check
+        val isTvSeries = title.contains("Season", true) || title.contains("Series", true) || title.contains("Episode", true)
+
+        return if (isTvSeries) {
+            newTvSeriesSearchResponse(title, href, TvType.TvSeries) { this.posterUrl = poster }
+        } else {
+            newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = poster }
         }
     }
 
@@ -57,7 +60,7 @@ class TheMoviesFlixProvider : MainAPI() {
     }
 
     // ==========================================
-    // 3. MOVIE DETAILS LOGIC (Fixed addTrailer)
+    // 3. MOVIE & SERIES DETAILS LOGIC
     // ==========================================
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
@@ -66,19 +69,41 @@ class TheMoviesFlixProvider : MainAPI() {
         val poster = document.selectFirst("meta[property=og:image]")?.attr("content")
         val plot = document.selectFirst("div.mfx-plot-box")?.text()
 
-        val yearText = document.selectFirst("div.mfx-info-box ul li:contains(Release Year)")?.text()
+        val yearText = document.selectFirst("div.mfx-info-box ul li:contains(Release Year), div.mfx-info-box ul li:contains(Released Year)")?.text()
         val year = yearText?.substringAfter(":")?.trim()?.toIntOrNull()
 
-        val ytId = document.selectFirst("div.mfx-yt-lazy")?.attr("data-yt-id")
+        val tags = document.selectFirst("div.mfx-info-box ul li:contains(Genres)")?.text()?.substringAfter(":")?.split(",")?.map { it.trim() }
+        val cast = document.selectFirst("div.mfx-info-box ul li:contains(Cast)")?.text()?.substringAfter(":")?.split(",")?.map { ActorData(Actor(it.trim())) }
 
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
-            this.posterUrl = poster
-            this.year = year
-            this.plot = plot
+        val ytId = document.selectFirst("div.mfx-yt-lazy")?.attr("data-yt-id")
+        val isTvSeries = title.contains("Season", true) || title.contains("Series", true) || title.contains("Episode", true)
+
+        if (isTvSeries) {
+            val episodes = listOf(
+                Episode(
+                    data = url,
+                    name = "All Episodes & Links",
+                    season = 1,
+                    episode = 1
+                )
+            )
             
-            // 👇 FIX: Use .let{} to safely add trailer using the correct import
-            ytId?.let { 
-                addTrailer("https://www.youtube.com/embed/$it") 
+            return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+                this.posterUrl = poster
+                this.year = year
+                this.plot = plot
+                this.tags = tags
+                this.actors = cast
+                ytId?.let { addTrailer("https://www.youtube.com/embed/$it") }
+            }
+        } else {
+            return newMovieLoadResponse(title, url, TvType.Movie, url) {
+                this.posterUrl = poster
+                this.year = year
+                this.plot = plot
+                this.tags = tags
+                this.actors = cast
+                ytId?.let { addTrailer("https://www.youtube.com/embed/$it") }
             }
         }
     }
@@ -94,19 +119,20 @@ class TheMoviesFlixProvider : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
 
+        // Naye buttons (`mfx-download-link`) aur purane `maxbutton` dono ko filter kiya hai
         val downloadButtons = document.select("a[href]").filter {
             val href = it.attr("href").lowercase()
-            it.hasClass("maxbutton") || href.contains("url=") || href.contains("/links/") || href.contains("gdflix") || href.contains("techzblog")
+            val cls = it.attr("class").lowercase()
+            cls.contains("maxbutton") || cls.contains("mfx-download-link") || href.contains("url=") || href.contains("/links/") || href.contains("gdflix") || href.contains("techzblog")
         }
 
-        // 👇 FIX: `amap` ki jagah standard `forEach` use kiya hai. Cloudstream versions badalne par standard Kotlin loops kabhi error nahi dete.
         downloadButtons.forEach { btn ->
             val link = btn.attr("href") ?: return@forEach
 
             if (link.contains(mainUrl) && link.contains("/links/")) {
                 try {
                     val innerDoc = app.get(link).document
-                    innerDoc.select("a.btn, a.button, a.maxbutton, a[href*='techz'], a[href*='gdflix']").forEach { innerBtn ->
+                    innerDoc.select("a.btn, a.button, a.maxbutton, a.mfx-download-link, a[href*='techz'], a[href*='gdflix']").forEach { innerBtn ->
                         val finalUrl = innerBtn.attr("href")
                         if (!finalUrl.isNullOrBlank()) {
                             loadExtractor(finalUrl, subtitleCallback, callback)
