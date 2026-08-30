@@ -493,25 +493,24 @@ val cinemetaEpisodes = if (isSeries && !imdbId.isNullOrBlank()) {
         return if (isSeries) {
 
     val episodes = cinemetaEpisodes
-        .filter {
-            it.season != null && it.episode != null
-        }
-        .sortedWith(
-            compareBy<CinemetaVideo> { it.season }
-                .thenBy { it.episode }
-        )
-        .map { video ->
+    .filter { video ->
+        video.season != null && video.episode != null
+    }
+    .sortedWith(
+        compareBy<CinemetaVideo> { it.season ?: 0 }
+            .thenBy { it.episode ?: 0 }
+    )
+    .map { video ->
 
-            newEpisode(url) {
-                name = video.title
-                season = video.season
-                episode = video.episode
-                description = video.overview
-                thumbnailUrl = video.thumbnail
-                runtime = video.runtime
-            }
+        newEpisode(url) {
+            this.name = video.title
+            this.season = video.season
+            this.episode = video.episode
+            this.description = video.overview
+            this.posterUrl = video.thumbnail
+            this.runTime = video.runtime
         }
-
+    }
     Log.d(
         "TheMoviesFlix",
         "Cinemeta episodes = ${episodes.size}"
