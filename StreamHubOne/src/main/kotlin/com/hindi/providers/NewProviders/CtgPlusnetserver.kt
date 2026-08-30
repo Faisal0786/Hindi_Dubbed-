@@ -21,7 +21,7 @@ fun getPlusNetYearFolder(year: Int?, categoryPath: String): String? {
     return null
 }
 
-suspend fun sourceProviders.invokePlusNet(
+suspend fun SourceProviders.invokePlusNet(
     title: String? = null,
     year: Int? = null,
     season: Int? = null,
