@@ -8,6 +8,6 @@ import com.lagradost.cloudstream3.plugins.Plugin
 class Sdplugin : Plugin() {
 
     override fun load(context: Context) {
-        registerMainAPI(SDMoviesProvider())
+        registerMainAPI(TheMoviesFlixProvider())
     }
 }
