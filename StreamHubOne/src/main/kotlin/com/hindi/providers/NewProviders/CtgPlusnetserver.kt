@@ -394,8 +394,8 @@ suspend fun SourceProviders.invokePlusNet(
 ) {
 
     val epRegex = Regex(
-        """(?i)(?:^|[^A-Z0-9])S0?$seasonE0?$episode(?:[^0-9]|$)"""
-    )
+    """(?i)(?:^|[^A-Z0-9])S0?${season}E0?${episode}(?:[^0-9]|$)"""
+)
 
     videoFiles.filter { (_, fileName) ->
         val matched = epRegex.containsMatchIn(fileName)
