@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import java.net.URLDecoder
-
+import com.lagradost.api.Log
 // Helper function specific to PlusNet's architecture
 fun getPlusNetYearFolder(year: Int?, categoryPath: String): String? {
     if (year == null) return null
