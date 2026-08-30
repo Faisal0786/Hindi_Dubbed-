@@ -5,6 +5,43 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
+import com.fasterxml.jackson.annotation.JsonProperty
+
+private data class CinemetaVideo(
+    @JsonProperty("id")
+    val id: String? = null,
+
+    @JsonProperty("title")
+    val title: String? = null,
+
+    @JsonProperty("season")
+    val season: Int? = null,
+
+    @JsonProperty("episode")
+    val episode: Int? = null,
+
+    @JsonProperty("released")
+    val released: String? = null,
+
+    @JsonProperty("thumbnail")
+    val thumbnail: String? = null,
+
+    @JsonProperty("overview")
+    val overview: String? = null,
+
+    @JsonProperty("runtime")
+    val runtime: Int? = null
+)
+
+private data class CinemetaMeta(
+    @JsonProperty("videos")
+    val videos: List<CinemetaVideo> = emptyList()
+)
+
+private data class CinemetaResponse(
+    @JsonProperty("meta")
+    val meta: CinemetaMeta? = null
+)
 
 class TheMoviesFlixProvider : MainAPI() {
 
@@ -397,6 +434,44 @@ class TheMoviesFlixProvider : MainAPI() {
                 """(?i)\bseason\s*\d+\b"""
             ).containsMatchIn(title)
 
+//fetch imdb id
+
+val imdbId = document
+    .selectFirst("a[href*='imdb.com/title/']")
+    ?.attr("href")
+    ?.substringAfter("/title/")
+    ?.substringBefore("/")
+    ?.takeIf { it.startsWith("tt") }
+
+//Cinemeta Episode 
+
+val cinemetaEpisodes = if (isSeries && !imdbId.isNullOrBlank()) {
+    try {
+        val cinemetaUrl =
+            "https://v3-cinemeta.strem.io/meta/series/$imdbId.json"
+
+        Log.d(
+            "TheMoviesFlix",
+            "Cinemeta URL = $cinemetaUrl"
+        )
+
+        app.get(cinemetaUrl)
+            .parsed<CinemetaResponse>()
+            .meta
+            ?.videos
+            .orEmpty()
+
+    } catch (e: Exception) {
+        Log.e(
+            "TheMoviesFlix",
+            "Cinemeta failed: ${e.message}"
+        )
+        emptyList()
+    }
+} else {
+    emptyList()
+}
+
         // -----------------------------------------------------
         // TRAILER
         // -----------------------------------------------------
@@ -417,28 +492,51 @@ class TheMoviesFlixProvider : MainAPI() {
 
         return if (isSeries) {
 
-            newTvSeriesLoadResponse(
-    title,
-    url,
-    TvType.TvSeries,
-    emptyList()
-) {
+    val episodes = cinemetaEpisodes
+        .filter {
+            it.season != null && it.episode != null
+        }
+        .sortedWith(
+            compareBy<CinemetaVideo> { it.season }
+                .thenBy { it.episode }
+        )
+        .map { video ->
 
-                posterUrl = poster
-                this.year = year
-                this.plot = plot
-                this.tags = genres
-
-                actors = cast
-
-                ytId?.let { id ->
-                    addTrailer(
-                        "https://www.youtube.com/watch?v=$id"
-                    )
-                }
+            newEpisode(url) {
+                name = video.title
+                season = video.season
+                episode = video.episode
+                description = video.overview
+                thumbnailUrl = video.thumbnail
+                runtime = video.runtime
             }
+        }
 
-        } else {
+    Log.d(
+        "TheMoviesFlix",
+        "Cinemeta episodes = ${episodes.size}"
+    )
+
+    newTvSeriesLoadResponse(
+        title,
+        url,
+        TvType.TvSeries,
+        episodes
+    ) {
+        posterUrl = poster
+        this.year = year
+        this.plot = plot
+        this.tags = genres
+        actors = cast
+
+        ytId?.let { id ->
+            addTrailer(
+                "https://www.youtube.com/watch?v=$id"
+            )
+        }
+    }
+
+} else {
 
             newMovieLoadResponse(
                 title,
