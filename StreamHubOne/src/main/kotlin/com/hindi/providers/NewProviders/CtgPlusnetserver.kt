@@ -4,9 +4,8 @@ import com.hindi.providers.*
 import com.hindi.providers.SourceProviders 
 
 import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.ExtractorLinkType
-import com.lagradost.cloudstream3.newExtractorLink
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
 import java.net.URLDecoder
 
 // Helper function specific to PlusNet's architecture
