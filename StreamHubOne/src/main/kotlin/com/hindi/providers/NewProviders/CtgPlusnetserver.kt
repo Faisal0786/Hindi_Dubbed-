@@ -447,11 +447,11 @@ suspend fun SourceProviders.invokePlusNet(
             "FINAL LINK = $finalUrl"
         )
 
-                callback.invoke(
+                        callback.invoke(
             newExtractorLink(
                 "PlusNet",
-                "[PlusNet]".toSansSerifBold() + " $tags",
-                href,
+                "[PlusNet ⚠️ VLC / Download]".toSansSerifBold() + " $tags", // 👈 Yahan text add hua hai
+                finalUrl, // 👈 BUG FIX: href ki jagah finalUrl aayega
                 ExtractorLinkType.VIDEO
             ) {
                 this.quality = quality
@@ -463,6 +463,7 @@ suspend fun SourceProviders.invokePlusNet(
                 )
             }
         )
+
 
     }
 }
