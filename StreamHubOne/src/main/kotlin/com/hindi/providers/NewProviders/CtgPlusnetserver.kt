@@ -388,22 +388,29 @@ suspend fun SourceProviders.invokePlusNet(
     // ---------------------------------------------------------
 
     val filteredFiles = if (
-        isTvShow &&
-        episode != null
-    ) {
+    isTvShow &&
+    season != null &&
+    episode != null
+) {
 
-        val epRegex = Regex(
-            """(?i)\bE0?$episode\b"""
+    val epRegex = Regex(
+        """(?i)(?:^|[^A-Z0-9])S0?$seasonE0?$episode(?:[^0-9]|$)"""
+    )
+
+    videoFiles.filter { (_, fileName) ->
+        val matched = epRegex.containsMatchIn(fileName)
+
+        Log.d(
+            "PlusNet",
+            "Episode check: $fileName -> $matched"
         )
 
-        videoFiles.filter { (_, fileName) ->
-            epRegex.containsMatchIn(fileName)
-        }
-
-    } else {
-        videoFiles
+        matched
     }
 
+} else {
+    videoFiles
+}
     Log.d(
         "PlusNet",
         "Files after episode filter = ${filteredFiles.size}"
