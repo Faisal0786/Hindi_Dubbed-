@@ -32,6 +32,12 @@ object NewSourceRegistry {
         ),
 
         SourceProviderDef(
+            key = "p_plusnet", displayName = "PlusNet Server",
+            executeStandard = { res, _, cb -> invokePlusNet(res.title, res.year, res.season, res.episode, cb) },
+            executeAnime = { res, _, cb -> invokePlusNet(res.imdbTitle, res.imdbYear, res.imdbSeason, res.imdbEpisode, cb) }
+        ),
+
+        SourceProviderDef(
             key = "p_ctghall", displayName = "CtgHall", category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeCtghall(res.title, res.tmdbId, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeCtghall(res.imdbTitle, res.tmdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
