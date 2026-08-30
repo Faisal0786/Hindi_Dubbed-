@@ -284,6 +284,134 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
         }
     }
 
+//movieflix
+    suspend fun invokeTheMoviesFlix(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        if (title.isNullOrBlank()) return
+        
+        // Tum isko Settings se bhi fetch karwa sakte ho agar domain change hota hai
+        val tmfUrl = "https://moviesflixi.com"
+        val logTag = "TheMoviesFlix"
+
+        Log.d(logTag, "🚀 Starting TMF Invoke for: $title | Year: $year | S:$season E:$episode")
+
+        // 1. Search Query via cfGet (Cloudflare bypass automatic lag jayega)
+        val searchUrl = "$tmfUrl/?s=${title.replace(" ", "+")}"
+        val searchDoc = try {
+            cfGet(searchUrl).document
+        } catch (e: Exception) {
+            Log.e(logTag, "❌ Search failed via cfGet: ${e.message}")
+            return
+        }
+
+        // 2. Find Accurate Match
+        val searchResults = searchDoc.select("article.latestpost a[href]")
+        val titleLower = title.lowercase().trim()
+
+        val matchedUrl = searchResults.firstOrNull {
+            val linkTitle = it.attr("title").replace("Download", "", true).lowercase().trim()
+            // Agar year available hai toh title + year dono match karenge for accuracy
+            if (year != null) {
+                linkTitle.contains(titleLower) && linkTitle.contains(year.toString())
+            } else {
+                linkTitle.contains(titleLower)
+            }
+        }?.attr("href")
+
+        if (matchedUrl.isNullOrBlank()) {
+            Log.e(logTag, "❌ No matching URL found for $title")
+            return
+        }
+
+        Log.d(logTag, "✅ Matched URL: $matchedUrl")
+
+        // 3. Load Movie/Series Details page
+        val document = try {
+            cfGet(matchedUrl).document
+        } catch (e: Exception) {
+            Log.e(logTag, "❌ Failed to load matched URL: ${e.message}")
+            return
+        }
+
+        // 4. Extract all valid download buttons
+        val downloadButtons = document.select("a[href]").filter {
+            val href = it.attr("href").lowercase()
+            val cls = it.attr("class").lowercase()
+            cls.contains("maxbutton") || cls.contains("mfx-download-link") || 
+            href.contains("url=") || href.contains("/links/") || 
+            href.contains("gdflix") || href.contains("mobilejsr")
+        }.distinctBy { it.attr("href") }
+
+        Log.d(logTag, "🎯 Found ${downloadButtons.size} unique download buttons.")
+
+        // 5. Heavy Duty Parallel Processing using YOUR `safeAmap`
+        downloadButtons.safeAmap(concurrency = 8) { btn ->
+            val link = btn.attr("href") ?: return@safeAmap
+
+            if (link.contains("mobilejsr.rest")) {
+                try {
+                    Log.d(logTag, "🛡️ MobileJSR Detected! Hitting with cfGet: $link")
+                    // cfGet is very important here for invisible Captchas
+                    val jsrHtml = cfGet(link, headers = mapOf("Referer" to matchedUrl)).text
+                    
+                    val base64Regex = Regex("""const\s+encoded\s*=\s*["']([^"']+)["']""")
+                    val matchResult = base64Regex.find(jsrHtml)
+
+                    if (matchResult != null) {
+                        // Decode using Cloudstream's Utils
+                        val decodedHtml = base64Decode(matchResult.groupValues[1])
+                        val decodedDoc = Jsoup.parse(decodedHtml)
+                        val finalLinks = decodedDoc.select("a[href]")
+
+                        Log.d(logTag, "🔓 MobileJSR Cracked! Found ${finalLinks.size} hidden links.")
+
+                        finalLinks.safeAmap { finalBtn ->
+                            val finalUrl = finalBtn.attr("href")
+                            if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
+                                Log.d(logTag, "🚀 Routing MobileJSR Link -> $finalUrl")
+                                // Code 4 ka router jo automatically TMF ko HubCloud/Gofile wagaira pe bhejega
+                                loadSourceNameExtractor("TheMoviesFlix", finalUrl, matchedUrl, subtitleCallback, callback)
+                            }
+                        }
+                    } else {
+                        Log.d(logTag, "❌ Base64 not found in MobileJSR page.")
+                    }
+                } catch (e: Exception) {
+                    Log.e(logTag, "❌ MobileJSR Bypass Failed: ${e.message}")
+                }
+            } 
+            else if (link.contains(tmfUrl) && link.contains("/links/")) {
+                // Internal Fast Server redirect pages
+                try {
+                    Log.d(logTag, "🔄 Resolving Internal Redirect: $link")
+                    val innerDoc = cfGet(link, headers = mapOf("Referer" to matchedUrl)).document
+                    innerDoc.select("a.btn, a.button, a.maxbutton, a.mfx-download-link, a[href*='gdflix']").forEach { innerBtn ->
+                        val finalUrl = innerBtn.attr("href")
+                        if (!finalUrl.isNullOrBlank()) {
+                            Log.d(logTag, "🚀 Routing Internal Link -> $finalUrl")
+                            loadSourceNameExtractor("TheMoviesFlix", finalUrl, matchedUrl, subtitleCallback, callback)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(logTag, "❌ Internal Redirect Failed: ${e.message}")
+                }
+            } 
+            else {
+                // Direct Host Links (Purani movies jisme bypassers nahi the)
+                if (link.isNotBlank() && !link.contains("mobilejsr", true)) {
+                    Log.d(logTag, "🚀 Routing Direct Link -> $link")
+                    loadSourceNameExtractor("TheMoviesFlix", link, matchedUrl, subtitleCallback, callback)
+                }
+            }
+        }
+    }
+
 //Sdmoviepoint 
             suspend fun invokeSdmovies(
         title: String? = null,
