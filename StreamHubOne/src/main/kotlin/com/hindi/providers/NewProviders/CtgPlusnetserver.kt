@@ -447,16 +447,22 @@ suspend fun SourceProviders.invokePlusNet(
             "FINAL LINK = $finalUrl"
         )
 
-        callback.invoke(
+                callback.invoke(
             newExtractorLink(
                 "PlusNet",
-                "[PlusNet] $tags",
-                finalUrl,
+                "[PlusNet]".toSansSerifBold() + " $tags",
+                href,
                 ExtractorLinkType.VIDEO
             ) {
                 this.quality = quality
                 this.referer = baseUrl
+                this.headers = mapOf(
+                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                    "Accept" to "*/*",
+                    "Connection" to "keep-alive"
+                )
             }
         )
+
     }
 }
