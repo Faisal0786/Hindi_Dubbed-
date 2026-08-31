@@ -354,16 +354,19 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
         downloadButtons.safeAmap(concurrency = 8) { btn ->
             val link = btn.attr("href") ?: return@safeAmap
 
-                        if (link.contains("mobilejsr.rest")) {
+                                    if (link.contains("mobilejsr.rest")) {
                 try {
-                    Log.d(logTag, "🛡️ MobileJSR Detected! Hitting with WebViewResolver: $link")
+                    Log.d(logTag, "🛡️ MobileJSR Detected! Hitting with CloudflareKiller & Native UA: $link")
                     
-                    // 🔥 FIX: cfGet/OkHttp is failing fingerprint checks. 
-                    // We use WebViewResolver to extract the HTML directly from the Android WebView!
+                    // 🔥 THE ULTIMATE FIX: CloudflareKiller ke sath global USER_AGENT pass kiya.
+                    // Isse WebView aur OkHttp dono ka fingerprint match karega aur 403 nahi aayega!
                     val jsrHtml = app.get(
                         link, 
-                        headers = mapOf("Referer" to matchedUrl),
-                        interceptor = com.lagradost.cloudstream3.network.WebViewResolver(Regex("""encoded\s*="""))
+                        headers = mapOf(
+                            "Referer" to matchedUrl,
+                            "User-Agent" to USER_AGENT // Ye tumhare phone ka real WebView UA fetch karega
+                        ),
+                        interceptor = com.lagradost.cloudstream3.network.CloudflareKiller()
                     ).text
                     
                     val base64Regex = Regex("""const\s+encoded\s*=\s*["']([^"']+)["']""")
@@ -384,7 +387,7 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
                             }
                         }
                     } else {
-                        Log.d(logTag, "❌ Base64 not found even in WebView. DOM might be different.")
+                        Log.e(logTag, "❌ Base64 not found. Cloudflare might still be blocking or page DOM changed.")
                     }
                 } catch (e: Exception) {
                     Log.e(logTag, "❌ MobileJSR Bypass Failed: ${e.message}")
