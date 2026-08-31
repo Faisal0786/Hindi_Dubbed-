@@ -296,7 +296,7 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
         if (title.isNullOrBlank()) return
         
         // Tum isko Settings se bhi fetch karwa sakte ho agar domain change hota hai
-        val tmfUrl = "https://moviesflixi.com"
+        val tmfUrl = "https://themoviesflix.actor"
         val logTag = "TheMoviesFlix"
 
         Log.d(logTag, "🚀 Starting TMF Invoke for: $title | Year: $year | S:$season E:$episode")
