@@ -57,23 +57,21 @@ object SourceRegistry {
     category = ProviderCategory.HINDI,
 
     executeStandard = { res, subCb, cb ->
-        if (!res.isBollywood) {
-            invokeTheMoviesFlix(
-                res.title,
-                res.imdbId,
-                res.year,
-                res.season,
-                res.episode,
-                subCb,
-                cb
-            )
-        }
+        invokeTheMoviesFlix(
+            res.imdbId,
+            res.title,
+            res.year,
+            res.season,
+            res.episode,
+            subCb,
+            cb
+        )
     },
 
     executeAnime = { res, subCb, cb ->
         invokeTheMoviesFlix(
-            res.imdbTitle,
             res.imdbId,
+            res.imdbTitle,
             res.imdbYear,
             res.imdbSeason,
             res.imdbEpisode,
@@ -82,7 +80,6 @@ object SourceRegistry {
         )
     }
 ),
-
 
         
        
