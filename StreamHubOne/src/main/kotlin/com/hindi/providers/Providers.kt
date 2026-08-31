@@ -398,17 +398,91 @@ Log.d(
             return
         }
 
-        // 4. Extract all valid download buttons
-        val downloadButtons = document.select("a[href]").filter {
-            val href = it.attr("href").lowercase()
-            val cls = it.attr("class").lowercase()
-            cls.contains("maxbutton") || cls.contains("mfx-download-link") || 
-            href.contains("url=") || href.contains("/links/") || 
-            href.contains("gdflix") || href.contains("mobilejsr")
-        }.distinctBy { it.attr("href") }
+                // 4. Extract all valid download buttons (SEASON FILTER & ZIP SKIP)
+        val validButtons = mutableListOf<org.jsoup.nodes.Element>()
 
-        Log.d(logTag, "🎯 Found ${downloadButtons.size} unique download buttons.")
+        if (season != null) {
+            // TV Show Logic: Target specific Season and ignore Zip/Batch
+            val seasonRegex = Regex("""(?i)(Season\s*0?$season|S0?$season)""")
+            
+            // HTML structure se correct season ka block nikalenge
+            val seasonGroups = document.select("div.mfx-download-group").filter {
+                it.select("h3.mfx-quality-title").text().contains(seasonRegex)
+            }
+            
+            if (seasonGroups.isNotEmpty()) {
+                seasonGroups.forEach { group ->
+                    group.select("a.mfx-download-link, a.maxbutton").forEach { btn ->
+                        val btnText = btn.text().lowercase()
+                        // 🚫 FILTER: Zip aur Batch wale buttons skip karo!
+                        if (!btnText.contains("zip") && !btnText.contains("batch")) {
+                            validButtons.add(btn)
+                        }
+                    }
+                }
+            } else {
+                // Fallback (Agar older post hui jisme div na ho)
+                document.select("h3, h4").filter { it.text().contains(seasonRegex) }.forEach { heading ->
+                    var sibling = heading.nextElementSibling()
+                    while (sibling != null && sibling.tagName() != "h3" && sibling.tagName() != "h4") {
+                        sibling.select("a.mfx-download-link, a.maxbutton").forEach { btn ->
+                            if (!btn.text().lowercase().contains("zip") && !btn.text().lowercase().contains("batch")) {
+                                validButtons.add(btn)
+                            }
+                        }
+                        sibling = sibling.nextElementSibling()
+                    }
+                }
+            }
+        } else {
+            // Movie Logic: Grab all valid buttons (Skip zip just in case)
+            document.select("a.mfx-download-link, a.maxbutton, a[href*='mobilejsr']").forEach { btn ->
+                if (!btn.text().lowercase().contains("zip") && !btn.text().lowercase().contains("batch")) {
+                    validButtons.add(btn)
+                }
+            }
+        }
 
+        val downloadButtons = validButtons.distinctBy { it.attr("href") }
+        Log.d(logTag, "🎯 Found ${downloadButtons.size} targeted buttons for Season $season (Zips skipped).")
+
+
+        // Helper Function: Episode Index Page ko scrape karne ke liye
+        suspend fun processEpisodeIndexPage(pageUrl: String) {
+            try {
+                val innerDoc = app.get(pageUrl, headers = mapOf("Referer" to matchedUrl)).document
+                
+                if (episode != null && innerDoc.text().contains(Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b"""))) {
+                    // 🔥 EPISODE FILTER: VegaMovies jaisa DOM Traversal
+                    val epHeading = innerDoc.select("h3, h4, p").firstOrNull { 
+                        it.text().contains(Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b""")) 
+                    }
+                    
+                    // nextElementSibling() (jo ki <p> tag hai) se links nikalenge
+                    epHeading?.nextElementSibling()?.select("a[href]")?.forEach { epBtn ->
+                        val finalUrl = epBtn.attr("href")
+                        if (finalUrl.isNotBlank()) {
+                            Log.d(logTag, "🚀 Routing EXACT Episode $episode Link -> $finalUrl")
+                            loadSourceNameExtractor(sourceName, finalUrl, matchedUrl, subtitleCallback, callback)
+                        }
+                    }
+                } else {
+                    // Movies ya Direct host links fallback
+                    innerDoc.select("a.btn, a.button, a.maxbutton, a.mfx-download-link, a[href*='gdflix'], a[href*='fastdl'], a[href*='filebee']").forEach { innerBtn ->
+                        val finalUrl = innerBtn.attr("href")
+                        if (finalUrl.isNotBlank()) {
+                            Log.d(logTag, "🚀 Routing Fallback Link -> $finalUrl")
+                            loadSourceNameExtractor(sourceName, finalUrl, matchedUrl, subtitleCallback, callback)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(logTag, "❌ Internal Page Parse Failed: ${e.message}")
+            }
+        }
+
+
+        
         // 5. Heavy Duty Parallel Processing using YOUR `safeAmap`
         downloadButtons.safeAmap(concurrency = 8) { btn ->
             val link = btn.attr("href") ?: return@safeAmap
