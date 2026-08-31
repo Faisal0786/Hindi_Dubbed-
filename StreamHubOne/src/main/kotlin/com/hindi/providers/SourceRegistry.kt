@@ -52,10 +52,36 @@ object SourceRegistry {
         ),
 
         SourceProviderDef(
-            key = "p_themoviesflix", displayName = "TheMoviesFlix", category = ProviderCategory.HINDI,
-            executeStandard = { res, subCb, cb -> invokeTheMoviesFlix(res.title, res.year, res.season, res.episode, subCb, cb) },
-            executeAnime = { res, subCb, cb -> invokeTheMoviesFlix(res.imdbTitle, res.imdbYear, res.imdbSeason, res.imdbEpisode, subCb, cb) }
-        ),
+    key = "p_themoviesflix",
+    displayName = "TheMoviesFlix",
+    category = ProviderCategory.HINDI,
+
+    executeStandard = { res, subCb, cb ->
+        if (!res.isBollywood) {
+            invokeTheMoviesFlix(
+                res.title,
+                res.imdbId,
+                res.year,
+                res.season,
+                res.episode,
+                subCb,
+                cb
+            )
+        }
+    },
+
+    executeAnime = { res, subCb, cb ->
+        invokeTheMoviesFlix(
+            res.imdbTitle,
+            res.imdbId,
+            res.imdbYear,
+            res.imdbSeason,
+            res.imdbEpisode,
+            subCb,
+            cb
+        )
+    }
+),
 
 
         
