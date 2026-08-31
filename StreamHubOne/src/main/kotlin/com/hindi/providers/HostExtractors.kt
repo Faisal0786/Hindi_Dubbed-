@@ -124,7 +124,7 @@ open class Filepress : ExtractorApi() {
         try {
             // Logs me humne dekha tha ki ye API hit karta hai
             val fileId = url.substringAfterLast("/")
-            val apiUrl = "https://${url.getHost()}/api/file/get/$fileId?referrer=https://moviesflixi.com/"
+            val apiUrl = "https://${url.getHost()}/api/file/get/$fileId?referrer=https://themoviesflix.actor/"
             
             // API se JSON response fetch karo
             val jsonResponse = app.get(apiUrl, headers = mapOf("Referer" to url)).text
