@@ -301,37 +301,95 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
 
         Log.d(logTag, "🚀 Starting TMF Invoke for: $title | Year: $year | S:$season E:$episode")
 
-        // 1. Search Query via cfGet (Cloudflare bypass automatic lag jayega)
-        val searchUrl = "$tmfUrl/?s=${title.replace(" ", "+")}"
-        val searchDoc = try {
-            cfGet(searchUrl).document
-        } catch (e: Exception) {
-            Log.e(logTag, "❌ Search failed via cfGet: ${e.message}")
-            return
-        }
+     // 1. Search TMF
+val searchUrl = "$tmfUrl/?s=${title.trim().replace(" ", "+")}"
 
-        // 2. Find Accurate Match
-        val searchResults = searchDoc.select("article.latestpost a[href]")
-        val titleLower = title.lowercase().trim()
+val searchDoc = try {
+    cfGet(searchUrl).document
+} catch (e: Exception) {
+    Log.e(logTag, "❌ Search failed via cfGet: ${e.message}")
+    return
+}
 
-        val matchedUrl = searchResults.firstOrNull {
-            val linkTitle = it.attr("title").replace("Download", "", true).lowercase().trim()
-            // Agar year available hai toh title + year dono match karenge for accuracy
-            if (year != null) {
-                linkTitle.contains(titleLower) && linkTitle.contains(year.toString())
-            } else {
-                linkTitle.contains(titleLower)
+// 2. Collect unique candidate pages
+val candidateUrls = searchDoc
+    .select("article.latestpost a[href]")
+    .mapNotNull { element ->
+        element.attr("href")
+            .trim()
+            .takeIf { it.isNotBlank() }
+    }
+    .distinct()
+
+Log.d(
+    logTag,
+    "🔎 Found ${candidateUrls.size} unique search candidates."
+)
+
+// 3. Verify every candidate using IMDb ID
+val matchedUrl = candidateUrls
+    .firstOrNull { candidateUrl ->
+
+        try {
+            Log.d(
+                logTag,
+                "🔍 Checking candidate: $candidateUrl"
+            )
+
+            val candidateDoc = cfGet(candidateUrl).document
+
+            // TMF detail page IMDb link
+            val imdbHref = candidateDoc
+                .selectFirst("a[href*='imdb.com/title/']")
+                ?.attr("href")
+                ?.trim()
+
+            if (imdbHref.isNullOrBlank()) {
+                Log.d(
+                    logTag,
+                    "⚠️ No IMDb link found: $candidateUrl"
+                )
+                return@firstOrNull false
             }
-        }?.attr("href")
 
-        if (matchedUrl.isNullOrBlank()) {
-            Log.e(logTag, "❌ No matching URL found for $title")
-            return
+            // Extract ttXXXXXXXX
+            val currentId = imdbHref
+                .substringAfter("/title/")
+                .substringBefore("/")
+                .substringBefore("?")
+                .trim()
+
+            Log.d(
+                logTag,
+                "🎬 Candidate IMDb: $currentId | Requested IMDb: $id"
+            )
+
+            // EXACT IMDb match — same logic as VegaMovies
+            currentId == id
+
+        } catch (e: Exception) {
+            Log.e(
+                logTag,
+                "❌ Candidate verification failed: ${e.message}"
+            )
+            false
         }
+    }
 
-        Log.d(logTag, "✅ Matched URL: $matchedUrl")
+if (matchedUrl.isNullOrBlank()) {
+    Log.e(
+        logTag,
+        "❌ No exact IMDb match found for $title | IMDb: $id"
+    )
+    return
+}
 
-        // 3. Load Movie/Series Details page
+Log.d(
+    logTag,
+    "✅ Exact TMF match found: $matchedUrl"
+)
+
+     // 3. Load Movie/Series Details page
         val document = try {
             cfGet(matchedUrl).document
         } catch (e: Exception) {
