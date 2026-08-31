@@ -45,7 +45,7 @@ private data class CinemetaResponse(
 
 class TheMoviesFlixProvider : MainAPI() {
 
-    override var mainUrl = "https://moviesflixi.com"
+    override var mainUrl = "https://themoviesflix.actor/"
     override var name = "TheMoviesFlix"
 
     override val hasMainPage = true
