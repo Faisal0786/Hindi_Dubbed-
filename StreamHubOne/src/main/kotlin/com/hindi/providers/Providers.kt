@@ -354,47 +354,49 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
         downloadButtons.safeAmap(concurrency = 8) { btn ->
             val link = btn.attr("href") ?: return@safeAmap
 
-                                                if (link.contains("mobilejsr.rest")) {
+                                                            if (link.contains("mobilejsr.rest")) {
                 try {
-                    Log.d(logTag, "🛡️ MobileJSR Detected! Initiating Advanced WebViewResolver: $link")
+                    Log.d(logTag, "🛡️ MobileJSR Detected! Bypassing Cloudflare with WebViewResolver...")
                     
-                    // 🔥 THE FINAL FIX: Using WebViewResolver with a specific Regex Hook.
-                    // This forces the hidden Android browser to wait UNTIL the base64 string actually renders on screen,
-                    // ignoring Cloudflare's fake loading pages.
+                    // 🔥 THE MASTER FIX: 
+                    // OkHttp block ho raha tha, isliye hum WebViewResolver use kar rahe hain.
+                    // Trigger word hai 'unlock-wrapper'. Jaise hi ye dikhega, WebView turant HTML return karega.
+                    // Humein timer khatam hone ka wait karne ki koi zaroorat nahi hai!
                     val jsrHtml = app.get(
                         link, 
-                        headers = mapOf(
-                            "Referer" to matchedUrl,
-                            "User-Agent" to USER_AGENT 
-                        ),
-                        // Ye interceptor WebView ko block karke rakhega jab tak "const encoded =" text DOM mein nahi aata
-                        interceptor = com.lagradost.cloudstream3.network.WebViewResolver(Regex("""const\s+encoded\s*="""))
+                        headers = mapOf("Referer" to matchedUrl),
+                        interceptor = com.lagradost.cloudstream3.network.WebViewResolver(Regex("unlock-wrapper"))
                     ).text
                     
-                    val base64Regex = Regex("""const\s+encoded\s*=\s*["']([^"']+)["']""")
+                    // Base64 nikalne ka loose aur perfect Regex
+                    val base64Regex = Regex("""encoded\s*=\s*["']([^"']+)["']""")
                     val matchResult = base64Regex.find(jsrHtml)
 
                     if (matchResult != null) {
+                        // Kotlin ka built-in base64Decode automatically UTF-8 handle kar lega
                         val decodedHtml = base64Decode(matchResult.groupValues[1])
                         val decodedDoc = Jsoup.parse(decodedHtml)
                         val finalLinks = decodedDoc.select("a[href]")
 
-                        Log.d(logTag, "🔓 MobileJSR Cracked! Found ${finalLinks.size} hidden links.")
+                        Log.d(logTag, "🔓 MobileJSR Cracked! Found ${finalLinks.size} hidden links instantly!")
 
                         finalLinks.safeAmap { finalBtn ->
                             val finalUrl = finalBtn.attr("href")
+                            // Fake/Empty links filter kar rahe hain
                             if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
                                 Log.d(logTag, "🚀 Routing MobileJSR Link -> $finalUrl")
+                                // Tumhare Code 4 ka Master Router (GDFlix, MCloud, Gofile automatically extract honge)
                                 loadSourceNameExtractor("TheMoviesFlix", finalUrl, matchedUrl, subtitleCallback, callback)
                             }
                         }
                     } else {
-                        Log.e(logTag, "❌ Base64 not found. The WebView timed out before the JS rendered.")
+                        Log.e(logTag, "❌ Base64 not found in HTML. Check if Cloudflare is still blocking.")
                     }
                 } catch (e: Exception) {
                     Log.e(logTag, "❌ MobileJSR Bypass Failed: ${e.message}")
                 }
             }
+
 
             else if (link.contains(tmfUrl) && link.contains("/links/")) {
                 // Internal Fast Server redirect pages
