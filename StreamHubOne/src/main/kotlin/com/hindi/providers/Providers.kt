@@ -354,26 +354,34 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
         downloadButtons.safeAmap(concurrency = 8) { btn ->
             val link = btn.attr("href") ?: return@safeAmap
 
-                                                            if (link.contains("mobilejsr.rest")) {
+                                                                        if (link.contains("mobilejsr.rest")) {
                 try {
-                    Log.d(logTag, "🛡️ MobileJSR Detected! Bypassing Cloudflare with WebViewResolver...")
+                    Log.d(logTag, "🛡️ MobileJSR Detected! Bypassing Turnstile using Direct Request...")
                     
-                    // 🔥 THE MASTER FIX: 
-                    // OkHttp block ho raha tha, isliye hum WebViewResolver use kar rahe hain.
-                    // Trigger word hai 'unlock-wrapper'. Jaise hi ye dikhega, WebView turant HTML return karega.
-                    // Humein timer khatam hone ka wait karne ki koi zaroorat nahi hai!
-                    val jsrHtml = app.get(
-                        link, 
-                        headers = mapOf("Referer" to matchedUrl),
-                        interceptor = com.lagradost.cloudstream3.network.WebViewResolver(Regex("unlock-wrapper"))
-                    ).text
+                    // Cloudflare Turnstile blocks invisible WebViews. 
+                    // We must use a direct HTTP request with heavily spoofed headers to bypass the CAPTCHA check entirely.
+                    val customHeaders = mapOf(
+                        "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+                        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                        "Accept-Language" to "en-US,en;q=0.9",
+                        "Sec-Ch-Ua" to "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"",
+                        "Sec-Ch-Ua-Mobile" to "?1",
+                        "Sec-Ch-Ua-Platform" to "\"Android\"",
+                        "Sec-Fetch-Dest" to "document",
+                        "Sec-Fetch-Mode" to "navigate",
+                        "Sec-Fetch-Site" to "none",
+                        "Sec-Fetch-User" to "?1",
+                        "Upgrade-Insecure-Requests" to "1",
+                        "Referer" to matchedUrl
+                    )
+
+                    // Using app.get directly with fake headers to bypass the Turnstile trigger
+                    val jsrHtml = app.get(link, headers = customHeaders).text
                     
-                    // Base64 nikalne ka loose aur perfect Regex
                     val base64Regex = Regex("""encoded\s*=\s*["']([^"']+)["']""")
                     val matchResult = base64Regex.find(jsrHtml)
 
                     if (matchResult != null) {
-                        // Kotlin ka built-in base64Decode automatically UTF-8 handle kar lega
                         val decodedHtml = base64Decode(matchResult.groupValues[1])
                         val decodedDoc = Jsoup.parse(decodedHtml)
                         val finalLinks = decodedDoc.select("a[href]")
@@ -382,20 +390,19 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
 
                         finalLinks.safeAmap { finalBtn ->
                             val finalUrl = finalBtn.attr("href")
-                            // Fake/Empty links filter kar rahe hain
                             if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
                                 Log.d(logTag, "🚀 Routing MobileJSR Link -> $finalUrl")
-                                // Tumhare Code 4 ka Master Router (GDFlix, MCloud, Gofile automatically extract honge)
                                 loadSourceNameExtractor("TheMoviesFlix", finalUrl, matchedUrl, subtitleCallback, callback)
                             }
                         }
                     } else {
-                        Log.e(logTag, "❌ Base64 not found in HTML. Check if Cloudflare is still blocking.")
+                        Log.e(logTag, "❌ Base64 not found. Turnstile might still be active.")
                     }
                 } catch (e: Exception) {
                     Log.e(logTag, "❌ MobileJSR Bypass Failed: ${e.message}")
                 }
             }
+
 
 
             else if (link.contains(tmfUrl) && link.contains("/links/")) {
