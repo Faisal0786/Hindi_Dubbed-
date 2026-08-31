@@ -110,6 +110,51 @@ open class Videostr : ExtractorApi() {
     }
 }
 
+open class Filepress : ExtractorApi() {
+    override val name = "Filepress"
+    override val mainUrl = "https://filepress.baby"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        try {
+            // Logs me humne dekha tha ki ye API hit karta hai
+            val fileId = url.substringAfterLast("/")
+            val apiUrl = "https://${url.getHost()}/api/file/get/$fileId?referrer=https://moviesflixi.com/"
+            
+            // API se JSON response fetch karo
+            val jsonResponse = app.get(apiUrl, headers = mapOf("Referer" to url)).text
+            val jsonObject = JSONObject(jsonResponse)
+            
+            val downloadUrl = jsonObject.optString("url")
+            
+            if (downloadUrl.isNotBlank()) {
+                callback.invoke(
+                    newExtractorLink(
+                        name,
+                        "$name [G-Drive]",
+                        downloadUrl,
+                        ExtractorLinkType.VIDEO
+                    ) {
+                        this.referer = url
+                    }
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("Filepress", "Extraction failed: ${e.message}")
+            // Agar API fail ho jaye toh direct link try karega
+            val directLink = url.replace("/file/", "/api/file/get/") + "?download"
+            callback.invoke(
+                newExtractorLink(name, "$name [Fallback]", directLink, ExtractorLinkType.VIDEO)
+            )
+        }
+    }
+}
+
 
 
 class Gofile : ExtractorApi() {
