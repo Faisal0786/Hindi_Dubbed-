@@ -354,19 +354,21 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
         downloadButtons.safeAmap(concurrency = 8) { btn ->
             val link = btn.attr("href") ?: return@safeAmap
 
-                                    if (link.contains("mobilejsr.rest")) {
+                                                if (link.contains("mobilejsr.rest")) {
                 try {
-                    Log.d(logTag, "🛡️ MobileJSR Detected! Hitting with CloudflareKiller & Native UA: $link")
+                    Log.d(logTag, "🛡️ MobileJSR Detected! Initiating Advanced WebViewResolver: $link")
                     
-                    // 🔥 THE ULTIMATE FIX: CloudflareKiller ke sath global USER_AGENT pass kiya.
-                    // Isse WebView aur OkHttp dono ka fingerprint match karega aur 403 nahi aayega!
+                    // 🔥 THE FINAL FIX: Using WebViewResolver with a specific Regex Hook.
+                    // This forces the hidden Android browser to wait UNTIL the base64 string actually renders on screen,
+                    // ignoring Cloudflare's fake loading pages.
                     val jsrHtml = app.get(
                         link, 
                         headers = mapOf(
                             "Referer" to matchedUrl,
-                            "User-Agent" to USER_AGENT // Ye tumhare phone ka real WebView UA fetch karega
+                            "User-Agent" to USER_AGENT 
                         ),
-                        interceptor = com.lagradost.cloudstream3.network.CloudflareKiller()
+                        // Ye interceptor WebView ko block karke rakhega jab tak "const encoded =" text DOM mein nahi aata
+                        interceptor = com.lagradost.cloudstream3.network.WebViewResolver(Regex("""const\s+encoded\s*="""))
                     ).text
                     
                     val base64Regex = Regex("""const\s+encoded\s*=\s*["']([^"']+)["']""")
@@ -387,12 +389,12 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
                             }
                         }
                     } else {
-                        Log.e(logTag, "❌ Base64 not found. Cloudflare might still be blocking or page DOM changed.")
+                        Log.e(logTag, "❌ Base64 not found. The WebView timed out before the JS rendered.")
                     }
                 } catch (e: Exception) {
                     Log.e(logTag, "❌ MobileJSR Bypass Failed: ${e.message}")
                 }
-            } 
+            }
 
             else if (link.contains(tmfUrl) && link.contains("/links/")) {
                 // Internal Fast Server redirect pages
