@@ -804,7 +804,7 @@ suspend fun loadSourceNameExtractor(
         
         else -> loadExtractor(url, referer, subtitleCallback, processLink)
     }
-
+}
 
 suspend fun loadCustomExtractor(
     name: String? = null,
