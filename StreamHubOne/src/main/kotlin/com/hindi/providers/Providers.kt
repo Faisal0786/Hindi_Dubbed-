@@ -354,12 +354,10 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
         downloadButtons.safeAmap(concurrency = 8) { btn ->
             val link = btn.attr("href") ?: return@safeAmap
 
-                                                                        if (link.contains("mobilejsr.rest")) {
+                                                                                    if (link.contains("mobilejsr.rest")) {
                 try {
                     Log.d(logTag, "🛡️ MobileJSR Detected! Bypassing Turnstile using Direct Request...")
                     
-                    // Cloudflare Turnstile blocks invisible WebViews. 
-                    // We must use a direct HTTP request with heavily spoofed headers to bypass the CAPTCHA check entirely.
                     val customHeaders = mapOf(
                         "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
                         "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -375,14 +373,19 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
                         "Referer" to matchedUrl
                     )
 
-                    // Using app.get directly with fake headers to bypass the Turnstile trigger
                     val jsrHtml = app.get(link, headers = customHeaders).text
                     
                     val base64Regex = Regex("""encoded\s*=\s*["']([^"']+)["']""")
                     val matchResult = base64Regex.find(jsrHtml)
 
                     if (matchResult != null) {
-                        val decodedHtml = base64Decode(matchResult.groupValues[1])
+                        val rawBase64 = matchResult.groupValues[1]
+                        
+                        // 🔥 THE FINAL FIX: Cleaning the Base64 String
+                        // Saare backslashes (\) aur invisible spaces ko hata rahe hain taaki decoder crash na ho
+                        val cleanBase64 = rawBase64.replace("\\", "").replace(Regex("\\s+"), "")
+                        
+                        val decodedHtml = base64Decode(cleanBase64)
                         val decodedDoc = Jsoup.parse(decodedHtml)
                         val finalLinks = decodedDoc.select("a[href]")
 
@@ -402,6 +405,7 @@ val executionList = Settings.activeProviderOrder.mapNotNull { key ->
                     Log.e(logTag, "❌ MobileJSR Bypass Failed: ${e.message}")
                 }
             }
+
 
 
 
