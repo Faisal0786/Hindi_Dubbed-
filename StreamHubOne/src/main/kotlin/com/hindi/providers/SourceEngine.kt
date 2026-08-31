@@ -401,13 +401,22 @@ fun quote(s: String): String =
 
 fun String.capitalizeServer() = replaceFirstChar { it.uppercase() }
 
+// mdrive
+
 suspend fun extractMdrive(url: String): List<String> {
-    val doc = app.get(url).document
-    return doc.select("a")
-        .mapNotNull { it.attr("href").takeIf { href ->
-            href.contains(Regex("hubcloud|gdflix|gdlink", RegexOption.IGNORE_CASE))
-        }}
+    try {
+        val doc = app.get(url).document
+        return doc.select("a[href]").mapNotNull { 
+            val href = it.attr("href")
+            href.takeIf { link ->
+                link.contains(Regex("gofile|pixeldrain|vikingfile|transfer|buzzheavier|hubcloud|gdflix|gdlink|fastdl|mcloud|vicloud", RegexOption.IGNORE_CASE))
+            }
+        }.distinct()
+    } catch (e: Exception) {
+        return emptyList()
+    }
 }
+
 
 fun getDate(): TmdbDate {
     val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
