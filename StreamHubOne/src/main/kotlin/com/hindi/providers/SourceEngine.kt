@@ -772,18 +772,29 @@ suspend fun loadSourceNameExtractor(
         }
     }
 
-    when {
-        url.contains("hubcloud.") || url.contains("vcloud.") -> HubCloud().getUrl(url, referer, subtitleCallback, processLink)
+        when {
+        // 1. Purane HubCloud clones + Naye MCloud aur ViCloud
+        url.contains("hubcloud.") || url.contains("vcloud.") || url.contains("mcloud.") || url.contains("vicloud.") -> 
+            HubCloud().getUrl(url, referer, subtitleCallback, processLink)
+
+        // 2. Naya Filepress Extractor (Filepress aur Filebee dono ek hi company ke hain)
+        url.contains("filepress") || url.contains("filebee") -> 
+            Filepress().getUrl(url, referer, subtitleCallback, processLink)
+
+        // 3. FastDL ke alag alag domains (Original aur .rest dono handle honge)
+        url.contains("fastdlserver.") || url.contains("fastdl.") -> 
+            fastdlserver().getUrl(url, referer, subtitleCallback, processLink)
+
+        // 4. BAAKI SAARE TUMHARE ORIGINAL EXTRACTORS (No Changes Here!)
         url.contains("gdflix.") || url.contains("gdlink.") -> GDFlix().getUrl(url, referer, subtitleCallback, processLink)
-        url.contains("fastdlserver.") -> fastdlserver().getUrl(url, referer, subtitleCallback, processLink)
         url.contains("linksmod.") -> Linksmod().getUrl(url, referer, subtitleCallback, processLink)
         url.contains("hubdrive.") -> Hubdrive().getUrl(url, referer, subtitleCallback, processLink)
         url.contains("gofile.") -> Gofile().getUrl(url, referer, subtitleCallback, processLink)
         url.contains("driveleech.") || url.contains("driveseed.") -> Driveleech().getUrl(url, referer, subtitleCallback, processLink)
         url.contains("howblogs.") -> Howblogs().getUrl(url, referer, subtitleCallback, processLink)
+        
         else -> loadExtractor(url, referer, subtitleCallback, processLink)
     }
-}
 
 
 suspend fun loadCustomExtractor(
