@@ -139,6 +139,7 @@ internal object SettingsDialog {
         layout.addView(buildApiTokensCard(context, pending))
 
         // Active catalogs card
+
         layout.addView(
     buildCollapsibleCard(
         context,
@@ -168,7 +169,115 @@ internal object SettingsDialog {
     }
 )
 
-        // Providers card (delegated)
+ private fun buildCatalogSourceRow(
+    context: Context,
+    pending: MutableMap<String, Any?>
+): View {
+
+    val theme = SettingsTheme
+
+    var selected = (
+        pending[Settings.CATALOG_SOURCE_KEY] as? String
+            ?: when (Settings.getCatalogSource()) {
+                Settings.CatalogSource.CINEMETA ->
+                    Settings.CATALOG_SOURCE_CINEMETA
+
+                Settings.CatalogSource.TMDB ->
+                    Settings.CATALOG_SOURCE_TMDB
+            }
+        ).lowercase()
+
+    val container = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(
+            20.dp(context),
+            14.dp(context),
+            16.dp(context),
+            14.dp(context)
+        )
+        background = theme.stateDrawable(context)
+    }
+
+    container.addView(TextView(context).apply {
+        text = "Catalog Source"
+        textSize = 15f
+        setTypeface(null, Typeface.BOLD)
+        setTextColor(theme.TEXT_PRIMARY)
+    })
+
+    container.addView(TextView(context).apply {
+        text = "Choose the catalog API used by StreamHubOne"
+        textSize = 12f
+        setTextColor(theme.TEXT_SECONDARY)
+        setPadding(0, 3.dp(context), 0, 12.dp(context))
+    })
+
+    val radioGroup = RadioGroup(context).apply {
+        orientation = RadioGroup.VERTICAL
+    }
+
+    val cinemeta = RadioButton(context).apply {
+        text = "Cinemeta"
+        textSize = 14f
+        setTextColor(theme.TEXT_PRIMARY)
+        isChecked = selected == Settings.CATALOG_SOURCE_CINEMETA
+        buttonTintList = android.content.res.ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf()
+            ),
+            intArrayOf(
+                theme.ACCENT_START,
+                theme.TEXT_SECONDARY
+            )
+        )
+    }
+
+    val tmdb = RadioButton(context).apply {
+        text = "TMDB"
+        textSize = 14f
+        setTextColor(theme.TEXT_PRIMARY)
+        isChecked = selected == Settings.CATALOG_SOURCE_TMDB
+        buttonTintList = android.content.res.ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf()
+            ),
+            intArrayOf(
+                theme.ACCENT_START,
+                theme.TEXT_SECONDARY
+            )
+        )
+    }
+
+    fun selectSource(source: String) {
+        selected = source
+        pending[Settings.CATALOG_SOURCE_KEY] = source
+
+        cinemeta.isChecked =
+            source == Settings.CATALOG_SOURCE_CINEMETA
+
+        tmdb.isChecked =
+            source == Settings.CATALOG_SOURCE_TMDB
+    }
+
+    cinemeta.setOnClickListener {
+        selectSource(Settings.CATALOG_SOURCE_CINEMETA)
+    }
+
+    tmdb.setOnClickListener {
+        selectSource(Settings.CATALOG_SOURCE_TMDB)
+    }
+
+    radioGroup.addView(cinemeta)
+    radioGroup.addView(tmdb)
+
+    container.addView(radioGroup)
+
+    return container
+}   
+
+    // Providers card (delegated)
         layout.addView(SettingsProviders.buildCard(context, pending) { commit -> commitOrder = commit })
 
         // Stremio addons card
