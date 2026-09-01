@@ -463,7 +463,7 @@ Log.d(
                         val finalUrl = epBtn.attr("href")
                         if (finalUrl.isNotBlank()) {
                             Log.d(logTag, "🚀 Routing EXACT Episode $episode Link -> $finalUrl")
-                            loadSourceNameExtractor(sourceName, finalUrl, matchedUrl, subtitleCallback, callback)
+                            loadSourceNameExtractor("TheMoviesFlix", finalUrl, matchedUrl, subtitleCallback, callback)
                         }
                     }
                 } else {
@@ -472,7 +472,7 @@ Log.d(
                         val finalUrl = innerBtn.attr("href")
                         if (finalUrl.isNotBlank()) {
                             Log.d(logTag, "🚀 Routing Fallback Link -> $finalUrl")
-                            loadSourceNameExtractor(sourceName, finalUrl, matchedUrl, subtitleCallback, callback)
+                            loadSourceNameExtractor("TheMoviesFlix", finalUrl, matchedUrl, subtitleCallback, callback)
                         }
                     }
                 }
