@@ -511,35 +511,51 @@ Log.d(
                     val base64Regex = Regex("""encoded\s*=\s*["']([^"']+)["']""")
                     val matchResult = base64Regex.find(jsrHtml)
 
-                    if (matchResult != null) {
+                                        if (matchResult != null) {
                         val rawBase64 = matchResult.groupValues[1]
 
-                        // 🔥 TUMHARA THE FINAL FIX: Cleaning the Base64 String (UNTOUCHED)
+                        // Cleaning the Base64 String
                         val cleanBase64 = rawBase64.replace("\\", "").replace(Regex("\\s+"), "")
                         val decodedHtml = base64Decode(cleanBase64)
                         val decodedDoc = Jsoup.parse(decodedHtml)
-                        val finalLinks = decodedDoc.select("a[href]")
 
-                        Log.d(logTag, "🔓 MobileJSR Cracked! Found ${finalLinks.size} hidden links instantly!")
+                        // 🔥 THE FIX: Check if MobileJSR decoded HTML IS the Episode Index Page
+                        if (episode != null && decodedDoc.text().contains(Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b"""))) {
+                            Log.d(logTag, "📂 Episode Index Page detected INSIDE decoded MobileJSR!")
 
-                        finalLinks.safeAmap { finalBtn ->
-                            val finalUrl = finalBtn.attr("href")
-                            if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
-                                
-                                // 🌟 NEW ADDITION: Check if link is an episode index or direct stream
-                                if (finalUrl.contains("/links/") || finalUrl.contains(tmfUrl)) {
-                                    Log.d(logTag, "📂 Episode Index Page detected inside MobileJSR!")
-                                    processEpisodeIndexPage(finalUrl)
-                                } else {
-                                    Log.d(logTag, "🚀 Routing MobileJSR Direct Link -> $finalUrl")
+                            val epHeading = decodedDoc.select("h3, h4, p").firstOrNull {
+                                it.text().contains(Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b"""))
+                            }
+
+                            // Sirf usi episode ke links nikalo
+                            epHeading?.nextElementSibling()?.select("a[href]")?.safeAmap { epBtn ->
+                                val finalUrl = epBtn.attr("href")
+                                if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
+                                    Log.d(logTag, "🚀 Routing EXACT Episode $episode Link -> $finalUrl")
                                     loadSourceNameExtractor("TheMoviesFlix", finalUrl, matchedUrl, subtitleCallback, callback)
                                 }
-                                
+                            }
+                        } else {
+                            // MOVIE MODE: Agar series nahi hai, toh purane style me sab nikal lo
+                            val finalLinks = decodedDoc.select("a[href]")
+                            Log.d(logTag, "🔓 MobileJSR Cracked! Found ${finalLinks.size} hidden links instantly!")
+
+                            finalLinks.safeAmap { finalBtn ->
+                                val finalUrl = finalBtn.attr("href")
+                                if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
+                                    if (finalUrl.contains("/links/") || finalUrl.contains(tmfUrl)) {
+                                        processEpisodeIndexPage(finalUrl)
+                                    } else {
+                                        Log.d(logTag, "🚀 Routing MobileJSR Direct Link -> $finalUrl")
+                                        loadSourceNameExtractor("TheMoviesFlix", finalUrl, matchedUrl, subtitleCallback, callback)
+                                    }
+                                }
                             }
                         }
                     } else {
                         Log.e(logTag, "❌ Base64 not found. Turnstile might still be active.")
                     }
+
                 } catch (e: Exception) {
                     Log.e(logTag, "❌ MobileJSR Bypass Failed: ${e.message}")
                 }
