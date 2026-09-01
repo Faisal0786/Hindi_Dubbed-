@@ -26,6 +26,7 @@ class StreamHubOnePlugin : Plugin() {
         registerMainAPI(Cwunchyroll())
         registerMainAPI(NexFlixiaProvider())
 
+registerMainAPI(SimklProvider())
         // Open settings
         this.openSettings = { ctx: Context ->
             Settings.showSettingsDialog(ctx) {
