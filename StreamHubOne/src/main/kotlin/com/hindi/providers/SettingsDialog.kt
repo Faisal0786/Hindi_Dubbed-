@@ -299,6 +299,18 @@ internal object SettingsDialog {
                         key == Settings.WYZIE_SUBS_KEY    && value is String -> Settings.saveWyzieSubsKey(value)
                         key == Settings.GRAMCINEMA_TOKEN_KEY && value == null   -> Settings.clearGramCinemaToken()
                         key == Settings.GRAMCINEMA_TOKEN_KEY && value is String -> Settings.saveGramCinemaToken(value)
+
+key == Settings.CATALOG_SOURCE_KEY && value is String ->
+        Settings.setCatalogSource(
+            when (value.lowercase()) {
+                Settings.CATALOG_SOURCE_TMDB ->
+                    Settings.CatalogSource.TMDB
+
+                else ->
+                    Settings.CatalogSource.CINEMETA
+            }
+        )
+
                         value is Boolean                                     -> com.lagradost.cloudstream3.CloudStreamApp.setKey(key, value)
                         value is Int                                         -> com.lagradost.cloudstream3.CloudStreamApp.setKey(key, value)
                         value == null                                        -> com.lagradost.cloudstream3.CloudStreamApp.setKey(key, null as String?)
