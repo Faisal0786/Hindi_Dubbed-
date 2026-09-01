@@ -169,7 +169,70 @@ internal object SettingsDialog {
     }
 )
 
- private fun buildCatalogSourceRow(
+ 
+
+    // Providers card (delegated)
+        layout.addView(SettingsProviders.buildCard(context, pending) { commit -> commitOrder = commit })
+
+        // Stremio addons card
+        layout.addView(buildStremioAddonsCard(context) { commit -> commitAddons = commit })
+
+        // Credits card
+        layout.addView(buildCreditsCard(context))
+
+        scroll.addView(layout)
+
+        val dialog = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
+            .setView(scroll)
+            .setPositiveButton("Save") { _, _ ->
+                pending.forEach { (key, value) ->
+                    when {
+                        key == Settings.SHOWBOX_TOKEN_KEY && value == null   -> Settings.clearShowboxToken()
+                        key == Settings.SHOWBOX_TOKEN_KEY && value is String -> Settings.saveShowboxToken(value)
+                        key == Settings.WYZIE_SUBS_KEY    && value == null   -> Settings.clearWyzieSubsKey()
+                        key == Settings.WYZIE_SUBS_KEY    && value is String -> Settings.saveWyzieSubsKey(value)
+                        key == Settings.GRAMCINEMA_TOKEN_KEY && value == null   -> Settings.clearGramCinemaToken()
+                        key == Settings.GRAMCINEMA_TOKEN_KEY && value is String -> Settings.saveGramCinemaToken(value)
+
+key == Settings.CATALOG_SOURCE_KEY && value is String ->
+        Settings.setCatalogSource(
+            when (value.lowercase()) {
+                Settings.CATALOG_SOURCE_TMDB ->
+                    Settings.CatalogSource.TMDB
+
+                else ->
+                    Settings.CatalogSource.CINEMETA
+            }
+        )
+
+                        value is Boolean                                     -> com.lagradost.cloudstream3.CloudStreamApp.setKey(key, value)
+                        value is Int                                         -> com.lagradost.cloudstream3.CloudStreamApp.setKey(key, value)
+                        value == null                                        -> com.lagradost.cloudstream3.CloudStreamApp.setKey(key, null as String?)
+                    }
+                }
+                commitAddons(); commitOrder()
+                if (requireRestart) showRestartWarning(context, onSave) else onSave()
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        dialog.window?.setBackgroundDrawable(
+            theme.roundRect(theme.BG_SURFACE, SettingsTheme.RADIUS_DIALOG.dp(context))
+        )
+        dialog.show()
+        dialog.window?.setLayout(
+            (context.resources.displayMetrics.widthPixels * 0.95).toInt(),
+            android.view.WindowManager.LayoutParams.WRAP_CONTENT
+        )
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            ?.apply { setTextColor(theme.ACCENT_START); isAllCaps = false }
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+            ?.apply { setTextColor(theme.TEXT_SECONDARY); isAllCaps = false }
+    }
+
+//build catalog source row api
+
+private fun buildCatalogSourceRow(
     context: Context,
     pending: MutableMap<String, Any?>
 ): View {
@@ -276,65 +339,6 @@ internal object SettingsDialog {
 
     return container
 }   
-
-    // Providers card (delegated)
-        layout.addView(SettingsProviders.buildCard(context, pending) { commit -> commitOrder = commit })
-
-        // Stremio addons card
-        layout.addView(buildStremioAddonsCard(context) { commit -> commitAddons = commit })
-
-        // Credits card
-        layout.addView(buildCreditsCard(context))
-
-        scroll.addView(layout)
-
-        val dialog = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
-            .setView(scroll)
-            .setPositiveButton("Save") { _, _ ->
-                pending.forEach { (key, value) ->
-                    when {
-                        key == Settings.SHOWBOX_TOKEN_KEY && value == null   -> Settings.clearShowboxToken()
-                        key == Settings.SHOWBOX_TOKEN_KEY && value is String -> Settings.saveShowboxToken(value)
-                        key == Settings.WYZIE_SUBS_KEY    && value == null   -> Settings.clearWyzieSubsKey()
-                        key == Settings.WYZIE_SUBS_KEY    && value is String -> Settings.saveWyzieSubsKey(value)
-                        key == Settings.GRAMCINEMA_TOKEN_KEY && value == null   -> Settings.clearGramCinemaToken()
-                        key == Settings.GRAMCINEMA_TOKEN_KEY && value is String -> Settings.saveGramCinemaToken(value)
-
-key == Settings.CATALOG_SOURCE_KEY && value is String ->
-        Settings.setCatalogSource(
-            when (value.lowercase()) {
-                Settings.CATALOG_SOURCE_TMDB ->
-                    Settings.CatalogSource.TMDB
-
-                else ->
-                    Settings.CatalogSource.CINEMETA
-            }
-        )
-
-                        value is Boolean                                     -> com.lagradost.cloudstream3.CloudStreamApp.setKey(key, value)
-                        value is Int                                         -> com.lagradost.cloudstream3.CloudStreamApp.setKey(key, value)
-                        value == null                                        -> com.lagradost.cloudstream3.CloudStreamApp.setKey(key, null as String?)
-                    }
-                }
-                commitAddons(); commitOrder()
-                if (requireRestart) showRestartWarning(context, onSave) else onSave()
-            }
-            .setNegativeButton("Cancel", null)
-            .create()
-
-        dialog.window?.setBackgroundDrawable(
-            theme.roundRect(theme.BG_SURFACE, SettingsTheme.RADIUS_DIALOG.dp(context))
-        )
-        dialog.show()
-        dialog.window?.setLayout(
-            (context.resources.displayMetrics.widthPixels * 0.95).toInt(),
-            android.view.WindowManager.LayoutParams.WRAP_CONTENT
-        )
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            ?.apply { setTextColor(theme.ACCENT_START); isAllCaps = false }
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
-            ?.apply { setTextColor(theme.TEXT_SECONDARY); isAllCaps = false }
-    }
 
     // =========================================================
     //  COLLAPSIBLE CARD TEMPLATE
