@@ -139,19 +139,34 @@ internal object SettingsDialog {
         layout.addView(buildApiTokensCard(context, pending))
 
         // Active catalogs card
-        val onCatalogChanged: () -> Unit = {
-            requireRestart = true
-        }
-        layout.addView(buildCollapsibleCard(context, "📡  Active Catalogs",
-            accentA = Color.parseColor("#10B981"), accentB = Color.parseColor("#059669")) {
-            addView(buildToggleRow(context, "StreamHubOne", "StreamHub catalog",
-                Settings.PROVIDER_CINESTREAM, true, pending, onCatalogChanged))
-            addView(SettingsWidgets.divider(context))
-            addView(buildToggleRow(context, "Crunchyroll", "Crunchyroll catalog",
-                Settings.PROVIDER_TMDB, true, pending, onCatalogChanged))
-            addView(buildToggleRow(context, "NexFlixia", "NexFlixia catalog",
-                                   Settings.PROVIDER_SIMKL, true, pending, onCatalogChanged))
-        })
+        layout.addView(
+    buildCollapsibleCard(
+        context,
+        "📡  Catalog Source",
+        accentA = Color.parseColor("#10B981"),
+        accentB = Color.parseColor("#059669")
+    ) {
+        addView(
+            buildCatalogSourceRow(
+                context,
+                pending
+            )
+        )
+
+        addView(SettingsWidgets.divider(context))
+
+        addView(
+            buildToggleRow(
+                context,
+                "Crunchyroll",
+                "Crunchyroll catalog",
+                Settings.PROVIDER_TMDB,
+                true,
+                pending
+            )
+        )
+    }
+)
 
         // Providers card (delegated)
         layout.addView(SettingsProviders.buildCard(context, pending) { commit -> commitOrder = commit })
