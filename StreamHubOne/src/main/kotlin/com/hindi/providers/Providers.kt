@@ -327,78 +327,76 @@ Log.d(
     "🔎 Found ${candidateUrls.size} unique search candidates."
 )
 
-// 3. Verify every candidate using IMDb ID
-val matchedUrl = candidateUrls
-    .firstOrNull { candidateUrl ->
+        // 3. Verify every candidate using IMDb ID + Season (DEEP INSPECTION)
+        var matchedUrl: String? = null
+        var matchedDocument: org.jsoup.nodes.Document? = null
 
-        try {
-            Log.d(
-                logTag,
-                "🔍 Checking candidate: $candidateUrl"
-            )
+        for (candidateUrl in candidateUrls) {
+            try {
+                Log.d(logTag, "🔍 Checking candidate: $candidateUrl")
+                val candidateDoc = cfGet(candidateUrl).document
 
-            val candidateDoc = cfGet(candidateUrl).document
+                // TMF detail page IMDb link
+                val imdbHref = candidateDoc
+                    .selectFirst("a[href*='imdb.com/title/']")
+                    ?.attr("href")
+                    ?.trim()
 
-            // TMF detail page IMDb link
-            val imdbHref = candidateDoc
-                .selectFirst("a[href*='imdb.com/title/']")
-                ?.attr("href")
-                ?.trim()
+                if (imdbHref.isNullOrBlank()) {
+                    Log.d(logTag, "⚠️ No IMDb link found: $candidateUrl")
+                    continue
+                }
 
-            if (imdbHref.isNullOrBlank()) {
-                Log.d(
-                    logTag,
-                    "⚠️ No IMDb link found: $candidateUrl"
-                )
-                return@firstOrNull false
+                // Extract ttXXXXXXXX
+                val currentId = imdbHref
+                    .substringAfter("/title/")
+                    .substringBefore("/")
+                    .substringBefore("?")
+                    .trim()
+
+                Log.d(logTag, "🎬 Candidate IMDb: $currentId | Requested IMDb: $id")
+
+                // ID Match Check
+                if (currentId == id) {
+                    // Agar Series hai, toh andar heading me Season match karo
+                    if (season != null) {
+                        val seasonRegex = Regex("""(?i)(Season\s*0?$season|S0?$season)""")
+                        
+                        val hasOurSeason = candidateDoc.select("h3.mfx-quality-title, h3, h4").any { heading ->
+                            heading.text().contains(seasonRegex)
+                        }
+
+                        if (hasOurSeason) {
+                            Log.d(logTag, "✅ Exact TMF match found (IMDb + Season $season inside): $candidateUrl")
+                            matchedUrl = candidateUrl
+                            matchedDocument = candidateDoc
+                            break // Sahi post mil gaya, loop yahi rok do
+                        } else {
+                            Log.d(logTag, "⏭️ IMDb matched, but Season $season NOT found inside. Checking next post...")
+                        }
+                    } else {
+                        // Movie Logic
+                        Log.d(logTag, "✅ Exact TMF match found (Movie): $candidateUrl")
+                        matchedUrl = candidateUrl
+                        matchedDocument = candidateDoc
+                        break
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(logTag, "❌ Candidate verification failed: ${e.message}")
             }
-
-            // Extract ttXXXXXXXX
-            val currentId = imdbHref
-                .substringAfter("/title/")
-                .substringBefore("/")
-                .substringBefore("?")
-                .trim()
-
-            Log.d(
-                logTag,
-                "🎬 Candidate IMDb: $currentId | Requested IMDb: $id"
-            )
-
-            // EXACT IMDb match — same logic as VegaMovies
-            currentId == id
-
-        } catch (e: Exception) {
-            Log.e(
-                logTag,
-                "❌ Candidate verification failed: ${e.message}"
-            )
-            false
         }
-    }
 
-if (matchedUrl.isNullOrBlank()) {
-    Log.e(
-        logTag,
-        "❌ No exact IMDb match found for $title | IMDb: $id"
-    )
-    return
-}
-
-Log.d(
-    logTag,
-    "✅ Exact TMF match found: $matchedUrl"
-)
-
-     // 3. Load Movie/Series Details page
-        val document = try {
-            cfGet(matchedUrl).document
-        } catch (e: Exception) {
-            Log.e(logTag, "❌ Failed to load matched URL: ${e.message}")
+        if (matchedUrl.isNullOrBlank() || matchedDocument == null) {
+            Log.e(logTag, "❌ No exact match found for $title (Season: $season) | IMDb: $id")
             return
         }
 
-                // 4. Extract all valid download buttons (SEASON FILTER & ZIP SKIP)
+        // Ab humein wapas `cfGet` karne ki zarurat nahi, loop me save kiya hua document use karenge
+        val document = matchedDocument
+
+
+          // 4. Extract all valid download buttons (SEASON FILTER & ZIP SKIP)
         val validButtons = mutableListOf<org.jsoup.nodes.Element>()
 
         if (season != null) {
