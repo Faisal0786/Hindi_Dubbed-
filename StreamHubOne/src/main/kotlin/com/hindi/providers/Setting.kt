@@ -151,6 +151,37 @@ fun only480p() = getKey<Boolean>(ONLY_480P) ?: true
     fun removeCookieForDomain(urlOrDomain: String) {
         setKey(cookieKeyForDomain(urlOrDomain), null as String?)
     }
+// catologe setting
+const val CATALOG_SOURCE_KEY = "CatalogSource"
+
+const val CATALOG_SOURCE_CINEMETA = "cinemeta"
+const val CATALOG_SOURCE_TMDB = "tmdb"
+
+enum class CatalogSource {
+    CINEMETA,
+    TMDB
+}
+
+fun getCatalogSource(): CatalogSource {
+    return when (
+        com.lagradost.cloudstream3.CloudStreamApp
+            .getKey<String>(CATALOG_SOURCE_KEY)
+            ?.lowercase()
+    ) {
+        CATALOG_SOURCE_TMDB -> CatalogSource.TMDB
+        else -> CatalogSource.CINEMETA
+    }
+}
+
+fun setCatalogSource(source: CatalogSource) {
+    com.lagradost.cloudstream3.CloudStreamApp.setKey(
+        CATALOG_SOURCE_KEY,
+        when (source) {
+            CatalogSource.CINEMETA -> CATALOG_SOURCE_CINEMETA
+            CatalogSource.TMDB -> CATALOG_SOURCE_TMDB
+        }
+    )
+}
 
     // ── Dynamic Provider Maps ────────────────────────────────
     // We dynamically pull these from our single source of truth (ProviderRegistry)!
