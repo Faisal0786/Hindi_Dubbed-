@@ -483,14 +483,15 @@ Log.d(
 
 
         
-        // 5. Heavy Duty Parallel Processing using YOUR `safeAmap`
+         // 5. Heavy Duty Parallel Processing using YOUR `safeAmap`
         downloadButtons.safeAmap(concurrency = 8) { btn ->
             val link = btn.attr("href") ?: return@safeAmap
 
-                                                                                    if (link.contains("mobilejsr.rest")) {
+            if (link.contains("mobilejsr.rest")) {
                 try {
                     Log.d(logTag, "🛡️ MobileJSR Detected! Bypassing Turnstile using Direct Request...")
-                    
+
+                    // 🛑 TUMHARA ORIGINAL HEADERS (UNTOUCHED)
                     val customHeaders = mapOf(
                         "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
                         "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -507,17 +508,14 @@ Log.d(
                     )
 
                     val jsrHtml = app.get(link, headers = customHeaders).text
-                    
                     val base64Regex = Regex("""encoded\s*=\s*["']([^"']+)["']""")
                     val matchResult = base64Regex.find(jsrHtml)
 
                     if (matchResult != null) {
                         val rawBase64 = matchResult.groupValues[1]
-                        
-                        // 🔥 THE FINAL FIX: Cleaning the Base64 String
-                        // Saare backslashes (\) aur invisible spaces ko hata rahe hain taaki decoder crash na ho
+
+                        // 🔥 TUMHARA THE FINAL FIX: Cleaning the Base64 String (UNTOUCHED)
                         val cleanBase64 = rawBase64.replace("\\", "").replace(Regex("\\s+"), "")
-                        
                         val decodedHtml = base64Decode(cleanBase64)
                         val decodedDoc = Jsoup.parse(decodedHtml)
                         val finalLinks = decodedDoc.select("a[href]")
@@ -527,8 +525,16 @@ Log.d(
                         finalLinks.safeAmap { finalBtn ->
                             val finalUrl = finalBtn.attr("href")
                             if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
-                                Log.d(logTag, "🚀 Routing MobileJSR Link -> $finalUrl")
-                                loadSourceNameExtractor("TheMoviesFlix", finalUrl, matchedUrl, subtitleCallback, callback)
+                                
+                                // 🌟 NEW ADDITION: Check if link is an episode index or direct stream
+                                if (finalUrl.contains("/links/") || finalUrl.contains(tmfUrl)) {
+                                    Log.d(logTag, "📂 Episode Index Page detected inside MobileJSR!")
+                                    processEpisodeIndexPage(finalUrl)
+                                } else {
+                                    Log.d(logTag, "🚀 Routing MobileJSR Direct Link -> $finalUrl")
+                                    loadSourceNameExtractor("TheMoviesFlix", finalUrl, matchedUrl, subtitleCallback, callback)
+                                }
+                                
                             }
                         }
                     } else {
@@ -538,25 +544,10 @@ Log.d(
                     Log.e(logTag, "❌ MobileJSR Bypass Failed: ${e.message}")
                 }
             }
-
-
-
-
             else if (link.contains(tmfUrl) && link.contains("/links/")) {
-                // Internal Fast Server redirect pages
-                try {
-                    Log.d(logTag, "🔄 Resolving Internal Redirect: $link")
-                    val innerDoc = cfGet(link, headers = mapOf("Referer" to matchedUrl)).document
-                    innerDoc.select("a.btn, a.button, a.maxbutton, a.mfx-download-link, a[href*='gdflix']").forEach { innerBtn ->
-                        val finalUrl = innerBtn.attr("href")
-                        if (!finalUrl.isNullOrBlank()) {
-                            Log.d(logTag, "🚀 Routing Internal Link -> $finalUrl")
-                            loadSourceNameExtractor("TheMoviesFlix", finalUrl, matchedUrl, subtitleCallback, callback)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(logTag, "❌ Internal Redirect Failed: ${e.message}")
-                }
+                // Internal Fast Server redirect pages (Without MobileJSR)
+                Log.d(logTag, "🔄 Resolving Internal Redirect: $link")
+                processEpisodeIndexPage(link) // 🌟 Direct helper call
             } 
             else {
                 // Direct Host Links (Purani movies jisme bypassers nahi the)
@@ -566,7 +557,7 @@ Log.d(
                 }
             }
         }
-    }
+}
 
 //Sdmoviepoint 
             suspend fun invokeSdmovies(
