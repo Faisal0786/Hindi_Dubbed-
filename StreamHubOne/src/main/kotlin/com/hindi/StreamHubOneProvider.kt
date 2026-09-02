@@ -30,6 +30,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+
 data class HybridData(
     val tmdbId: Int? = null,
     val cinemetaId: String? = null,
@@ -99,7 +100,7 @@ class StreamHubOneProvider : MainAPI() {
         "https://v3-cinemeta.strem.io/catalog/movie/top/skip=###&genre=Documentary" to "🎥 Uncovering the Truth"
     )
 
-    override val mainPage: List<MainPageList>
+    override val mainPage: List<MainPageData>
         get() = if (Settings.getCatalogSource() == Settings.CatalogSource.TMDB) tmdbMainPage else cinemetaMainPage
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -186,7 +187,7 @@ class StreamHubOneProvider : MainAPI() {
         val endpoint = request.data.replace("###", skip.toString())
         
         val response = runCatching { app.get("$endpoint.json").text }.getOrNull() ?: return newHomePageResponse(request.name, emptyList(), false)
-        val result = tryParseJson<CinemetaSearchResult>(response) ?: return newHomePageResponse(request.name, emptyList(), false)
+        val result = tryParseJson<HybridCineSearchResult>(response) ?: return newHomePageResponse(request.name, emptyList(), false)
 
         val items = result.metas.mapNotNull { item ->
             val title = item.aliases?.firstOrNull { it.isNotBlank() } ?: item.name?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
@@ -233,7 +234,7 @@ class StreamHubOneProvider : MainAPI() {
         endpoints.map { ep ->
             async {
                 val res = runCatching { app.get(ep).text }.getOrNull() ?: return@async emptyList<SearchResponse>()
-                val result = tryParseJson<CinemetaSearchResult>(res) ?: return@async emptyList<SearchResponse>()
+                val result = tryParseJson<HybridCineSearchResult>(res) ?: return@async emptyList<SearchResponse>()
                 result.metas.mapNotNull { item ->
                     val title = item.name?.takeIf { it.isNotBlank() } ?: item.aliases?.firstOrNull { it.isNotBlank() } ?: return@mapNotNull null
                     val type = when (item.type.lowercase()) {
@@ -276,7 +277,7 @@ class StreamHubOneProvider : MainAPI() {
             anilistId = metadata.anilistId,
             malId = metadata.malId,
             orgTitle = metadata.originalTitle,
-            airedYear = metadata.year?.toString()
+            airedYear = metadata.year
         )
 
         return if (mediaType == "movie") {
@@ -363,7 +364,7 @@ class StreamHubOneProvider : MainAPI() {
                             anilistId = metadata.anilistId,
                             malId = metadata.malId,
                             orgTitle = metadata.originalTitle,
-                            airedYear = metadata.year?.toString()
+                            airedYear = metadata.year
                         ).toJson()
                     ) {
                         this.season = episode.season_number
@@ -383,7 +384,7 @@ class StreamHubOneProvider : MainAPI() {
 
     private suspend fun loadCinemeta(cinemetaId: String, mediaType: String, sourceUrl: String): LoadResponse? {
         val response = runCatching { app.get("https://v3-cinemeta.strem.io/meta/$mediaType/$cinemetaId.json").text }.getOrNull() ?: return null
-        val meta = tryParseJson<CinemetaMetaResponse>(response)?.meta ?: return null
+        val meta = tryParseJson<HybridCineMetaResponse>(response)?.meta ?: return null
         val title = meta.name?.takeIf { it.isNotBlank() } ?: return null
 
         val isAnime = detectAnime(meta)
@@ -394,7 +395,7 @@ class StreamHubOneProvider : MainAPI() {
 
         val linkData = LoadLinksData(
             title = title,
-            id = meta.id ?: meta.imdbId ?: "",
+            id = meta.id ?: meta.imdb_id ?: meta.imdbId ?: "",
             tmdbId = meta.tmdbId ?: meta.moviedb_id,
             tvtype = if (mediaType == "movie") "movie" else "tv",
             year = extractYear(meta.year ?: meta.releaseInfo)?.toString(),
@@ -402,11 +403,11 @@ class StreamHubOneProvider : MainAPI() {
             isBollywood = isBollywood,
             isAsian = isAsian,
             isCartoon = isCartoon,
-            imdb_id = meta.imdbId,
+            imdb_id = meta.imdb_id ?: meta.imdbId,
             anilistId = animeIds?.first,
             malId = animeIds?.second,
             orgTitle = title,
-            airedYear = extractYear(meta.year ?: meta.releaseInfo)?.toString()
+            airedYear = extractYear(meta.year ?: meta.releaseInfo)
         )
 
         return if (mediaType == "movie") {
@@ -433,7 +434,7 @@ class StreamHubOneProvider : MainAPI() {
                 actors = actorList.takeIf { it.isNotEmpty() }
                 
                 contentRating = meta.certification
-                addImdbId(meta.imdbId)
+                addImdbId(meta.imdb_id ?: meta.imdbId)
                 addAniListId(animeIds?.first)
                 addMalId(animeIds?.second)
             }
@@ -442,9 +443,7 @@ class StreamHubOneProvider : MainAPI() {
                 val epData = linkData.copy(
                     season = ep.season,
                     episode = ep.episode,
-                    firstAired = ep.firstAired ?: ep.released,
-                    imdbSeason = ep.imdbSeason,
-                    imdbEpisode = ep.imdbEpisode
+                    firstAired = ep.firstAired ?: ep.released
                 )
                 newEpisode(epData.toJson()) {
                     name = ep.name ?: ep.title
@@ -481,7 +480,7 @@ class StreamHubOneProvider : MainAPI() {
                 }
                 actors = actorList.takeIf { it.isNotEmpty() }
                 
-                addImdbId(meta.imdbId)
+                addImdbId(meta.imdb_id ?: meta.imdbId)
                 addAniListId(animeIds?.first)
                 addMalId(animeIds?.second)
             }
@@ -492,14 +491,15 @@ class StreamHubOneProvider : MainAPI() {
         val cleanTitle = title.trim().takeIf { it.isNotEmpty() } ?: return null
         val query = """query (${"$"}search: String) { Page(page: 1, perPage: 8) { media(search: ${"$"}search, type: ANIME) { id idMal seasonYear title { romaji english native } } } }"""
         val body = mapOf("query" to query, "variables" to mapOf("search" to cleanTitle)).toJson()
-        val response = runCatching { app.post("https://graphql.anilist.co", headers = mapOf("Content-Type" to "application/json", "Accept" to "application/json"), data = body).text }.getOrNull() ?: return null
-        val result = tryParseJson<CinemetaAniListResponse>(response) ?: return null
-        val media = result.data?.page?.media?.maxByOrNull { calculateMatchScore(cleanTitle, it, year) } ?: return null
+        val reqBody = body.toRequestBody("application/json".toMediaTypeOrNull())
+        val response = runCatching { app.post("https://graphql.anilist.co", headers = mapOf("Content-Type" to "application/json", "Accept" to "application/json"), requestBody = reqBody).text }.getOrNull() ?: return null
+        val result = tryParseJson<HybridAniListResponse>(response) ?: return null
+        val media = result.data?.Page?.media?.maxByOrNull { calculateMatchScore(cleanTitle, it, year) } ?: return null
         if (calculateMatchScore(cleanTitle, media, year) < 50) return null
         return Pair(media.id, media.idMal)
     }
 
-    private fun calculateMatchScore(searchTitle: String, anime: CinemetaAniListMedia, year: Int?): Int {
+    private fun calculateMatchScore(searchTitle: String, anime: HybridAniListMedia, year: Int?): Int {
         val normalizedSearch = searchTitle.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim()
         val titles = listOfNotNull(anime.title?.romaji, anime.title?.english, anime.title?.native)
         var score = 0
@@ -512,7 +512,7 @@ class StreamHubOneProvider : MainAPI() {
         return score
     }
 
-    private fun detectAnime(meta: CinemetaMeta): Boolean {
+    private fun detectAnime(meta: HybridCineMeta): Boolean {
         val title = buildString { append(meta.name.orEmpty()); append(" "); append(meta.aliases.orEmpty().joinToString(" ")) }.lowercase()
         val country = meta.country.orEmpty().lowercase()
         val genres = meta.genres.orEmpty().joinToString(" ").lowercase()
@@ -520,13 +520,13 @@ class StreamHubOneProvider : MainAPI() {
         return listOf("anime", "anime series", "japanese animation", "japanese anime").any { title.contains(it) || genres.contains(it) }
     }
     
-    private fun detectCartoon(meta: CinemetaMeta, isAnime: Boolean): Boolean {
+    private fun detectCartoon(meta: HybridCineMeta, isAnime: Boolean): Boolean {
         if (isAnime) return false
         return meta.genres.orEmpty().any { it.contains("animation", true) } || meta.genre.orEmpty().any { it.contains("animation", true) }
     }
     
-    private fun detectBollywood(meta: CinemetaMeta): Boolean = meta.country?.contains("India", true) == true
-    private fun detectAsian(meta: CinemetaMeta, isAnime: Boolean): Boolean {
+    private fun detectBollywood(meta: HybridCineMeta): Boolean = meta.country?.contains("India", true) == true
+    private fun detectAsian(meta: HybridCineMeta, isAnime: Boolean): Boolean {
         if (isAnime) return false
         val country = meta.country.orEmpty()
         return country.contains("Korea", true) || country.contains("China", true) || country.contains("Japan", true)
@@ -536,47 +536,26 @@ class StreamHubOneProvider : MainAPI() {
     private fun extractRuntime(runtime: String?): Int? = if (runtime.isNullOrBlank()) null else Regex("""\d+""").find(runtime)?.value?.toIntOrNull()
 }
 
-data class LoadLinksData(
-    val title: String,
-    val id: String,
-    val tmdbId: Int?,
-    val tvtype: String,
-    val year: String? = null,
-    val season: Int? = null,
-    val episode: Int? = null,
-    val firstAired: String? = null,
-    val isAnime: Boolean = false,
-    val isBollywood: Boolean = false,
-    val isAsian: Boolean = false,
-    val isCartoon: Boolean = false,
-    val imdb_id : String? = null,
-    val imdbSeason : Int? = null,
-    val imdbEpisode : Int? = null,
-    val anilistId : Int? = null,
-    val malId : Int? = null,
-    val orgTitle: String? = null,
-    val airedYear: String? = null
-)
-
-data class CinemetaSearchResult(val metas: List<CinemetaSearchItem> = emptyList())
-data class CinemetaSearchItem(val id: String? = null, val type: String, val name: String? = null, val poster: String? = null, val imdbRating: String? = null, val aliases: List<String>? = null)
-data class CinemetaMetaResponse(val meta: CinemetaMeta? = null)
-data class CinemetaMeta(
-    val id: String? = null, val imdb_id: String? = null, val awards: String? = null, val type: String? = null, val aliases: List<String>? = null, 
+// ✅ HYBRID CINEMETA CLASSES (Renamed to avoid Redeclaration Errors)
+data class HybridCineSearchResult(val metas: List<HybridCineSearchItem> = emptyList())
+data class HybridCineSearchItem(val id: String? = null, val type: String, val name: String? = null, val poster: String? = null, val imdbRating: String? = null, val aliases: List<String>? = null)
+data class HybridCineMetaResponse(val meta: HybridCineMeta? = null)
+data class HybridCineMeta(
+    val id: String? = null, val imdb_id: String? = null, val imdbId: String? = null, val awards: String? = null, val type: String? = null, val aliases: List<String>? = null, 
     val certification: String? = null, val poster: String? = null, val logo: String? = null, val background: String? = null, val moviedb_id: Int? = null, val tmdbId: Int? = null, 
     val name: String? = null, val description: String? = null, val genre: List<String>? = null, val genres: List<String>? = null, val releaseInfo: String? = null, 
-    val status: String? = null, val runtime: String? = null, val cast: List<String>? = null, val app_extras: CinemetaAppExtras? = null, val language: String? = null, 
-    val country: String? = null, val imdbRating: String? = null, val year: String? = null, val videos: List<CinemetaEpisode>? = null, val imdbId: String? = null
+    val status: String? = null, val runtime: String? = null, val cast: List<String>? = null, val app_extras: HybridCineAppExtras? = null, val language: String? = null, 
+    val country: String? = null, val imdbRating: String? = null, val year: String? = null, val videos: List<HybridCineEpisode>? = null
 )
-data class CinemetaAppExtras(val cast: List<CinemetaCast> = emptyList())
-data class CinemetaCast(val name: String? = null, val character: String? = null, val photo: String? = null)
-data class CinemetaEpisode(
+data class HybridCineAppExtras(val cast: List<HybridCineCast> = emptyList())
+data class HybridCineCast(val name: String? = null, val character: String? = null, val photo: String? = null)
+data class HybridCineEpisode(
     val id: String? = null, val name: String? = null, val title: String? = null, val season: Int? = null, val episode: Int? = null, val overview: String? = null, 
     val thumbnail: String? = null, val rating: String? = null, val released: String? = null, val firstAired: String? = null, val runtime: String? = null, 
     val imdb_id: String? = null, val imdbSeason: Int? = null, val imdbEpisode: Int? = null, val tmdbId: Int? = null, val imdbId: String? = null
 )
-data class CinemetaAniListResponse(val data: CinemetaAniListData? = null)
-data class CinemetaAniListData(val Page: CinemetaAniListPage? = null)
-data class CinemetaAniListPage(val media: List<CinemetaAniListMedia> = emptyList())
-data class CinemetaAniListMedia(val id: Int? = null, val idMal: Int? = null, val seasonYear: Int? = null, val title: CinemetaAniListTitle? = null)
-data class CinemetaAniListTitle(val romaji: String? = null, val english: String? = null, val native: String? = null)
+data class HybridAniListResponse(val data: HybridAniListData? = null)
+data class HybridAniListData(val Page: HybridAniListPage? = null)
+data class HybridAniListPage(val media: List<HybridAniListMedia> = emptyList())
+data class HybridAniListMedia(val id: Int? = null, val idMal: Int? = null, val seasonYear: Int? = null, val title: HybridAniListTitle? = null)
+data class HybridAniListTitle(val romaji: String? = null, val english: String? = null, val native: String? = null)
