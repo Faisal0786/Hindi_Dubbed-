@@ -163,15 +163,9 @@ enum class CatalogSource {
 }
 
 fun getCatalogSource(): CatalogSource {
-    return when (
-        com.lagradost.cloudstream3.CloudStreamApp
-            .getKey<String>(CATALOG_SOURCE_KEY)
-            ?.lowercase()
-    ) {
-        CATALOG_SOURCE_TMDB -> CatalogSource.TMDB
-        else -> CatalogSource.CINEMETA
-    }
+    return CatalogSource.CINEMETA
 }
+
 
 fun setCatalogSource(source: CatalogSource) {
     com.lagradost.cloudstream3.CloudStreamApp.setKey(
