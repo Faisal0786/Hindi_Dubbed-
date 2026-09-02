@@ -1,0 +1,29 @@
+package com.hindi
+
+import com.lagradost.cloudstream3.Actor
+import com.lagradost.cloudstream3.ActorData
+import com.lagradost.cloudstream3.HomePageList
+import java.net.URLEncoder
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
+
+import com.hindi.providers.SourceProviders.invokeAllSources
+import com.hindi.providers.SourceProviders.invokeAllAnimeSources
+import com.hindi.providers.toSansSerifBold
+import com.hindi.providers.toSansSerifItalic
+import com.hindi.providers.toFlagEmoji
+import com.hindi.providers.SourceProviders.invokeAnimes
+import com.hindi.providers.AllLoadLinksData
+import com.hindi.providers.convertImdbToAnimeId
+import com.hindi.providers.convertTmdbToAnimeId
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
