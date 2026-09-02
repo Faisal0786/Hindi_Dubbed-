@@ -13,24 +13,14 @@ class StreamHubOnePlugin : Plugin() {
 
     override fun load(context: Context) {
 
-        
-
-        // Load dynamic API URLs
         runBlocking { init() }
 
-        // Initialize provider settings
         Settings.initSeenProviders()
 
-        // Register providers
-
-        
         registerMainAPI(StreamHubOneProvider())
-}
+        registerMainAPI(Cwunchyroll())
+        registerMainAPI(NexFlixiaProvider())
 
-registerMainAPI(Cwunchyroll())
-registerMainAPI(NexFlixiaProvider())
-
-        // Open settings
         this.openSettings = { ctx: Context ->
             Settings.showSettingsDialog(ctx) {
                 MainActivity.reloadHomeEvent.invoke(true)
