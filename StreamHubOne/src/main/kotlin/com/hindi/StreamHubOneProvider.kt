@@ -547,4 +547,17 @@ override suspend fun getMainPage(
 }
 
 
-            }
+ override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        return com.hindi.loadLinks(
+            data = data,
+            isCasting = isCasting,
+            subtitleCallback = subtitleCallback,
+            callback = callback
+        )
+    }
+}
