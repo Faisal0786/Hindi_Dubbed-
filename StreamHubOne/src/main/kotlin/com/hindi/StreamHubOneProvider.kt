@@ -10,6 +10,10 @@ import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
+
+
 import com.hindi.providers.AllLoadLinksData
 import com.hindi.providers.Settings
 import com.hindi.providers.SourceProviders.invokeAllAnimeSources
