@@ -25,13 +25,14 @@ class StreamHubOnePlugin : Plugin() {
 
         when (Settings.getCatalogSource()) {
     Settings.CatalogSource.CINEMETA ->
-        registerMainAPI(NexFlixiaProvider())
+        
 
     Settings.CatalogSource.TMDB ->
         registerMainAPI(StreamHubOneProvider())
 }
 
 registerMainAPI(Cwunchyroll())
+registerMainAPI(NexFlixiaProvider())
 
         // Open settings
         this.openSettings = { ctx: Context ->
