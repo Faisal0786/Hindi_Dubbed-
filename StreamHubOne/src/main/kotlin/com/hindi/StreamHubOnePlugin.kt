@@ -23,11 +23,7 @@ class StreamHubOnePlugin : Plugin() {
 
         // Register providers
 
-        when (Settings.getCatalogSource()) {
-    Settings.CatalogSource.CINEMETA ->
         
-
-    Settings.CatalogSource.TMDB ->
         registerMainAPI(StreamHubOneProvider())
 }
 
