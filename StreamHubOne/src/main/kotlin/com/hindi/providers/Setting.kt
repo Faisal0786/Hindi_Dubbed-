@@ -163,7 +163,11 @@ enum class CatalogSource {
 }
 
 fun getCatalogSource(): CatalogSource {
-    return CatalogSource.CINEMETA
+    val savedSource = com.lagradost.cloudstream3.CloudStreamApp.getKey<String>(CATALOG_SOURCE_KEY)
+    return when (savedSource) {
+        CATALOG_SOURCE_TMDB -> CatalogSource.TMDB
+        else -> CatalogSource.CINEMETA 
+    }
 }
 
 
@@ -176,6 +180,7 @@ fun setCatalogSource(source: CatalogSource) {
         }
     )
 }
+
 
     // ── Dynamic Provider Maps ────────────────────────────────
     // We dynamically pull these from our single source of truth (ProviderRegistry)!
