@@ -106,7 +106,7 @@ open class NexFlixiaProvider : MainAPI() {
         } 
     } 
 
-    private suspend fun buildMovieResponse(meta: NexFlixiaMeta, sourceUrl: String): LoadResponse? { 
+        private suspend fun buildMovieResponse(meta: NexFlixiaMeta, sourceUrl: String): LoadResponse? { 
         val title = meta.name?.takeIf { it.isNotBlank() } ?: return null 
         val ids = metadata.extractIds(meta) 
         val isAnime = detectAnime(meta) 
@@ -115,7 +115,6 @@ open class NexFlixiaProvider : MainAPI() {
         val isAsian = detectAsian(meta, isAnime) 
         val isCartoon = detectCartoon(meta, isAnime) 
         
-        // MAPPED TO CENTRAL LoadLinksData
         val data = LoadLinksData( 
             title = title, 
             id = meta.id ?: ids.imdbId ?: "", 
@@ -135,12 +134,22 @@ open class NexFlixiaProvider : MainAPI() {
             posterUrl = meta.poster 
             backgroundPosterUrl = meta.background 
             logoUrl = meta.logo 
-            plot = meta.description 
+            
+            plot = buildString {
+                meta.awards?.takeIf { it.isNotBlank() }?.let {
+                    append("🏆 Awards: $it\n\n")
+                }
+                append(meta.description ?: "")
+            }
+            
             tags = (meta.genres ?: meta.genre)?.filter { it.isNotBlank() }?.distinct() 
             score = meta.imdbRating?.toString()?.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { Score.from10(it) } 
             year = extractYear(meta.year ?: meta.releaseInfo) 
             duration = extractRuntime(meta.runtime) 
+            
             actors = buildActors(meta.appExtras?.cast) 
+                ?: meta.cast?.filter { it.isNotBlank() }?.map { ActorData(Actor(it)) }
+                
             contentRating = meta.certification 
             addImdbId(ids.imdbId) 
         } 
@@ -157,7 +166,6 @@ open class NexFlixiaProvider : MainAPI() {
         
         val episodes = meta.videos.orEmpty().asSequence().filter { ep -> (ep.season ?: 0) > 0 && (ep.episode ?: 0) > 0 }.map { ep -> 
             
-            // MAPPED TO CENTRAL LoadLinksData
             val episodeData = LoadLinksData( 
                 title = title, 
                 id = meta.id ?: ids.imdbId ?: "", 
@@ -184,6 +192,9 @@ open class NexFlixiaProvider : MainAPI() {
                 this.episode = ep.episode ?: 1 
                 posterUrl = ep.thumbnail 
                 description = ep.overview 
+                
+                runTime = extractRuntime(ep.runtime)
+                
                 score = ep.rating?.toString()?.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { Score.from10(it) } 
                 addDate(ep.firstAired ?: ep.released) 
             } 
@@ -193,15 +204,27 @@ open class NexFlixiaProvider : MainAPI() {
             posterUrl = meta.poster 
             backgroundPosterUrl = meta.background 
             logoUrl = meta.logo 
-            plot = meta.description 
+            
+            plot = buildString {
+                meta.awards?.takeIf { it.isNotBlank() }?.let {
+                    append("🏆 Awards: $it\n\n")
+                }
+                append(meta.description ?: "")
+            }
+            
             tags = (meta.genres ?: meta.genre)?.filter { it.isNotBlank() }?.distinct() 
             score = meta.imdbRating?.toString()?.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { Score.from10(it) } 
             year = extractYear(meta.year ?: meta.releaseInfo) 
             duration = extractRuntime(meta.runtime) 
             contentRating = meta.certification 
+            
+            actors = buildActors(meta.appExtras?.cast) 
+                ?: meta.cast?.filter { it.isNotBlank() }?.map { ActorData(Actor(it)) }
+                
             addImdbId(ids.imdbId) 
         } 
     } 
+
 
     
  
