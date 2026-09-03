@@ -2,8 +2,8 @@ package com.hindi.setting
 
 import android.content.Context
 import android.content.SharedPreferences
-import it.dogior.hadEnough.StreamCenterPlugin
-import it.dogior.hadEnough.util.StreamCenterLogger
+
+import com.hindi.setting.StreamCenterLogger
 
 internal object StreamCenterConfigurationStore {
     fun preferences(context: Context): SharedPreferences =
