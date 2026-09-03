@@ -1,4 +1,4 @@
-package it.dogior.hadEnough.settings
+package com.hindi.setting
 
 import android.content.Context
 import android.content.SharedPreferences
