@@ -1,6 +1,6 @@
-package it.dogior.hadEnough.settings
+package com.hindi.setting
 
-import it.dogior.hadEnough.*
+
 
 import android.content.Context
 import android.content.Intent
