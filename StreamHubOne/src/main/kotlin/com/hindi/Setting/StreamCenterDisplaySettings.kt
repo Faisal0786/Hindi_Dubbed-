@@ -1,6 +1,6 @@
-package it.dogior.hadEnough.settings
+package com.hindi.settings
 
-import it.dogior.hadEnough.*
+
 
 import android.os.Bundle
 import android.view.LayoutInflater
