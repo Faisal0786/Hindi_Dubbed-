@@ -1,4 +1,4 @@
-package it.dogior.hadEnough.settings
+package com.hindi.setting
 
 import it.dogior.hadEnough.*
 import it.dogior.hadEnough.catalog.StreamCenterCatalogDefinition
