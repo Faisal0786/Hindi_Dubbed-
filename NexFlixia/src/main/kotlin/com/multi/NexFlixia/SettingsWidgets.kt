@@ -1,0 +1,452 @@
+package com.hindi.providers
+
+import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.view.View
+import android.view.animation.DecelerateInterpolator
+import android.widget.LinearLayout
+import android.widget.Switch
+import android.widget.TextView
+import com.hindi.providers.SettingsTheme.dp
+import android.graphics.Typeface
+import android.view.Gravity
+
+/**
+ * Small, reusable UI building blocks shared across all Settings card files.
+ */
+internal object SettingsWidgets {
+
+    // ── Pill button ──────────────────────────────────────────
+
+    fun pillBtn(
+        context: Context, label: String,
+        textColor: Int, bgColor: Int, borderColor: Int,
+        onClick: () -> Unit
+    ) = TextView(context).apply {
+        text = label; textSize = 11f
+        setTypeface(null, android.graphics.Typeface.BOLD)
+        setTextColor(textColor)
+        setPadding(12.dp(context), 6.dp(context), 12.dp(context), 6.dp(context))
+        background = GradientDrawable().apply {
+            cornerRadius = SettingsTheme.RADIUS_CHIP.dp(context); setColor(bgColor); setStroke(1, borderColor)
+        }
+        isClickable = true; isFocusable = true; isFocusableInTouchMode = false
+        setOnClickListener {
+            animate().scaleX(0.88f).scaleY(0.88f).setDuration(70).withEndAction {
+                animate().scaleX(1f).scaleY(1f).setDuration(100).start()
+            }.start()
+            onClick()
+        }
+    }
+
+    // ── Divider ──────────────────────────────────────────────
+
+    fun divider(context: Context) = View(context).apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
+            .also { it.setMargins(20.dp(context), 0, 20.dp(context), 0) }
+        setBackgroundColor(SettingsTheme.DIVIDER_COLOR)
+    }
+
+    // ── Horizontal / vertical spacer ────────────────────────────────────
+
+    fun hSpacer(context: Context, widthDp: Int) = View(context).apply {
+        layoutParams = LinearLayout.LayoutParams(widthDp.dp(context), 1)
+    }
+fun vSpacer(
+    context: Context,
+    heightDp: Int
+) = View(context).apply {
+    layoutParams = LinearLayout.LayoutParams(
+        1,
+        heightDp.dp(context)
+    )
+}
+
+    // ── Expand / collapse animation ──────────────────────────
+
+    fun animateExpand(view: View, expand: Boolean, onCollapsed: (() -> Unit)? = null) {
+        if (expand) {
+            view.visibility = View.VISIBLE
+            view.alpha = 0f
+            view.animate().alpha(1f).setDuration(220).start()
+        } else {
+            view.animate().alpha(0f).setDuration(160).withEndAction {
+                view.visibility = View.GONE
+                view.alpha = 1f
+                onCollapsed?.invoke()
+            }.start()
+        }
+    }
+
+    // ── Entrance animation for cards ─────────────────────────
+
+    fun fadeInSlide(view: View) {
+        view.alpha       = 0f
+        view.translationY = 20f
+        view.animate()
+            .alpha(1f).translationY(0f)
+            .setDuration(300).setInterpolator(DecelerateInterpolator()).start()
+    }
+
+    // ── Accent bar (left colour strip used in card headers) ──
+
+    fun accentBar(context: Context, top: Int, bottom: Int) = View(context).apply {
+        layoutParams = LinearLayout.LayoutParams(3.dp(context), 18.dp(context))
+            .also { it.marginEnd = 12.dp(context) }
+        background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(top, bottom))
+            .apply { cornerRadius = 99f }
+    }
+
+    // ── Danger pill shortcut ─────────────────────────────────
+
+    fun dangerBtn(
+    context: Context,
+    label: String,
+    onClick: () -> Unit
+) = pillBtn(
+    context,
+    label,
+    SettingsTheme.DANGER_COLOR,
+    SettingsTheme.DANGER_BG,
+    SettingsTheme.DANGER_BORDER,
+    onClick
+)
+
+// stat Tile
+
+fun statTile(
+    context: Context,
+    value: String,
+    label: String,
+    accent: Int
+): LinearLayout {
+
+    return LinearLayout(context).apply {
+
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_VERTICAL
+
+        layoutParams = LinearLayout.LayoutParams(
+            0,
+            96.dp(context),
+            1f
+        ).apply {
+            marginStart = 6.dp(context)
+            marginEnd = 6.dp(context)
+        }
+
+        setPadding(
+            16.dp(context),
+            14.dp(context),
+            16.dp(context),
+            14.dp(context)
+        )
+
+        background = GradientDrawable().apply {
+            cornerRadius = SettingsTheme.RADIUS_CARD.dp(context)
+            setColor(SettingsTheme.BG_SECONDARY)
+            setStroke(2, SettingsTheme.CARD_BORDER)
+        }
+
+        // Top colored indicator
+        addView(View(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                26.dp(context),
+                4.dp(context)
+            ).apply {
+                bottomMargin = 10.dp(context)
+            }
+
+            background = GradientDrawable().apply {
+                cornerRadius = 99f
+                setColor(accent)
+            }
+        })
+
+        addView(TextView(context).apply {
+            text = value
+            textSize = 24f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(SettingsTheme.TEXT_PRIMARY)
+        })
+
+        addView(TextView(context).apply {
+            text = label.uppercase()
+            textSize = 10f
+            setTextColor(SettingsTheme.TEXT_SECONDARY)
+            setPadding(0, 4.dp(context), 0, 0)
+        })
+    }
+}
+//Sectione Title
+
+fun sectionTitle(
+    context: Context,
+    text: String
+): TextView {
+
+    return TextView(context).apply {
+
+        this.text = text
+
+        textSize = SettingsTheme.HEADER_SIZE
+
+        setTypeface(null, Typeface.BOLD)
+
+        setTextColor(SettingsTheme.TEXT_PRIMARY)
+
+        setPadding(
+            22.dp(context),
+            8.dp(context),
+            22.dp(context),
+            12.dp(context)
+        )
+    }
+}
+
+//status Chip
+
+fun statusChip(
+    context: Context,
+    text: String,
+    color: Int
+): TextView {
+
+    return TextView(context).apply {
+
+        this.text = text
+
+        textSize = 10f
+
+        gravity = Gravity.CENTER
+
+        setTypeface(null, Typeface.BOLD)
+
+        setTextColor(color)
+
+        setPadding(
+            10.dp(context),
+            4.dp(context),
+            10.dp(context),
+            4.dp(context)
+        )
+
+        background = SettingsTheme.pill(
+            SettingsTheme.CHIP_BG,
+            color
+        )
+    }
+}
+
+    // ── Styled switch ────────────────────────────────────────
+    // Single place for all switch tint boilerplate.
+    // trackOnColor defaults to SWITCH_ON; pass a different color for custom tints.
+
+    fun styledSwitch(
+        context: Context,
+        checked: Boolean,
+        trackOnColor: Int = SettingsTheme.SWITCH_ON
+    ) = Switch(context).apply {
+        isChecked = checked
+        isClickable = false; isFocusable = false; isFocusableInTouchMode = false
+        thumbTintList = android.content.res.ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(android.graphics.Color.WHITE, Color.parseColor("#9099B8"))
+        )
+        trackTintList = android.content.res.ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(trackOnColor, SettingsTheme.SWITCH_OFF)
+        )
+    }
+
+    // ── Card container ───────────────────────────────────────
+    // Standard card: vertical LinearLayout with side margins, rounded bg, elevation.
+
+    fun cardContainer(context: Context) = LinearLayout(context).apply {
+    orientation = LinearLayout.VERTICAL
+
+    val margin = 16.dp(context)
+
+    layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+    ).apply {
+        setMargins(
+            margin,
+            0,
+            margin,
+            14.dp(context)
+        )
+    }
+
+    background = GradientDrawable().apply {
+        cornerRadius = SettingsTheme.RADIUS_CARD.dp(context)
+        setColor(SettingsTheme.BG_CARD)
+        setStroke(2, SettingsTheme.CARD_BORDER)
+    }
+
+    elevation = 8f
+
+    clipToOutline = true
+}
+
+
+fun pressAnimation(view: View) {
+    view.animate()
+        .scaleX(0.96f)
+        .scaleY(0.96f)
+        .setDuration(70)
+        .withEndAction {
+            view.animate()
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(120)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
+        .start()
+}
+
+fun glassBackground(
+    fill: Int = SettingsTheme.BG_CARD,
+    stroke: Int = SettingsTheme.CARD_BORDER,
+    radius: Float = SettingsTheme.RADIUS_CARD.toFloat()
+): GradientDrawable {
+
+    return GradientDrawable().apply {
+        cornerRadius = radius
+        setColor(fill)
+        setStroke(2, stroke)
+    }
+}
+
+fun heroChip(
+    context: Context,
+    icon: String,
+    text: String,
+    accent: Int,
+    onClick: (() -> Unit)? = null
+): TextView {
+
+    return TextView(context).apply {
+
+        this.text = "$icon  $text"
+
+        textSize = 12f
+
+        gravity = Gravity.CENTER
+
+        setTypeface(null, Typeface.BOLD)
+
+        setTextColor(SettingsTheme.TEXT_PRIMARY)
+
+        setPadding(
+            14.dp(context),
+            10.dp(context),
+            14.dp(context),
+            10.dp(context)
+        )
+
+        background = glassBackground(
+    fill = SettingsTheme.BG_SECONDARY,
+    stroke = accent,
+    radius = 999f
+)
+
+        if (onClick != null) {
+            isClickable = true
+            isFocusable = true
+
+            setOnClickListener {
+                pressAnimation(this)
+                onClick()
+            }
+        }
+    }
+}
+
+fun controlTile(
+    context: Context,
+    icon: String,
+    title: String,
+    value: String,
+    accent: Int,
+    onClick: (() -> Unit)? = null
+): LinearLayout {
+
+    return LinearLayout(context).apply {
+
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+
+        layoutParams = LinearLayout.LayoutParams(
+            0,
+            112.dp(context),
+            1f
+        ).apply {
+            marginStart = 6.dp(context)
+            marginEnd = 6.dp(context)
+        }
+
+        setPadding(
+            16.dp(context),
+            14.dp(context),
+            16.dp(context),
+            14.dp(context)
+        )
+
+        background = glassBackground()
+
+        val iconView = TextView(context).apply {
+            text = icon
+            textSize = 22f
+            gravity = Gravity.CENTER
+        }
+
+        val titleView = TextView(context).apply {
+            text = title
+            textSize = 11f
+            gravity = Gravity.CENTER
+            setTextColor(SettingsTheme.TEXT_SECONDARY)
+            setPadding(0, 6.dp(context), 0, 0)
+        }
+
+        val valueView = TextView(context).apply {
+            text = value
+            textSize = 18f
+            gravity = Gravity.CENTER
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(accent)
+            setPadding(0, 2.dp(context), 0, 0)
+        }
+
+        addView(iconView)
+        addView(titleView)
+        addView(valueView)
+
+        if (onClick != null) {
+            isClickable = true
+            isFocusable = true
+
+            setOnClickListener {
+                pressAnimation(this)
+                onClick()
+            }
+        }
+    }
+}
+fun glassCard(context: Context): LinearLayout {
+
+    return cardContainer(context).apply {
+
+        background = glassBackground(
+            fill = SettingsTheme.BG_CARD,
+            stroke = SettingsTheme.CARD_BORDER,
+            radius = 24f
+        )
+
+        elevation = 10f
+    }
+}
+}
