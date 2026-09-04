@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.mvvm.safeAmap
 import com.lagradost.cloudstream3.utils.AppUtils.parsedSafe
 import com.lagradost.api.Log
 import com.hindi.providers.*
+import com.hindi.providers.SourceProviders
 
 suspend fun SourceProviders.invokeAnimepahe(
     url: String? = null,
