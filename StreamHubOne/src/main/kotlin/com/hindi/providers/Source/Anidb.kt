@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parsedSafe
 import com.hindi.providers.*
+import com.hindi.providers.SourceProviders
 
 suspend fun SourceProviders.invokeAnidb(
     title: String? = null,
