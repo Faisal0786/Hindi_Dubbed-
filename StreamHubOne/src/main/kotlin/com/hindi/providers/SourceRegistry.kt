@@ -1,8 +1,11 @@
 package com.hindi.providers
 
+
+import com.hindi.providers.source
 import com.hindi.providers.NewProviders.NewSourceRegistry
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+
 
 /** Container for data fetched during MALSync requests */
 data class MalSyncData(
