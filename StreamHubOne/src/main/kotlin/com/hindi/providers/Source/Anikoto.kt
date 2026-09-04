@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.api.Log
 import com.hindi.providers.*
 import org.jsoup.Jsoup
+import com.hindi.providers.SourceProviders
 
 suspend fun SourceProviders.invokeAnikoto(
     title: String? = null,
