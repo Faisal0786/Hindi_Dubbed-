@@ -36,3 +36,38 @@ import java.net.URI
 import java.net.URL
 import java.net.URLEncoder
 import java.util.concurrent.ConcurrentHashMap
+
+    suspend fun SourceProviders.invokeStremioSubtitles(
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+    ) {
+        val subsUrls = listOf(
+            "https://opensubtitles.stremio.homes/en|hi|de|ar|tr|es|ta|te|ru|ko/ai-translated=true|from=all|auto-adjustment=true",
+            """https://subsense.nepiraw.com/n0tcjfba-{"languages":["en","hi","ta","es","ar"],"maxSubtitles":10}"""
+        )
+
+        subsUrls.safeAmap { subUrl ->
+            try {
+                val url = if(season != null) {
+                    subUrl + "/subtitles/series/$imdbId:$season:$episode.json"
+                } else {
+                    subUrl + "/subtitles/movie/$imdbId.json"
+                }
+
+                val json = app.get(url).text
+                val subtitleResponse = parseJson<StremioSubtitleResponse>(json)
+
+                subtitleResponse.subtitles.forEach {
+                    val lang = it.lang ?: it.lang_code
+                    val fileUrl = it.url
+                    if(lang != null && fileUrl != null) {
+                        mySubtitleCallback(lang, fileUrl, subtitleCallback, "StremioSubtitle")
+                    }
+                }
+            } catch (e: Exception) {
+                println("Error fetching/parsing subtitle from: $subUrl - ${e.message}")
+            }
+        }
+    }
