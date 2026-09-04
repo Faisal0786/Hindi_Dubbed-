@@ -1,5 +1,7 @@
 package com.hindi.providers
 
+import com.hindi.providers.Source.*
+
 // Cloudstream Core & Utils
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.mvvm.safeApiCall
