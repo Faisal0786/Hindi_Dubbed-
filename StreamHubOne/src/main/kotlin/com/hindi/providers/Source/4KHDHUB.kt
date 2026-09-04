@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.mvvm.safeAmap
 import com.lagradost.api.Log
 import com.hindi.providers.*
+import com.hindi.providers.SourceProviders
 
 suspend fun SourceProviders.invoke4khdhub(
     title: String? = null,
