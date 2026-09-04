@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.api.Log
 import com.hindi.providers.*
 import java.net.URLEncoder
+import com.hindi.providers.SourceProviders
 
 suspend fun SourceProviders.invokeAkwam(
     imdbId: String? = null,
