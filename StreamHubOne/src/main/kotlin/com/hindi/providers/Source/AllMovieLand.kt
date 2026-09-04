@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.mvvm.safeAmap
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.hindi.providers.*
+import com.hindi.providers.SourceProviders
 
 suspend fun SourceProviders.invokeAllmovieland(
     id : String? = null,
