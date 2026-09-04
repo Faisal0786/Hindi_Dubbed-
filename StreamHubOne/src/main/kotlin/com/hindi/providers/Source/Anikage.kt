@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.parsedSafe
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.api.Log
 import com.hindi.providers.*
+import com.hindi.providers.SourceProviders
 
 suspend fun SourceProviders.invokeAnikage(
     title: String? = null,
