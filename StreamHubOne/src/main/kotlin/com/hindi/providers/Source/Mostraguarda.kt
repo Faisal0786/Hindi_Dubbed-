@@ -41,22 +41,22 @@ import java.util.concurrent.ConcurrentHashMap
 
 
 suspend fun SourceProviders.invokeMostraguarda(
-    id: String? = null,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit,
-) {
-    val url = "$MostraguardaAPI/movie/$id"
-    val doc = app.get(
-        url,
-        headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-        )
-    ).document
+            id: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val url = "$MostraguardaAPI/movie/$id"
+        val doc = app.get(
+            url,
+            headers = mapOf(
+                "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+            )
+        ).document
 
-    doc.select("ul > li").safeAmap {
-        if(it.text().contains("supervideo")) {
-            val source = "https:" + it.attr("data-link")
-            com.lagradost.cloudstream3.extractors.SuperVideo().getUrl(source, "", subtitleCallback, callback)
+        doc.select("ul > li").safeAmap {
+            if(it.text().contains("supervideo")) {
+                val source = "https:" + it.attr("data-link")
+                SuperVideo().getUrl(source, "", subtitleCallback, callback)
+            }
         }
     }
-}
