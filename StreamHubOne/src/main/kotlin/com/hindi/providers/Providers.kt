@@ -1,6 +1,6 @@
 package com.hindi.providers
 
-import com.hindi.providers.Source.*
+import com.hindi.providers.source.*
 
 // Cloudstream Core & Utils
 import com.lagradost.cloudstream3.*
