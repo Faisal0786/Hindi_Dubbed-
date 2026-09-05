@@ -8,7 +8,9 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import org.jsoup.Jsoup
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.lagradost.cloudstream3.mvvm.safeAmap // 🔥 FIX: safeAmap import added
+import com.lagradost.cloudstream3.mvvm.safeAmap 
+
+import com.lagradost.cloudstream3.mvvm.safeApiCall
 
 private data class CinemetaVideo(
     @JsonProperty("id") val id: String? = null,
