@@ -1,11 +1,15 @@
 package com.Movieflix
 
 import android.util.Log
+import android.util.Base64
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
+import org.jsoup.Jsoup
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 
 private data class CinemetaVideo(
     @JsonProperty("id")
@@ -43,6 +47,13 @@ private data class CinemetaResponse(
     val meta: CinemetaMeta? = null
 )
 
+// Yeh class humein madad karegi Load function se URL, Season, aur Episode pass karne mein
+private data class LinkData(
+    val url: String,
+    val season: Int? = null,
+    val episode: Int? = null
+)
+
 class TheMoviesFlixProvider : MainAPI() {
 
     override var mainUrl = "https://themoviesflix.actor/"
@@ -56,625 +67,405 @@ class TheMoviesFlixProvider : MainAPI() {
         TvType.TvSeries
     )
 
-  // =========================================================
-// HOME PAGE CATEGORIES
-// =========================================================
+    // =========================================================
+    // HOME PAGE CATEGORIES
+    // =========================================================
 
-override val mainPage = mainPageOf(
-
-    // Main categories
-    "$mainUrl/category/english/" to "Hollywood",
-    "$mainUrl/category/bollywood/" to "Bollywood",
-    "$mainUrl/category/hindi-dubbed-movies/" to "Hindi Dubbed",
-    "$mainUrl/category/dual-audio-movies/" to "Dual Audio",
-    "$mainUrl/category/web-series/" to "Web Series",
-    "$mainUrl/category/korean-series/" to "Korean Drama",
-
-    // Genres
-    "$mainUrl/category/drama/" to "Drama",
-    "$mainUrl/category/action/" to "Action",
-    "$mainUrl/category/comedy/" to "Comedy",
-    "$mainUrl/category/thriller/" to "Thriller",
-    "$mainUrl/category/romance/" to "Romance",
-    "$mainUrl/category/adventure/" to "Adventure",
-    "$mainUrl/category/crime/" to "Crime",
-    "$mainUrl/category/horror/" to "Horror",
-    "$mainUrl/category/mystery/" to "Mystery",
-    "$mainUrl/category/fantasy/" to "Fantasy",
-    "$mainUrl/category/sci-fi/" to "Sci-Fi",
-    "$mainUrl/category/animation/" to "Animation",
-    "$mainUrl/category/family/" to "Family",
-    "$mainUrl/category/sport/" to "Sport"
-)
-
-// =========================================================
-// HOME PAGE
-// =========================================================
-
-override suspend fun getMainPage(
-    page: Int,
-    request: MainPageRequest
-): HomePageResponse {
-
-    val baseCategoryUrl = request.data.trimEnd('/')
-
-    val pageUrl = if (page <= 1) {
-        "$baseCategoryUrl/"
-    } else {
-        "$baseCategoryUrl/page/$page/"
-    }
-
-    Log.d(
-        "TheMoviesFlix",
-        "Loading category: ${request.name}"
+    override val mainPage = mainPageOf(
+        "$mainUrl/category/english/" to "Hollywood",
+        "$mainUrl/category/bollywood/" to "Bollywood",
+        "$mainUrl/category/hindi-dubbed-movies/" to "Hindi Dubbed",
+        "$mainUrl/category/dual-audio-movies/" to "Dual Audio",
+        "$mainUrl/category/web-series/" to "Web Series",
+        "$mainUrl/category/korean-series/" to "Korean Drama",
+        "$mainUrl/category/drama/" to "Drama",
+        "$mainUrl/category/action/" to "Action",
+        "$mainUrl/category/comedy/" to "Comedy",
+        "$mainUrl/category/thriller/" to "Thriller",
+        "$mainUrl/category/romance/" to "Romance",
+        "$mainUrl/category/adventure/" to "Adventure",
+        "$mainUrl/category/crime/" to "Crime",
+        "$mainUrl/category/horror/" to "Horror",
+        "$mainUrl/category/mystery/" to "Mystery",
+        "$mainUrl/category/fantasy/" to "Fantasy",
+        "$mainUrl/category/sci-fi/" to "Sci-Fi",
+        "$mainUrl/category/animation/" to "Animation",
+        "$mainUrl/category/family/" to "Family",
+        "$mainUrl/category/sport/" to "Sport"
     )
-
-    Log.d(
-        "TheMoviesFlix",
-        "Page: $page"
-    )
-
-    Log.d(
-        "TheMoviesFlix",
-        "URL: $pageUrl"
-    )
-
-    return try {
-
-        val document = app.get(
-            pageUrl,
-            timeout = 30L
-        ).document
-
-        /*
-         * Actual site structure:
-         *
-         * .post-cards
-         *     └── .latestpost
-         *          └── .featured-thumbnail img
-         *          └── .entry-title a
-         *
-         * Primary selector is intentionally specific.
-         */
-
-        val results = document
-            .select(
-                ".post-cards > .latestpost, " +
-                ".post-cards article.latestpost, " +
-                "article.latestpost"
-            )
-            .mapNotNull { it.toSearchResult() }
-            .distinctBy { it.url }
-
-        /*
-         * WordPress page navigation exposes:
-         *
-         * <link rel="next" ...>
-         *
-         * So don't assume that every non-empty page
-         * has another page.
-         */
-
-        val hasNextPage =
-            document.selectFirst("link[rel=next]") != null ||
-            document.selectFirst(
-                "a.next, " +
-                ".next a, " +
-                ".pagination .next, " +
-                ".posts-navigation .next"
-            ) != null
-
-        Log.d(
-            "TheMoviesFlix",
-            "${request.name} page=$page results=${results.size} hasNext=$hasNextPage"
-        )
-
-        newHomePageResponse(
-            request.name,
-            results,
-            hasNext = hasNextPage
-        )
-
-    } catch (e: Exception) {
-
-        Log.e(
-            "TheMoviesFlix",
-            "Category load failed: ${request.name} : ${e.message}"
-        )
-
-        newHomePageResponse(
-            request.name,
-            emptyList(),
-            hasNext = false
-        )
-    }
-}
 
     // =========================================================
-// SEARCH RESULT PARSER
-// =========================================================
+    // HOME PAGE
+    // =========================================================
 
-private fun Element.toSearchResult(): SearchResponse? {
+    override suspend fun getMainPage(
+        page: Int,
+        request: MainPageRequest
+    ): HomePageResponse {
 
-    val anchor = selectFirst(
-        ".entry-title a[href]"
-    ) ?: selectFirst(
-        "a[title][href]"
-    ) ?: return null
+        val baseCategoryUrl = request.data.trimEnd('/')
 
-    val href = anchor
-        .attr("href")
-        .trim()
-
-    if (href.isBlank()) return null
-
-    val rawTitle = when {
-        anchor.attr("title").isNotBlank() -> {
-            anchor.attr("title")
+        val pageUrl = if (page <= 1) {
+            "$baseCategoryUrl/"
+        } else {
+            "$baseCategoryUrl/page/$page/"
         }
 
-        selectFirst(".entry-title a")?.text()?.isNotBlank() == true -> {
-            selectFirst(".entry-title a")!!.text()
+        Log.d("TheMoviesFlix", "Loading category: ${request.name}")
+        Log.d("TheMoviesFlix", "Page: $page")
+        Log.d("TheMoviesFlix", "URL: $pageUrl")
+
+        return try {
+            val document = app.get(pageUrl, timeout = 30L).document
+
+            val results = document
+                .select(".post-cards > .latestpost, .post-cards article.latestpost, article.latestpost")
+                .mapNotNull { it.toSearchResult() }
+                .distinctBy { it.url }
+
+            val hasNextPage =
+                document.selectFirst("link[rel=next]") != null ||
+                        document.selectFirst("a.next, .next a, .pagination .next, .posts-navigation .next") != null
+
+            Log.d("TheMoviesFlix", "${request.name} page=$page results=${results.size} hasNext=$hasNextPage")
+
+            newHomePageResponse(request.name, results, hasNext = hasNextPage)
+
+        } catch (e: Exception) {
+            Log.e("TheMoviesFlix", "Category load failed: ${request.name} : ${e.message}")
+            newHomePageResponse(request.name, emptyList(), hasNext = false)
+        }
+    }
+
+    // =========================================================
+    // SEARCH RESULT PARSER
+    // =========================================================
+
+    private fun Element.toSearchResult(): SearchResponse? {
+        val anchor = selectFirst(".entry-title a[href]") ?: selectFirst("a[title][href]") ?: return null
+        val href = anchor.attr("href").trim()
+        if (href.isBlank()) return null
+
+        val rawTitle = when {
+            anchor.attr("title").isNotBlank() -> anchor.attr("title")
+            selectFirst(".entry-title a")?.text()?.isNotBlank() == true -> selectFirst(".entry-title a")!!.text()
+            anchor.text().isNotBlank() -> anchor.text()
+            else -> return null
         }
 
-        anchor.text().isNotBlank() -> {
-            anchor.text()
-        }
+        val title = rawTitle
+            .replace(Regex("""(?i)^\s*download\s+"""), "")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
 
-        else -> {
-            return null
+        if (title.isBlank()) return null
+
+        val poster = selectFirst(".featured-thumbnail img")?.attr("src")?.takeIf { it.isNotBlank() }
+            ?: selectFirst("img")?.attr("src")?.takeIf { it.isNotBlank() }
+
+        val isSeries = Regex("""(?i)\b(?:season\s*\d+|s\d{1,2}\b|web\s*series|series)\b""").containsMatchIn(title)
+
+        return if (isSeries) {
+            newTvSeriesSearchResponse(title, href) { posterUrl = poster }
+        } else {
+            newMovieSearchResponse(title, href, TvType.Movie) { posterUrl = poster }
         }
     }
 
-    val title = rawTitle
-        .replace(
-            Regex("""(?i)^\s*download\s+"""),
-            ""
-        )
-        .replace(
-            Regex("""\s+"""),
-            " "
-        )
-        .trim()
-
-    if (title.isBlank()) return null
-
-    val poster = selectFirst(
-        ".featured-thumbnail img"
-    )?.attr("src")
-        ?.takeIf { it.isNotBlank() }
-        ?: selectFirst(
-            "img"
-        )?.attr("src")
-            ?.takeIf { it.isNotBlank() }
-
-    val isSeries = Regex(
-        """(?i)\b(?:season\s*\d+|s\d{1,2}\b|web\s*series|series)\b"""
-    ).containsMatchIn(title)
-
-    return if (isSeries) {
-
-        newTvSeriesSearchResponse(
-            title,
-            href
-        ) {
-            posterUrl = poster
-        }
-
-    } else {
-
-        newMovieSearchResponse(
-            title,
-            href,
-            TvType.Movie
-        ) {
-            posterUrl = poster
-        }
-    }
-}
     // =========================================================
     // SEARCH
     // =========================================================
 
-    // =========================================================
-// SEARCH
-// =========================================================
+    override suspend fun search(query: String): List<SearchResponse> {
+        val encodedQuery = java.net.URLEncoder.encode(query.trim(), "UTF-8")
+        val url = "$mainUrl/?s=$encodedQuery"
 
-override suspend fun search(
-    query: String
-): List<SearchResponse> {
+        Log.d("TheMoviesFlix", "Search URL = $url")
 
-    val encodedQuery = java.net.URLEncoder
-        .encode(
-            query.trim(),
-            "UTF-8"
-        )
+        return try {
+            val document = app.get(url, timeout = 30L).document
 
-    val url = "$mainUrl/?s=$encodedQuery"
-
-    Log.d(
-        "TheMoviesFlix",
-        "Search URL = $url"
-    )
-
-    return try {
-
-        val document = app.get(
-            url,
-            timeout = 30L
-        ).document
-
-        document
-            .select(
-                ".post-cards > .latestpost, " +
-                ".post-cards article.latestpost, " +
-                "article.latestpost"
-            )
-            .mapNotNull {
-                it.toSearchResult()
-            }
-            .distinctBy {
-                it.url
-            }
-
-    } catch (e: Exception) {
-
-        Log.e(
-            "TheMoviesFlix",
-            "Search failed: ${e.message}"
-        )
-
-        emptyList()
+            document
+                .select(".post-cards > .latestpost, .post-cards article.latestpost, article.latestpost")
+                .mapNotNull { it.toSearchResult() }
+                .distinctBy { it.url }
+        } catch (e: Exception) {
+            Log.e("TheMoviesFlix", "Search failed: ${e.message}")
+            emptyList()
+        }
     }
-}
 
     // =========================================================
     // METADATA / DETAILS
     // =========================================================
 
-    override suspend fun load(
-        url: String
-    ): LoadResponse? {
-
-        Log.d(
-            "TheMoviesFlix",
-            "Loading details: $url"
-        )
-
+    override suspend fun load(url: String): LoadResponse? {
+        Log.d("TheMoviesFlix", "Loading details: $url")
         val document = app.get(url).document
 
-        // -----------------------------------------------------
-        // TITLE
-        // -----------------------------------------------------
+        val title = document.selectFirst("h2.mfx-main-title")
+            ?.text()?.replace("Download", "", ignoreCase = true)?.trim() ?: return null
 
-        val title = document
-            .selectFirst(
-                "h2.mfx-main-title"
-            )
-            ?.text()
-            ?.replace(
-                "Download",
-                "",
-                ignoreCase = true
-            )
-            ?.trim()
-            ?: return null
+        val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.takeIf { it.isNotBlank() }
+            ?: document.selectFirst(".entry-content img")?.attr("src")?.takeIf { it.isNotBlank() }
 
-        // -----------------------------------------------------
-        // POSTER
-        // -----------------------------------------------------
+        val plot = document.selectFirst("div.mfx-plot-box")?.text()?.trim()
 
-        val poster = document
-            .selectFirst(
-                "meta[property=og:image]"
-            )
-            ?.attr("content")
-            ?.takeIf {
-                it.isNotBlank()
+        fun infoValue(label: String): String? {
+            val li = document.select("div.mfx-info-box ul li").firstOrNull { element ->
+                element.selectFirst("strong")?.text()?.contains(label, ignoreCase = true) == true
             }
-            ?: document
-                .selectFirst(
-                    ".entry-content img"
-                )
-                ?.attr("src")
-                ?.takeIf {
-                    it.isNotBlank()
-                }
-
-        // -----------------------------------------------------
-        // PLOT
-        // -----------------------------------------------------
-
-        val plot = document
-            .selectFirst(
-                "div.mfx-plot-box"
-            )
-            ?.text()
-            ?.trim()
-
-        // -----------------------------------------------------
-        // INFO HELPER
-        // -----------------------------------------------------
-
-        fun infoValue(
-            label: String
-        ): String? {
-
-            val li = document
-                .select(
-                    "div.mfx-info-box ul li"
-                )
-                .firstOrNull { element ->
-
-                    element
-                        .selectFirst("strong")
-                        ?.text()
-                        ?.contains(
-                            label,
-                            ignoreCase = true
-                        ) == true
-                }
-
-            return li
-                ?.text()
-                ?.substringAfter(":")
-                ?.trim()
-                ?.takeIf {
-                    it.isNotBlank()
-                }
+            return li?.text()?.substringAfter(":")?.trim()?.takeIf { it.isNotBlank() }
         }
 
-        // -----------------------------------------------------
-        // YEAR
-        // -----------------------------------------------------
+        val year = infoValue("Release Year")?.toIntOrNull() ?: infoValue("Released Year")?.toIntOrNull()
+        val genres = infoValue("Genres")?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
+        val director = infoValue("Director")
+        val cast = infoValue("Cast")?.split(",")?.map { ActorData(actor = Actor(it.trim())) }?.filter { it.actor.name.isNotBlank() }
+        val language = infoValue("Language")
+        val subtitle = infoValue("Subtitle")
+        val size = infoValue("Size")
+        val format = infoValue("Format")
+        val season = infoValue("Season")?.toIntOrNull()
+        val episode = infoValue("Episode")?.toIntOrNull()
 
-        val year = infoValue(
-            "Release Year"
-        )?.toIntOrNull()
-            ?: infoValue(
-                "Released Year"
-            )?.toIntOrNull()
+        val isSeries = document.selectFirst("h2.mfx-section-title")?.text()?.contains("Series Info", ignoreCase = true) == true
+                || season != null || Regex("""(?i)\bseason\s*\d+\b""").containsMatchIn(title)
 
-        // -----------------------------------------------------
-        // GENRES
-        // -----------------------------------------------------
+        val imdbId = document.selectFirst("a[href*='imdb.com/title/']")
+            ?.attr("href")?.substringAfter("/title/")?.substringBefore("/")?.takeIf { it.startsWith("tt") }
 
-        val genres = infoValue(
-            "Genres"
-        )
-            ?.split(",")
-            ?.map {
-                it.trim()
+        val cinemetaEpisodes = if (isSeries && !imdbId.isNullOrBlank()) {
+            try {
+                val cinemetaUrl = "https://v3-cinemeta.strem.io/meta/series/$imdbId.json"
+                Log.d("TheMoviesFlix", "Cinemeta URL = $cinemetaUrl")
+                app.get(cinemetaUrl).parsed<CinemetaResponse>().meta?.videos.orEmpty()
+            } catch (e: Exception) {
+                Log.e("TheMoviesFlix", "Cinemeta failed: ${e.message}")
+                emptyList()
             }
-            ?.filter {
-                it.isNotBlank()
-            }
-            ?.takeIf {
-                it.isNotEmpty()
-            }
+        } else {
+            emptyList()
+        }
 
-        // -----------------------------------------------------
-        // DIRECTOR
-        // -----------------------------------------------------
-
-        val director = infoValue(
-            "Director"
-        )
-
-        // -----------------------------------------------------
-        // CAST
-        // -----------------------------------------------------
-
-        val cast = infoValue(
-            "Cast"
-        )
-            ?.split(",")
-            ?.map {
-                ActorData(
-                    actor = Actor(
-                        it.trim()
-                    )
-                )
-            }
-            ?.filter {
-                it.actor.name.isNotBlank()
-            }
-
-        // -----------------------------------------------------
-        // LANGUAGE
-        // -----------------------------------------------------
-
-        val language = infoValue(
-            "Language"
-        )
-
-        // -----------------------------------------------------
-        // SUBTITLE
-        // -----------------------------------------------------
-
-        val subtitle = infoValue(
-            "Subtitle"
-        )
-
-        // -----------------------------------------------------
-        // SIZE
-        // -----------------------------------------------------
-
-        val size = infoValue(
-            "Size"
-        )
-
-        // -----------------------------------------------------
-        // FORMAT
-        // -----------------------------------------------------
-
-        val format = infoValue(
-            "Format"
-        )
-
-        // -----------------------------------------------------
-        // SEASON / EPISODE
-        // -----------------------------------------------------
-
-        val season = infoValue(
-            "Season"
-        )?.toIntOrNull()
-
-        val episode = infoValue(
-            "Episode"
-        )?.toIntOrNull()
-
-        // -----------------------------------------------------
-        // SERIES DETECTION
-        // -----------------------------------------------------
-
-        val isSeries = document
-            .selectFirst(
-                "h2.mfx-section-title"
-            )
-            ?.text()
-            ?.contains(
-                "Series Info",
-                ignoreCase = true
-            ) == true
-            ||
-            season != null
-            ||
-            Regex(
-                """(?i)\bseason\s*\d+\b"""
-            ).containsMatchIn(title)
-
-//fetch imdb id
-
-val imdbId = document
-    .selectFirst("a[href*='imdb.com/title/']")
-    ?.attr("href")
-    ?.substringAfter("/title/")
-    ?.substringBefore("/")
-    ?.takeIf { it.startsWith("tt") }
-
-//Cinemeta Episode 
-
-val cinemetaEpisodes = if (isSeries && !imdbId.isNullOrBlank()) {
-    try {
-        val cinemetaUrl =
-            "https://v3-cinemeta.strem.io/meta/series/$imdbId.json"
-
-        Log.d(
-            "TheMoviesFlix",
-            "Cinemeta URL = $cinemetaUrl"
-        )
-
-        app.get(cinemetaUrl)
-            .parsed<CinemetaResponse>()
-            .meta
-            ?.videos
-            .orEmpty()
-
-    } catch (e: Exception) {
-        Log.e(
-            "TheMoviesFlix",
-            "Cinemeta failed: ${e.message}"
-        )
-        emptyList()
-    }
-} else {
-    emptyList()
-}
-
-        // -----------------------------------------------------
-        // TRAILER
-        // -----------------------------------------------------
-
-        val ytId = document
-            .selectFirst(
-                "div.mfx-yt-lazy"
-            )
-            ?.attr("data-yt-id")
-            ?.takeIf {
-                it.isNotBlank()
-            }
-
-        Log.d(
-            "TheMoviesFlix",
-            "title=$title year=$year season=$season episode=$episode isSeries=$isSeries"
-        )
+        val ytId = document.selectFirst("div.mfx-yt-lazy")?.attr("data-yt-id")?.takeIf { it.isNotBlank() }
+        Log.d("TheMoviesFlix", "title=$title year=$year season=$season episode=$episode isSeries=$isSeries")
 
         return if (isSeries) {
+            val episodes = cinemetaEpisodes
+                .filter { video -> video.season != null && video.episode != null }
+                .sortedWith(compareBy<CinemetaVideo> { it.season ?: 0 }.thenBy { it.episode ?: 0 })
+                .map { video ->
+                    // 🔥 MAGIC TRICK: Pass url, season, and episode as JSON to loadLinks!
+                    val linkData = toJson(LinkData(url, video.season, video.episode))
+                    newEpisode(linkData) {
+                        this.name = video.title
+                        this.season = video.season
+                        this.episode = video.episode
+                        this.description = video.overview
+                        this.posterUrl = video.thumbnail
+                        this.runTime = video.runtime
+                    }
+                }
+            Log.d("TheMoviesFlix", "Cinemeta episodes = ${episodes.size}")
 
-    val episodes = cinemetaEpisodes
-    .filter { video ->
-        video.season != null && video.episode != null
-    }
-    .sortedWith(
-        compareBy<CinemetaVideo> { it.season ?: 0 }
-            .thenBy { it.episode ?: 0 }
-    )
-    .map { video ->
-
-        newEpisode(url) {
-            this.name = video.title
-            this.season = video.season
-            this.episode = video.episode
-            this.description = video.overview
-            this.posterUrl = video.thumbnail
-            this.runTime = video.runtime
-        }
-    }
-    Log.d(
-        "TheMoviesFlix",
-        "Cinemeta episodes = ${episodes.size}"
-    )
-
-    newTvSeriesLoadResponse(
-        title,
-        url,
-        TvType.TvSeries,
-        episodes
-    ) {
-        posterUrl = poster
-        this.year = year
-        this.plot = plot
-        this.tags = genres
-        actors = cast
-
-        ytId?.let { id ->
-            addTrailer(
-                "https://www.youtube.com/watch?v=$id"
-            )
-        }
-    }
-
-} else {
-
-            newMovieLoadResponse(
-                title,
-                url,
-                TvType.Movie,
-                url
-            ) {
-
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 posterUrl = poster
                 this.year = year
                 this.plot = plot
                 this.tags = genres
-
                 actors = cast
-
-                ytId?.let { id ->
-                    addTrailer(
-                        "https://www.youtube.com/watch?v=$id"
-                    )
-                }
+                ytId?.let { id -> addTrailer("https://www.youtube.com/watch?v=$id") }
+            }
+        } else {
+            // MOVIE: Sirf URL ko JSON me bind karke bheja gaya hai
+            val linkData = toJson(LinkData(url))
+            newMovieLoadResponse(title, url, TvType.Movie, linkData) {
+                posterUrl = poster
+                this.year = year
+                this.plot = plot
+                this.tags = genres
+                actors = cast
+                ytId?.let { id -> addTrailer("https://www.youtube.com/watch?v=$id") }
             }
         }
     }
 
     // =========================================================
-    // LOAD LINKS
+    // LOAD LINKS (IMPLEMENTING YOUR BYPASS & FILTER LOGIC)
     // =========================================================
-    //
-    // INTENTIONALLY LEFT AS YOUR EXISTING IMPLEMENTATION.
-    //
-    // =========================================================
+
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        // Data parse karna
+        val linkData = tryParseJson<LinkData>(data) ?: LinkData(data)
+        val matchedUrl = linkData.url
+        val season = linkData.season
+        val episode = linkData.episode
+        val logTag = "TheMoviesFlix"
+
+        Log.d(logTag, "🚀 Starting TMF loadLinks for: $matchedUrl | S:$season E:$episode")
+
+        // 1. Fetch exact item page
+        val document = app.get(matchedUrl, timeout = 30L).document
+
+        // 2. Extract valid buttons (SEASON FILTER & ZIP SKIP)
+        val validButtons = mutableListOf<Element>()
+
+        if (season != null) {
+            val seasonRegex = Regex("""(?i)(Season\s*0?$season|S0?$season)""")
+            val seasonGroups = document.select("div.mfx-download-group").filter {
+                it.select("h3.mfx-quality-title").text().contains(seasonRegex)
+            }
+
+            if (seasonGroups.isNotEmpty()) {
+                seasonGroups.forEach { group ->
+                    group.select("a.mfx-download-link, a.maxbutton").forEach { btn ->
+                        val btnText = btn.text().lowercase()
+                        if (!btnText.contains("zip") && !btnText.contains("batch")) {
+                            validButtons.add(btn)
+                        }
+                    }
+                }
+            } else {
+                document.select("h3, h4").filter { it.text().contains(seasonRegex) }.forEach { heading ->
+                    var sibling = heading.nextElementSibling()
+                    while (sibling != null && sibling.tagName() != "h3" && sibling.tagName() != "h4") {
+                        sibling.select("a.mfx-download-link, a.maxbutton").forEach { btn ->
+                            if (!btn.text().lowercase().contains("zip") && !btn.text().lowercase().contains("batch")) {
+                                validButtons.add(btn)
+                            }
+                        }
+                        sibling = sibling.nextElementSibling()
+                    }
+                }
+            }
+        } else {
+            // MOVIE Mode
+            document.select("a.mfx-download-link, a.maxbutton, a[href*='mobilejsr']").forEach { btn ->
+                if (!btn.text().lowercase().contains("zip") && !btn.text().lowercase().contains("batch")) {
+                    validButtons.add(btn)
+                }
+            }
+        }
+
+        val downloadButtons = validButtons.distinctBy { it.attr("href") }
+        Log.d(logTag, "🎯 Found ${downloadButtons.size} targeted buttons for Season $season (Zips skipped).")
+
+        // Helper Function for Internal Redirects (Episode Index)
+        suspend fun processEpisodeIndexPage(pageUrl: String) {
+            try {
+                val innerDoc = app.get(pageUrl, headers = mapOf("Referer" to matchedUrl)).document
+
+                if (episode != null && innerDoc.text().contains(Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b"""))) {
+                    val epHeading = innerDoc.select("h3, h4, p").firstOrNull {
+                        it.text().contains(Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b"""))
+                    }
+                    epHeading?.nextElementSibling()?.select("a[href]")?.forEach { epBtn ->
+                        val finalUrl = epBtn.attr("href")
+                        if (finalUrl.isNotBlank()) {
+                            Log.d(logTag, "🚀 Routing EXACT Episode $episode Link -> $finalUrl")
+                            loadExtractor(finalUrl, matchedUrl, subtitleCallback, callback)
+                        }
+                    }
+                } else {
+                    innerDoc.select("a.btn, a.button, a.maxbutton, a.mfx-download-link, a[href*='gdflix'], a[href*='fastdl'], a[href*='filebee']").forEach { innerBtn ->
+                        val finalUrl = innerBtn.attr("href")
+                        if (finalUrl.isNotBlank()) {
+                            Log.d(logTag, "🚀 Routing Fallback Link -> $finalUrl")
+                            loadExtractor(finalUrl, matchedUrl, subtitleCallback, callback)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(logTag, "❌ Internal Page Parse Failed: ${e.message}")
+            }
+        }
+
+        // 3. Parallel Processing for Bypass & Extraction
+        downloadButtons.apmap { btn ->
+            val link = btn.attr("href") ?: return@apmap
+
+            if (link.contains("mobilejsr.rest")) {
+                try {
+                    Log.d(logTag, "🛡️ MobileJSR Detected! Bypassing Turnstile using Direct Request...")
+                    val customHeaders = mapOf(
+                        "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+                        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                        "Accept-Language" to "en-US,en;q=0.9",
+                        "Sec-Ch-Ua" to "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"",
+                        "Sec-Ch-Ua-Mobile" to "?1",
+                        "Sec-Ch-Ua-Platform" to "\"Android\"",
+                        "Sec-Fetch-Dest" to "document",
+                        "Sec-Fetch-Mode" to "navigate",
+                        "Sec-Fetch-Site" to "none",
+                        "Sec-Fetch-User" to "?1",
+                        "Upgrade-Insecure-Requests" to "1",
+                        "Referer" to matchedUrl
+                    )
+
+                    val jsrHtml = app.get(link, headers = customHeaders).text
+                    val base64Regex = Regex("""encoded\s*=\s*["']([^"']+)["']""")
+                    val matchResult = base64Regex.find(jsrHtml)
+
+                    if (matchResult != null) {
+                        val rawBase64 = matchResult.groupValues[1]
+                        val cleanBase64 = rawBase64.replace("\\", "").replace(Regex("\\s+"), "")
+                        
+                        // Proper Base64 Decode
+                        val decodedHtml = String(Base64.decode(cleanBase64, Base64.DEFAULT))
+                        val decodedDoc = Jsoup.parse(decodedHtml)
+
+                        if (episode != null && decodedDoc.text().contains(Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b"""))) {
+                            Log.d(logTag, "📂 Episode Index Page detected INSIDE decoded MobileJSR!")
+                            val epHeading = decodedDoc.select("h3, h4, p").firstOrNull {
+                                it.text().contains(Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b"""))
+                            }
+                            epHeading?.nextElementSibling()?.select("a[href]")?.apmap { epBtn ->
+                                val finalUrl = epBtn.attr("href")
+                                if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
+                                    Log.d(logTag, "🚀 Routing EXACT Episode $episode Link -> $finalUrl")
+                                    loadExtractor(finalUrl, matchedUrl, subtitleCallback, callback)
+                                }
+                            }
+                        } else {
+                            val finalLinks = decodedDoc.select("a[href]")
+                            Log.d(logTag, "🔓 MobileJSR Cracked! Found ${finalLinks.size} hidden links instantly!")
+                            
+                            finalLinks.apmap { finalBtn ->
+                                val finalUrl = finalBtn.attr("href")
+                                if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
+                                    if (finalUrl.contains("/links/") || finalUrl.contains(mainUrl.removeSuffix("/"))) {
+                                        processEpisodeIndexPage(finalUrl)
+                                    } else {
+                                        Log.d(logTag, "🚀 Routing MobileJSR Direct Link -> $finalUrl")
+                                        loadExtractor(finalUrl, matchedUrl, subtitleCallback, callback)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Log.e(logTag, "❌ Base64 not found. Turnstile might still be active.")
+                    }
+                } catch (e: Exception) {
+                    Log.e(logTag, "❌ MobileJSR Bypass Failed: ${e.message}")
+                }
+            }
+            else if (link.contains(mainUrl.removeSuffix("/")) && link.contains("/links/")) {
+                Log.d(logTag, "🔄 Resolving Internal Redirect: $link")
+                processEpisodeIndexPage(link)
+            }
+            else {
+                if (link.isNotBlank() && !link.contains("mobilejsr", true)) {
+                    Log.d(logTag, "🚀 Routing Direct Link -> $link")
+                    loadExtractor(link, matchedUrl, subtitleCallback, callback)
+                }
+            }
+        }
+        return true
+    }
 }
