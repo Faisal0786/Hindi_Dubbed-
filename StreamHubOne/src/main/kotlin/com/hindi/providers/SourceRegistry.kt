@@ -311,7 +311,7 @@ object SourceRegistry {
             key = "p_onetouchtv", displayName = "Onetouchtv", category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeOnetouchtv(res.title, res.airedYear ?: res.year, res.season, res.episode, subCb, cb) }
         ),
-        ProviderDef(
+        SourceProviderDef(
             key = "p_just4anime", displayName = "Just4Anime",
             executeAnime = { res, subCb, cb -> invokeJust4Anime(res.anilistId, res.episode, subCb, cb) }
         ),
