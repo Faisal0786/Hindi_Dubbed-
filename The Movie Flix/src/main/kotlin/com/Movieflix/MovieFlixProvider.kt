@@ -8,64 +8,41 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import org.jsoup.Jsoup
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.cloudstream3.mvvm.safeAmap // 🔥 FIX: safeAmap import added
 
 private data class CinemetaVideo(
-    @JsonProperty("id")
-    val id: String? = null,
-
-    @JsonProperty("title")
-    val title: String? = null,
-
-    @JsonProperty("season")
-    val season: Int? = null,
-
-    @JsonProperty("episode")
-    val episode: Int? = null,
-
-    @JsonProperty("released")
-    val released: String? = null,
-
-    @JsonProperty("thumbnail")
-    val thumbnail: String? = null,
-
-    @JsonProperty("overview")
-    val overview: String? = null,
-
-    @JsonProperty("runtime")
-    val runtime: Int? = null
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("season") val season: Int? = null,
+    @JsonProperty("episode") val episode: Int? = null,
+    @JsonProperty("released") val released: String? = null,
+    @JsonProperty("thumbnail") val thumbnail: String? = null,
+    @JsonProperty("overview") val overview: String? = null,
+    @JsonProperty("runtime") val runtime: Int? = null
 )
 
 private data class CinemetaMeta(
-    @JsonProperty("videos")
-    val videos: List<CinemetaVideo> = emptyList()
+    @JsonProperty("videos") val videos: List<CinemetaVideo> = emptyList()
 )
 
 private data class CinemetaResponse(
-    @JsonProperty("meta")
-    val meta: CinemetaMeta? = null
+    @JsonProperty("meta") val meta: CinemetaMeta? = null
 )
 
-// Yeh class humein madad karegi Load function se URL, Season, aur Episode pass karne mein
-private data class LinkData(
-    val url: String,
-    val season: Int? = null,
-    val episode: Int? = null
+// 🔥 FIX: Renamed and added @JsonProperty to prevent Jackson parsing errors
+private data class TmfLinkData(
+    @JsonProperty("url") val url: String,
+    @JsonProperty("season") val season: Int? = null,
+    @JsonProperty("episode") val episode: Int? = null
 )
 
 class TheMoviesFlixProvider : MainAPI() {
 
     override var mainUrl = "https://themoviesflix.actor/"
     override var name = "TheMoviesFlix"
-
     override val hasMainPage = true
     override var lang = "hi"
-
-    override val supportedTypes = setOf(
-        TvType.Movie,
-        TvType.TvSeries
-    )
+    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     // =========================================================
     // HOME PAGE CATEGORIES
@@ -98,22 +75,11 @@ class TheMoviesFlixProvider : MainAPI() {
     // HOME PAGE
     // =========================================================
 
-    override suspend fun getMainPage(
-        page: Int,
-        request: MainPageRequest
-    ): HomePageResponse {
-
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val baseCategoryUrl = request.data.trimEnd('/')
+        val pageUrl = if (page <= 1) "$baseCategoryUrl/" else "$baseCategoryUrl/page/$page/"
 
-        val pageUrl = if (page <= 1) {
-            "$baseCategoryUrl/"
-        } else {
-            "$baseCategoryUrl/page/$page/"
-        }
-
-        Log.d("TheMoviesFlix", "Loading category: ${request.name}")
-        Log.d("TheMoviesFlix", "Page: $page")
-        Log.d("TheMoviesFlix", "URL: $pageUrl")
+        Log.d("TheMoviesFlix", "Loading category: ${request.name} | Page: $page")
 
         return try {
             val document = app.get(pageUrl, timeout = 30L).document
@@ -123,14 +89,10 @@ class TheMoviesFlixProvider : MainAPI() {
                 .mapNotNull { it.toSearchResult() }
                 .distinctBy { it.url }
 
-            val hasNextPage =
-                document.selectFirst("link[rel=next]") != null ||
-                        document.selectFirst("a.next, .next a, .pagination .next, .posts-navigation .next") != null
-
-            Log.d("TheMoviesFlix", "${request.name} page=$page results=${results.size} hasNext=$hasNextPage")
+            val hasNextPage = document.selectFirst("link[rel=next]") != null ||
+                    document.selectFirst("a.next, .next a, .pagination .next, .posts-navigation .next") != null
 
             newHomePageResponse(request.name, results, hasNext = hasNextPage)
-
         } catch (e: Exception) {
             Log.e("TheMoviesFlix", "Category load failed: ${request.name} : ${e.message}")
             newHomePageResponse(request.name, emptyList(), hasNext = false)
@@ -180,11 +142,8 @@ class TheMoviesFlixProvider : MainAPI() {
         val encodedQuery = java.net.URLEncoder.encode(query.trim(), "UTF-8")
         val url = "$mainUrl/?s=$encodedQuery"
 
-        Log.d("TheMoviesFlix", "Search URL = $url")
-
         return try {
             val document = app.get(url, timeout = 30L).document
-
             document
                 .select(".post-cards > .latestpost, .post-cards article.latestpost, article.latestpost")
                 .mapNotNull { it.toSearchResult() }
@@ -220,12 +179,7 @@ class TheMoviesFlixProvider : MainAPI() {
 
         val year = infoValue("Release Year")?.toIntOrNull() ?: infoValue("Released Year")?.toIntOrNull()
         val genres = infoValue("Genres")?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
-        val director = infoValue("Director")
         val cast = infoValue("Cast")?.split(",")?.map { ActorData(actor = Actor(it.trim())) }?.filter { it.actor.name.isNotBlank() }
-        val language = infoValue("Language")
-        val subtitle = infoValue("Subtitle")
-        val size = infoValue("Size")
-        val format = infoValue("Format")
         val season = infoValue("Season")?.toIntOrNull()
         val episode = infoValue("Episode")?.toIntOrNull()
 
@@ -238,7 +192,6 @@ class TheMoviesFlixProvider : MainAPI() {
         val cinemetaEpisodes = if (isSeries && !imdbId.isNullOrBlank()) {
             try {
                 val cinemetaUrl = "https://v3-cinemeta.strem.io/meta/series/$imdbId.json"
-                Log.d("TheMoviesFlix", "Cinemeta URL = $cinemetaUrl")
                 app.get(cinemetaUrl).parsed<CinemetaResponse>().meta?.videos.orEmpty()
             } catch (e: Exception) {
                 Log.e("TheMoviesFlix", "Cinemeta failed: ${e.message}")
@@ -249,16 +202,15 @@ class TheMoviesFlixProvider : MainAPI() {
         }
 
         val ytId = document.selectFirst("div.mfx-yt-lazy")?.attr("data-yt-id")?.takeIf { it.isNotBlank() }
-        Log.d("TheMoviesFlix", "title=$title year=$year season=$season episode=$episode isSeries=$isSeries")
 
         return if (isSeries) {
             val episodes = cinemetaEpisodes
                 .filter { video -> video.season != null && video.episode != null }
                 .sortedWith(compareBy<CinemetaVideo> { it.season ?: 0 }.thenBy { it.episode ?: 0 })
                 .map { video ->
-                    // 🔥 MAGIC TRICK: Pass url, season, and episode as JSON to loadLinks!
-                    val linkData = toJson(LinkData(url, video.season, video.episode))
-                    newEpisode(linkData) {
+                    // 🔥 Passing URL, Season, and Episode cleanly as JSON string to loadLinks
+                    val linkDataString = AppUtils.toJson(TmfLinkData(url, video.season, video.episode))
+                    newEpisode(linkDataString) {
                         this.name = video.title
                         this.season = video.season
                         this.episode = video.episode
@@ -267,7 +219,6 @@ class TheMoviesFlixProvider : MainAPI() {
                         this.runTime = video.runtime
                     }
                 }
-            Log.d("TheMoviesFlix", "Cinemeta episodes = ${episodes.size}")
 
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 posterUrl = poster
@@ -278,9 +229,8 @@ class TheMoviesFlixProvider : MainAPI() {
                 ytId?.let { id -> addTrailer("https://www.youtube.com/watch?v=$id") }
             }
         } else {
-            // MOVIE: Sirf URL ko JSON me bind karke bheja gaya hai
-            val linkData = toJson(LinkData(url))
-            newMovieLoadResponse(title, url, TvType.Movie, linkData) {
+            val linkDataString = AppUtils.toJson(TmfLinkData(url))
+            newMovieLoadResponse(title, url, TvType.Movie, linkDataString) {
                 posterUrl = poster
                 this.year = year
                 this.plot = plot
@@ -292,7 +242,7 @@ class TheMoviesFlixProvider : MainAPI() {
     }
 
     // =========================================================
-    // LOAD LINKS (IMPLEMENTING YOUR BYPASS & FILTER LOGIC)
+    // LOAD LINKS (BYPASS & EXTRACTION)
     // =========================================================
 
     override suspend fun loadLinks(
@@ -301,8 +251,8 @@ class TheMoviesFlixProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // Data parse karna
-        val linkData = tryParseJson<LinkData>(data) ?: LinkData(data)
+        // 🔥 FIX: Safe parsing. Agar purana format (direct URL) aaye toh fallback karega.
+        val linkData = AppUtils.tryParseJson<TmfLinkData>(data) ?: TmfLinkData(data)
         val matchedUrl = linkData.url
         val season = linkData.season
         val episode = linkData.episode
@@ -310,10 +260,7 @@ class TheMoviesFlixProvider : MainAPI() {
 
         Log.d(logTag, "🚀 Starting TMF loadLinks for: $matchedUrl | S:$season E:$episode")
 
-        // 1. Fetch exact item page
         val document = app.get(matchedUrl, timeout = 30L).document
-
-        // 2. Extract valid buttons (SEASON FILTER & ZIP SKIP)
         val validButtons = mutableListOf<Element>()
 
         if (season != null) {
@@ -326,9 +273,7 @@ class TheMoviesFlixProvider : MainAPI() {
                 seasonGroups.forEach { group ->
                     group.select("a.mfx-download-link, a.maxbutton").forEach { btn ->
                         val btnText = btn.text().lowercase()
-                        if (!btnText.contains("zip") && !btnText.contains("batch")) {
-                            validButtons.add(btn)
-                        }
+                        if (!btnText.contains("zip") && !btnText.contains("batch")) validButtons.add(btn)
                     }
                 }
             } else {
@@ -345,18 +290,14 @@ class TheMoviesFlixProvider : MainAPI() {
                 }
             }
         } else {
-            // MOVIE Mode
             document.select("a.mfx-download-link, a.maxbutton, a[href*='mobilejsr']").forEach { btn ->
-                if (!btn.text().lowercase().contains("zip") && !btn.text().lowercase().contains("batch")) {
-                    validButtons.add(btn)
-                }
+                if (!btn.text().lowercase().contains("zip") && !btn.text().lowercase().contains("batch")) validButtons.add(btn)
             }
         }
 
         val downloadButtons = validButtons.distinctBy { it.attr("href") }
         Log.d(logTag, "🎯 Found ${downloadButtons.size} targeted buttons for Season $season (Zips skipped).")
 
-        // Helper Function for Internal Redirects (Episode Index)
         suspend fun processEpisodeIndexPage(pageUrl: String) {
             try {
                 val innerDoc = app.get(pageUrl, headers = mapOf("Referer" to matchedUrl)).document
@@ -368,7 +309,6 @@ class TheMoviesFlixProvider : MainAPI() {
                     epHeading?.nextElementSibling()?.select("a[href]")?.forEach { epBtn ->
                         val finalUrl = epBtn.attr("href")
                         if (finalUrl.isNotBlank()) {
-                            Log.d(logTag, "🚀 Routing EXACT Episode $episode Link -> $finalUrl")
                             loadExtractor(finalUrl, matchedUrl, subtitleCallback, callback)
                         }
                     }
@@ -376,7 +316,6 @@ class TheMoviesFlixProvider : MainAPI() {
                     innerDoc.select("a.btn, a.button, a.maxbutton, a.mfx-download-link, a[href*='gdflix'], a[href*='fastdl'], a[href*='filebee']").forEach { innerBtn ->
                         val finalUrl = innerBtn.attr("href")
                         if (finalUrl.isNotBlank()) {
-                            Log.d(logTag, "🚀 Routing Fallback Link -> $finalUrl")
                             loadExtractor(finalUrl, matchedUrl, subtitleCallback, callback)
                         }
                     }
@@ -386,13 +325,13 @@ class TheMoviesFlixProvider : MainAPI() {
             }
         }
 
-        // 3. Parallel Processing for Bypass & Extraction
-        downloadButtons.apmap { btn ->
-            val link = btn.attr("href") ?: return@apmap
+        // 🔥 FIX: Changed apmap -> safeAmap to fix compilation issue
+        downloadButtons.safeAmap { btn ->
+            val link = btn.attr("href")
+            if (link.isBlank()) return@safeAmap
 
             if (link.contains("mobilejsr.rest")) {
                 try {
-                    Log.d(logTag, "🛡️ MobileJSR Detected! Bypassing Turnstile using Direct Request...")
                     val customHeaders = mapOf(
                         "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
                         "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -416,33 +355,29 @@ class TheMoviesFlixProvider : MainAPI() {
                         val rawBase64 = matchResult.groupValues[1]
                         val cleanBase64 = rawBase64.replace("\\", "").replace(Regex("\\s+"), "")
                         
-                        // Proper Base64 Decode
                         val decodedHtml = String(Base64.decode(cleanBase64, Base64.DEFAULT))
                         val decodedDoc = Jsoup.parse(decodedHtml)
 
                         if (episode != null && decodedDoc.text().contains(Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b"""))) {
-                            Log.d(logTag, "📂 Episode Index Page detected INSIDE decoded MobileJSR!")
                             val epHeading = decodedDoc.select("h3, h4, p").firstOrNull {
                                 it.text().contains(Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b"""))
                             }
-                            epHeading?.nextElementSibling()?.select("a[href]")?.apmap { epBtn ->
+                            // 🔥 FIX: Changed apmap -> safeAmap
+                            epHeading?.nextElementSibling()?.select("a[href]")?.safeAmap { epBtn ->
                                 val finalUrl = epBtn.attr("href")
                                 if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
-                                    Log.d(logTag, "🚀 Routing EXACT Episode $episode Link -> $finalUrl")
                                     loadExtractor(finalUrl, matchedUrl, subtitleCallback, callback)
                                 }
                             }
                         } else {
                             val finalLinks = decodedDoc.select("a[href]")
-                            Log.d(logTag, "🔓 MobileJSR Cracked! Found ${finalLinks.size} hidden links instantly!")
-                            
-                            finalLinks.apmap { finalBtn ->
+                            // 🔥 FIX: Changed apmap -> safeAmap
+                            finalLinks.safeAmap { finalBtn ->
                                 val finalUrl = finalBtn.attr("href")
                                 if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
                                     if (finalUrl.contains("/links/") || finalUrl.contains(mainUrl.removeSuffix("/"))) {
                                         processEpisodeIndexPage(finalUrl)
                                     } else {
-                                        Log.d(logTag, "🚀 Routing MobileJSR Direct Link -> $finalUrl")
                                         loadExtractor(finalUrl, matchedUrl, subtitleCallback, callback)
                                     }
                                 }
@@ -456,12 +391,10 @@ class TheMoviesFlixProvider : MainAPI() {
                 }
             }
             else if (link.contains(mainUrl.removeSuffix("/")) && link.contains("/links/")) {
-                Log.d(logTag, "🔄 Resolving Internal Redirect: $link")
                 processEpisodeIndexPage(link)
             }
             else {
                 if (link.isNotBlank() && !link.contains("mobilejsr", true)) {
-                    Log.d(logTag, "🚀 Routing Direct Link -> $link")
                     loadExtractor(link, matchedUrl, subtitleCallback, callback)
                 }
             }
