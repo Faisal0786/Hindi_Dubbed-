@@ -311,6 +311,10 @@ object SourceRegistry {
             key = "p_onetouchtv", displayName = "Onetouchtv", category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> invokeOnetouchtv(res.title, res.airedYear ?: res.year, res.season, res.episode, subCb, cb) }
         ),
+        ProviderDef(
+            key = "p_just4anime", displayName = "Just4Anime",
+            executeAnime = { res, subCb, cb -> invokeJust4Anime(res.anilistId, res.episode, subCb, cb) }
+        ),
         SourceProviderDef(
             key = "p_toonstream", displayName = "Toonstream", category = ProviderCategory.HINDI,
             executeStandard = { res, subCb, cb -> if (res.isAnime || res.isCartoon) invokeToonstream(res.title, res.season, res.episode, subCb, cb) },
