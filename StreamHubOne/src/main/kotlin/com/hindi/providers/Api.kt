@@ -62,6 +62,8 @@ const val hdGharTvAPI = "https://hdghartv.cc"
 const val aninekoAPI = "https://anineko.to"
 const val torrentioAPI = "https://torrentio.strem.fun/limit=4"
 const val torrentsdbAPI = "https://torrentsdb.com/eyJsaW1pdCI6IjMiLCJkZWJyaWRvcHRpb25zIjpbIm5vZG93bmxvYWRsaW5rcyJdfQ=="
+const val just4animeAPI = "https://api.just4anime.online/api/v1"
+const val just4animeBaseAPI = "https://just4anime.online"
 
 // ── 2. Dynamic API Config ────────────────────────────────────
 // Loaded once via init() called from CineStream.load()
