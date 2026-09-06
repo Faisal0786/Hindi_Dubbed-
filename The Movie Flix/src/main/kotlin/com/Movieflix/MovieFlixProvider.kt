@@ -325,7 +325,7 @@ class TheMoviesFlixProvider : MainAPI() {
             val newName = if (detailsItalic.isNotEmpty()) "$sourceBold >> $formattedServer • $detailsItalic"
                           else "$sourceBold >> $formattedServer"
 
-            // 🟢 FIXED: Using Builder syntax for newExtractorLink
+            // 🟢 CORRECT BUILDER SYNTAX
             callback(
                 newExtractorLink(
                     newSourceName,
@@ -336,6 +336,7 @@ class TheMoviesFlixProvider : MainAPI() {
                     this.quality = link.quality
                     this.headers = link.headers
                     this.extractorData = link.extractorData
+                    this.referer = link.referer ?: ""
                 }
             )
         }
@@ -354,7 +355,7 @@ class TheMoviesFlixProvider : MainAPI() {
             url.contains("driveleech.") || url.contains("driveseed.") -> 
                 EmbeddedDriveleech().getUrl(url, referer, subtitleCallback, processLink)
             url.contains("howblogs.") -> EmbeddedHowblogs().getUrl(url, referer, subtitleCallback, processLink)
-            else -> loadExtractor(url, referer, subtitleCallback, processLink) // 🟢 FIXED (Removed app.)
+            else -> loadExtractor(url, referer, subtitleCallback, processLink)
         }
     }
 
@@ -412,14 +413,12 @@ class TheMoviesFlixProvider : MainAPI() {
                     val episodeRegex = Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b""")
                     val epHeading = innerDoc.select("h3, h4, p").firstOrNull { it.text().contains(episodeRegex) }
                     
-                    // 🟢 FIXED: Used standard Kotlin for-loop instead of .forEach
                     val epBtns = epHeading?.nextElementSibling()?.select("a[href]")?.toList() ?: emptyList()
                     for (epBtn in epBtns) {
                         val finalUrl = epBtn.attr("href")
                         if (finalUrl.isNotBlank()) routeAndLoadExtractor(finalUrl, matchedUrl, subtitleCallback, callback)
                     }
                 } else {
-                    // 🟢 FIXED: Used standard Kotlin for-loop
                     val innerBtns = innerDoc.select("a.btn, a.button, a.maxbutton, a.mfx-download-link, a[href*='gdflix'], a[href*='fastdl'], a[href*='filebee']").toList()
                     for (innerBtn in innerBtns) {
                         val finalUrl = innerBtn.attr("href")
@@ -453,7 +452,6 @@ class TheMoviesFlixProvider : MainAPI() {
                             val episodeRegex = Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b""")
                             val epHeading = decodedDoc.select("h3, h4, p").firstOrNull { it.text().contains(episodeRegex) }
                             
-                            // 🟢 FIXED: Used standard Kotlin for-loop
                             val epBtns = epHeading?.nextElementSibling()?.select("a[href]")?.toList() ?: emptyList()
                             for (epBtn in epBtns) {
                                 val finalUrl = epBtn.attr("href")
@@ -462,7 +460,6 @@ class TheMoviesFlixProvider : MainAPI() {
                                 }
                             }
                         } else {
-                            // 🟢 FIXED: Used standard Kotlin for-loop
                             val finalLinks = decodedDoc.select("a[href]").toList()
                             for (finalBtn in finalLinks) {
                                 val finalUrl = finalBtn.attr("href")
@@ -529,7 +526,7 @@ open class EmbeddedHubCloud : ExtractorApi() {
         val quality = getIndexQuality(header)
 
         fun myCallback(finalLink: String, server: String = "") {
-            // 🟢 FIXED: Using Builder syntax
+            // 🟢 CORRECT BUILDER SYNTAX
             callback.invoke(
                 newExtractorLink(
                     "${name}${server}",
@@ -538,11 +535,11 @@ open class EmbeddedHubCloud : ExtractorApi() {
                     ExtractorLinkType.VIDEO
                 ) {
                     this.quality = quality
+                    this.referer = "$mainUrl/"
                 }
             )
         }
 
-        // 🟢 FIXED: Used standard Kotlin for-loop instead of .forEach for suspend safety
         val h2Btns = document.select("h2 a.btn").toList()
         for (btn in h2Btns) {
             val hlink = btn.attr("href")
@@ -579,7 +576,7 @@ class EmbeddedFilepress : ExtractorApi() {
             val jsonResponse = app.get(apiUrl, headers = mapOf("Referer" to url)).text
             val downloadUrl = JSONObject(jsonResponse).optString("url")
             if (downloadUrl.isNotBlank()) {
-                // 🟢 FIXED: Using Builder syntax
+                // 🟢 CORRECT BUILDER SYNTAX
                 callback.invoke(
                     newExtractorLink(
                         name,
@@ -588,12 +585,13 @@ class EmbeddedFilepress : ExtractorApi() {
                         ExtractorLinkType.VIDEO
                     ) {
                         this.headers = mapOf("Referer" to url)
+                        this.referer = url
                     }
                 )
             }
         } catch (e: Exception) {
             val directLink = url.replace("/file/", "/api/file/get/") + "?download"
-            // 🟢 FIXED: Using Builder syntax
+            // 🟢 CORRECT BUILDER SYNTAX
             callback.invoke(
                 newExtractorLink(
                     name,
@@ -602,6 +600,7 @@ class EmbeddedFilepress : ExtractorApi() {
                     ExtractorLinkType.VIDEO
                 ) {
                     this.headers = mapOf("Referer" to url)
+                    this.referer = url
                 }
             )
         }
@@ -625,7 +624,7 @@ open class EmbeddedGDFlix : ExtractorApi() {
         val quality = getIndexQuality(fileName)
 
         fun myCallback(link: String, server: String = "") {
-            // 🟢 FIXED: Using Builder syntax
+            // 🟢 CORRECT BUILDER SYNTAX
             callback.invoke(
                 newExtractorLink(
                     "${name}${server}",
@@ -634,11 +633,11 @@ open class EmbeddedGDFlix : ExtractorApi() {
                     ExtractorLinkType.VIDEO
                 ) {
                     this.quality = quality
+                    this.referer = url
                 }
             )
         }
 
-        // 🟢 FIXED: Used standard Kotlin for-loop
         val anchors = document.select("div.text-center a").toList()
         for (anchor in anchors) {
             val text = anchor.select("a").text()
@@ -703,7 +702,6 @@ class EmbeddedLinksmod : ExtractorApi() {
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         val document = app.get(url).document
-        // 🟢 FIXED: Used standard Kotlin for-loop
         val links = document.select("div .view-well > a").toList()
         for (link in links) {
             loadExtractor(link.attr("href"), "", subtitleCallback, callback)
@@ -739,7 +737,7 @@ open class EmbeddedDriveleech : ExtractorApi() {
         val quality = getIndexQuality(fileName)
 
         fun myCallback(link: String, server: String = "") {
-            // 🟢 FIXED: Using Builder syntax
+            // 🟢 CORRECT BUILDER SYNTAX
             callback.invoke(
                 newExtractorLink(
                     "${name}${server}",
@@ -748,11 +746,11 @@ open class EmbeddedDriveleech : ExtractorApi() {
                     ExtractorLinkType.VIDEO
                 ) {
                     this.quality = quality
+                    this.referer = url
                 }
             )
         }
 
-        // 🟢 FIXED: Used standard Kotlin for-loop
         val elements = document.select("div.text-center > a").toList()
         for (element in elements) {
             val text = element.text()
@@ -794,7 +792,6 @@ class EmbeddedHowblogs : ExtractorApi() {
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
-        // 🟢 FIXED: Used standard Kotlin for-loop
         val links = app.get(url).document.select("div.center_it a").toList()
         for (link in links) {
             loadExtractor(link.attr("href"), referer, subtitleCallback, callback)
