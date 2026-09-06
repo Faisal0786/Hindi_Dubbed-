@@ -325,17 +325,18 @@ class TheMoviesFlixProvider : MainAPI() {
             val newName = if (detailsItalic.isNotEmpty()) "$sourceBold >> $formattedServer • $detailsItalic"
                           else "$sourceBold >> $formattedServer"
 
+            // 🟢 FIXED: Using Builder syntax for newExtractorLink
             callback(
                 newExtractorLink(
-                    source = newSourceName,
-                    name = newName,
-                    url = link.url,
-                    referer = link.referer ?: "",
-                    quality = link.quality,
-                    type = link.type,
-                    headers = link.headers,
-                    extractorData = link.extractorData
-                )
+                    newSourceName,
+                    newName,
+                    link.url,
+                    link.type
+                ) {
+                    this.quality = link.quality
+                    this.headers = link.headers
+                    this.extractorData = link.extractorData
+                }
             )
         }
 
@@ -353,13 +354,12 @@ class TheMoviesFlixProvider : MainAPI() {
             url.contains("driveleech.") || url.contains("driveseed.") -> 
                 EmbeddedDriveleech().getUrl(url, referer, subtitleCallback, processLink)
             url.contains("howblogs.") -> EmbeddedHowblogs().getUrl(url, referer, subtitleCallback, processLink)
-            else -> loadExtractor(url, referer, subtitleCallback, processLink) // 🟢 PERFECTED
+            else -> loadExtractor(url, referer, subtitleCallback, processLink) // 🟢 FIXED (Removed app.)
         }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         
-        // 🟢 Bulletproof Custom JSON Parser avoiding all external dependencies
         val (matchedUrl, season, episode) = try {
             val json = JSONObject(data)
             Triple(
@@ -378,16 +378,19 @@ class TheMoviesFlixProvider : MainAPI() {
             val seasonRegex = Regex("""(?i)(Season\s*0?$season|S0?$season)""")
             val seasonGroups = document.select("div.mfx-download-group").filter { it.select("h3.mfx-quality-title").text().contains(seasonRegex) }
             if (seasonGroups.isNotEmpty()) {
-                seasonGroups.forEach { group ->
-                    group.select("a.mfx-download-link, a.maxbutton").forEach { btn ->
+                for (group in seasonGroups) {
+                    val btns = group.select("a.mfx-download-link, a.maxbutton")
+                    for (btn in btns) {
                         if (!btn.text().lowercase().contains("zip") && !btn.text().lowercase().contains("batch")) validButtons.add(btn)
                     }
                 }
             } else {
-                document.select("h3, h4").filter { it.text().contains(seasonRegex) }.forEach { heading ->
+                val headings = document.select("h3, h4").filter { it.text().contains(seasonRegex) }
+                for (heading in headings) {
                     var sibling = heading.nextElementSibling()
                     while (sibling != null && sibling.tagName() != "h3" && sibling.tagName() != "h4") {
-                        sibling.select("a.mfx-download-link, a.maxbutton").forEach { btn ->
+                        val btns = sibling.select("a.mfx-download-link, a.maxbutton")
+                        for (btn in btns) {
                             if (!btn.text().lowercase().contains("zip") && !btn.text().lowercase().contains("batch")) validButtons.add(btn)
                         }
                         sibling = sibling.nextElementSibling()
@@ -395,7 +398,8 @@ class TheMoviesFlixProvider : MainAPI() {
                 }
             }
         } else {
-            document.select("a.mfx-download-link, a.maxbutton, a[href*='mobilejsr']").forEach { btn ->
+            val btns = document.select("a.mfx-download-link, a.maxbutton, a[href*='mobilejsr']")
+            for (btn in btns) {
                 if (!btn.text().lowercase().contains("zip") && !btn.text().lowercase().contains("batch")) validButtons.add(btn)
             }
         }
@@ -407,12 +411,17 @@ class TheMoviesFlixProvider : MainAPI() {
                 if (episode != null && innerDoc.text().contains(Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b"""))) {
                     val episodeRegex = Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b""")
                     val epHeading = innerDoc.select("h3, h4, p").firstOrNull { it.text().contains(episodeRegex) }
-                    epHeading?.nextElementSibling()?.select("a[href]")?.forEach { epBtn ->
+                    
+                    // 🟢 FIXED: Used standard Kotlin for-loop instead of .forEach
+                    val epBtns = epHeading?.nextElementSibling()?.select("a[href]")?.toList() ?: emptyList()
+                    for (epBtn in epBtns) {
                         val finalUrl = epBtn.attr("href")
                         if (finalUrl.isNotBlank()) routeAndLoadExtractor(finalUrl, matchedUrl, subtitleCallback, callback)
                     }
                 } else {
-                    innerDoc.select("a.btn, a.button, a.maxbutton, a.mfx-download-link, a[href*='gdflix'], a[href*='fastdl'], a[href*='filebee']").forEach { innerBtn ->
+                    // 🟢 FIXED: Used standard Kotlin for-loop
+                    val innerBtns = innerDoc.select("a.btn, a.button, a.maxbutton, a.mfx-download-link, a[href*='gdflix'], a[href*='fastdl'], a[href*='filebee']").toList()
+                    for (innerBtn in innerBtns) {
                         val finalUrl = innerBtn.attr("href")
                         if (finalUrl.isNotBlank()) routeAndLoadExtractor(finalUrl, matchedUrl, subtitleCallback, callback)
                     }
@@ -443,17 +452,21 @@ class TheMoviesFlixProvider : MainAPI() {
                         if (episode != null && decodedDoc.text().contains(Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b"""))) {
                             val episodeRegex = Regex("""(?i)Episodes?\s*[:-]\s*0?$episode\b""")
                             val epHeading = decodedDoc.select("h3, h4, p").firstOrNull { it.text().contains(episodeRegex) }
-                            epHeading?.nextElementSibling()?.select("a[href]")?.forEach { epBtn ->
+                            
+                            // 🟢 FIXED: Used standard Kotlin for-loop
+                            val epBtns = epHeading?.nextElementSibling()?.select("a[href]")?.toList() ?: emptyList()
+                            for (epBtn in epBtns) {
                                 val finalUrl = epBtn.attr("href")
                                 if (finalUrl.isNotBlank() && !finalUrl.startsWith("#") && !finalUrl.contains("moviesflix.red", true)) {
                                     routeAndLoadExtractor(finalUrl, matchedUrl, subtitleCallback, callback)
                                 }
                             }
                         } else {
-                            val finalLinks = decodedDoc.select("a[href]")
-                            finalLinks.forEach { finalBtn ->
+                            // 🟢 FIXED: Used standard Kotlin for-loop
+                            val finalLinks = decodedDoc.select("a[href]").toList()
+                            for (finalBtn in finalLinks) {
                                 val finalUrl = finalBtn.attr("href")
-                                if (finalUrl.isBlank() || finalUrl.startsWith("#") || finalUrl.contains("moviesflix.red", true)) return@forEach
+                                if (finalUrl.isBlank() || finalUrl.startsWith("#") || finalUrl.contains("moviesflix.red", true)) continue
                                 if (finalUrl.contains("/links/") || finalUrl.contains(mainUrl.removeSuffix("/"), true)) {
                                     processEpisodeIndexPage(finalUrl)
                                 } else {
@@ -516,33 +529,36 @@ open class EmbeddedHubCloud : ExtractorApi() {
         val quality = getIndexQuality(header)
 
         fun myCallback(finalLink: String, server: String = "") {
+            // 🟢 FIXED: Using Builder syntax
             callback.invoke(
                 newExtractorLink(
-                    source = "${name}${server}",
-                    name = "${name}${server} ${header}[${size}]",
-                    url = finalLink,
-                    referer = "$mainUrl/",
-                    quality = quality,
-                    type = ExtractorLinkType.VIDEO
-                )
+                    "${name}${server}",
+                    "${name}${server} ${header}[${size}]",
+                    finalLink,
+                    ExtractorLinkType.VIDEO
+                ) {
+                    this.quality = quality
+                }
             )
         }
 
-        document.select("h2 a.btn").forEach {
-            val hlink = it.attr("href")
-            val text = it.text()
+        // 🟢 FIXED: Used standard Kotlin for-loop instead of .forEach for suspend safety
+        val h2Btns = document.select("h2 a.btn").toList()
+        for (btn in h2Btns) {
+            val hlink = btn.attr("href")
+            val text = btn.text()
             if (text.contains("FSL Server")) myCallback(hlink, "[FSL Server]")
             else if (text.contains("FSLv2")) myCallback(hlink, "[FSLv2 Server]")
             else if (text.contains("Mega Server")) myCallback(hlink, "[Mega Server]")
             else if (text.contains("Download File")) myCallback(hlink)
             else if (hlink.contains("pixeldra")) {
-                val pixelLink = extractPxlUrl(document.toString()) ?: return@forEach
+                val pixelLink = extractPxlUrl(document.toString()) ?: continue
                 val baseUrlLink = getBaseUrl(pixelLink)
                 val finalURL = if (pixelLink.contains("download", true)) pixelLink else "$baseUrlLink/api/file/${pixelLink.substringAfterLast("/")}?download"
                 myCallback(finalURL, "[Pixeldrain]")
             }
             else if (text.contains("Server : 10Gbps")) {
-                var redirectUrl = resolveFinalUrl(hlink) ?: return@forEach
+                var redirectUrl = resolveFinalUrl(hlink) ?: continue
                 if(redirectUrl.contains("link=")) redirectUrl = redirectUrl.substringAfter("link=")
                 myCallback(redirectUrl, "[Download]")
             }
@@ -563,28 +579,30 @@ class EmbeddedFilepress : ExtractorApi() {
             val jsonResponse = app.get(apiUrl, headers = mapOf("Referer" to url)).text
             val downloadUrl = JSONObject(jsonResponse).optString("url")
             if (downloadUrl.isNotBlank()) {
+                // 🟢 FIXED: Using Builder syntax
                 callback.invoke(
                     newExtractorLink(
-                        source = name,
-                        name = "$name [G-Drive]",
-                        url = downloadUrl,
-                        referer = url,
-                        quality = Qualities.Unknown.value,
-                        type = ExtractorLinkType.VIDEO
-                    )
+                        name,
+                        "$name [G-Drive]",
+                        downloadUrl,
+                        ExtractorLinkType.VIDEO
+                    ) {
+                        this.headers = mapOf("Referer" to url)
+                    }
                 )
             }
         } catch (e: Exception) {
             val directLink = url.replace("/file/", "/api/file/get/") + "?download"
+            // 🟢 FIXED: Using Builder syntax
             callback.invoke(
                 newExtractorLink(
-                    source = name,
-                    name = "$name [Fallback]",
-                    url = directLink,
-                    referer = url,
-                    quality = Qualities.Unknown.value,
-                    type = ExtractorLinkType.VIDEO
-                )
+                    name,
+                    "$name [Fallback]",
+                    directLink,
+                    ExtractorLinkType.VIDEO
+                ) {
+                    this.headers = mapOf("Referer" to url)
+                }
             )
         }
     }
@@ -607,19 +625,22 @@ open class EmbeddedGDFlix : ExtractorApi() {
         val quality = getIndexQuality(fileName)
 
         fun myCallback(link: String, server: String = "") {
+            // 🟢 FIXED: Using Builder syntax
             callback.invoke(
                 newExtractorLink(
-                    source = "${name}${server}",
-                    name = "${name}${server} ${fileName}[${fileSize}]",
-                    url = link,
-                    referer = url,
-                    quality = quality,
-                    type = ExtractorLinkType.VIDEO
-                )
+                    "${name}${server}",
+                    "${name}${server} ${fileName}[${fileSize}]",
+                    link,
+                    ExtractorLinkType.VIDEO
+                ) {
+                    this.quality = quality
+                }
             )
         }
 
-        document.select("div.text-center a").forEach { anchor ->
+        // 🟢 FIXED: Used standard Kotlin for-loop
+        val anchors = document.select("div.text-center a").toList()
+        for (anchor in anchors) {
             val text = anchor.select("a").text()
             val link = anchor.attr("href")
 
@@ -629,9 +650,11 @@ open class EmbeddedGDFlix : ExtractorApi() {
                 text.contains("CLOUD DOWNLOAD [R2]") -> myCallback(link, "[Cloud]")
                 text.contains("GD Index") -> {
                     val cfLink = baseUrl + link
-                    listOf(1, 2).forEach { cfType ->
-                        app.get(cfLink + "?type=$cfType").document.select("a.btn-success").forEach { 
-                            myCallback(it.attr("href"), "[CF]") 
+                    val cfTypes = listOf(1, 2)
+                    for (cfType in cfTypes) {
+                        val cfBtns = app.get(cfLink + "?type=$cfType").document.select("a.btn-success").toList()
+                        for (cfBtn in cfBtns) {
+                            myCallback(cfBtn.attr("href"), "[CF]")
                         }
                     }
                 }
@@ -651,8 +674,9 @@ open class EmbeddedGDFlix : ExtractorApi() {
                 }
                 text.contains("GoFile") -> {
                     try {
-                        app.get(link).document.select(".row .row a").forEach { 
-                            if (it.attr("href").contains("gofile")) loadExtractor(it.attr("href"), "", subtitleCallback, callback)
+                        val gofileAnchors = app.get(link).document.select(".row .row a").toList()
+                        for (gofileAnchor in gofileAnchors) {
+                            if (gofileAnchor.attr("href").contains("gofile")) loadExtractor(gofileAnchor.attr("href"), "", subtitleCallback, callback)
                         }
                     } catch (e: Exception) {}
                 }
@@ -668,7 +692,7 @@ class EmbeddedFastdlserver : ExtractorApi() {
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         val location = app.get(url, allowRedirects = false).headers["location"]
-        if (location != null) loadExtractor(location, "", subtitleCallback, callback) // 🟢 PERFECTED
+        if (location != null) loadExtractor(location, "", subtitleCallback, callback)
     }
 }
 
@@ -679,7 +703,11 @@ class EmbeddedLinksmod : ExtractorApi() {
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         val document = app.get(url).document
-        document.select("div .view-well > a").forEach { loadExtractor(it.attr("href"), "", subtitleCallback, callback) } // 🟢 PERFECTED
+        // 🟢 FIXED: Used standard Kotlin for-loop
+        val links = document.select("div .view-well > a").toList()
+        for (link in links) {
+            loadExtractor(link.attr("href"), "", subtitleCallback, callback)
+        }
     }
 }
 
@@ -690,7 +718,7 @@ class EmbeddedHubdrive : ExtractorApi() {
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         val href = app.get(url).document.select(".btn.btn-primary.btn-user.btn-success1.m-1").attr("href")
-        loadExtractor(href, "", subtitleCallback, callback) // 🟢 PERFECTED
+        loadExtractor(href, "", subtitleCallback, callback)
     }
 }
 
@@ -711,43 +739,50 @@ open class EmbeddedDriveleech : ExtractorApi() {
         val quality = getIndexQuality(fileName)
 
         fun myCallback(link: String, server: String = "") {
+            // 🟢 FIXED: Using Builder syntax
             callback.invoke(
                 newExtractorLink(
-                    source = "${name}${server}",
-                    name = "${name}${server} ${fileName}[${fileSize}]",
-                    url = link,
-                    referer = url,
-                    quality = quality,
-                    type = ExtractorLinkType.VIDEO
-                )
+                    "${name}${server}",
+                    "${name}${server} ${fileName}[${fileSize}]",
+                    link,
+                    ExtractorLinkType.VIDEO
+                ) {
+                    this.quality = quality
+                }
             )
         }
 
-        document.select("div.text-center > a").forEach { element ->
+        // 🟢 FIXED: Used standard Kotlin for-loop
+        val elements = document.select("div.text-center > a").toList()
+        for (element in elements) {
             val text = element.text()
             val href = element.attr("href")
             when {
                 text.contains("Cloud Download") -> myCallback(href, "[Cloud]")
                 text.contains("Instant Download") -> {
                     try{
-                        val link = app.get(href, allowRedirects = false).headers["location"]?.substringAfter("?url=") ?: return@forEach
+                        val link = app.get(href, allowRedirects = false).headers["location"]?.substringAfter("?url=") ?: continue
                         myCallback(link, "[Instant(Download)]")
                     } catch (e: Exception) {}
                 }
                 text.contains("Direct Links") -> {
                     try {
-                        listOf("1", "2").forEach { t ->
-                            app.get("$baseUrl$href?type=$t").document.select("a.btn-success").forEach { myCallback(it.attr("href"), "[CF]") }
+                        val types = listOf("1", "2")
+                        for (t in types) {
+                            val cfBtns = app.get("$baseUrl$href?type=$t").document.select("a.btn-success").toList()
+                            for (cfBtn in cfBtns) {
+                                myCallback(cfBtn.attr("href"), "[CF]")
+                            }
                         }
                     } catch (e: Exception) {}
                 }
                 text.contains("Resume Cloud") -> {
                     try {
-                        val link = app.get(baseUrl + href).document.selectFirst("a.btn-success")?.attr("href") ?: return@forEach
+                        val link = app.get(baseUrl + href).document.selectFirst("a.btn-success")?.attr("href") ?: continue
                         myCallback(link, "[ResumeCloud]")
                     } catch (e: Exception) {}
                 }
-                text.contains("gofile") -> loadExtractor(href, "", subtitleCallback, callback) // 🟢 PERFECTED
+                text.contains("gofile") -> loadExtractor(href, "", subtitleCallback, callback)
             }
         }
     }
@@ -759,6 +794,10 @@ class EmbeddedHowblogs : ExtractorApi() {
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
-        app.get(url).document.select("div.center_it a").forEach { loadExtractor(it.attr("href"), referer, subtitleCallback, callback) } // 🟢 PERFECTED
+        // 🟢 FIXED: Used standard Kotlin for-loop
+        val links = app.get(url).document.select("div.center_it a").toList()
+        for (link in links) {
+            loadExtractor(link.attr("href"), referer, subtitleCallback, callback)
+        }
     }
 }
