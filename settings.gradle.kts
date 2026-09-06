@@ -3,7 +3,7 @@ rootProject.name = "CloudstreamPlugins"
 // This file sets what projects are included.
 // All new projects should get automatically included unless specified in the "disabled" variable.
 
-val disabled = listOf("NexFlixia","StreamImdb","PlusBox","OttSource") 
+val disabled = listOf("NexFlixia","StreamImdb","PlusBox","OttSource","ExampleProvider") 
 
 
 File(rootDir, ".").eachDir { dir ->
