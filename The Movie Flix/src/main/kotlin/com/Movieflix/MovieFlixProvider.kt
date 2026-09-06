@@ -3,52 +3,18 @@ package com.Movieflix
 import android.util.Base64
 import android.util.Log
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.AppUtils.parsedSafe
 
+import org.json.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
-import org.jsoup.nodes.Document
 
 import java.net.URI
-import java.net.URLDecoder
 
 // =========================================================
-// 1. DATA CLASSES (CINEMETA & LINK DATA)
-// =========================================================
-
-private data class CinemetaVideo(
-    @JsonProperty("id") val id: String? = null,
-    @JsonProperty("title") val title: String? = null,
-    @JsonProperty("season") val season: Int? = null,
-    @JsonProperty("episode") val episode: Int? = null,
-    @JsonProperty("released") val released: String? = null,
-    @JsonProperty("thumbnail") val thumbnail: String? = null,
-    @JsonProperty("overview") val overview: String? = null,
-    @JsonProperty("runtime") val runtime: Int? = null
-)
-
-private data class CinemetaMeta(
-    @JsonProperty("videos") val videos: List<CinemetaVideo> = emptyList()
-)
-
-private data class CinemetaResponse(
-    @JsonProperty("meta") val meta: CinemetaMeta? = null
-)
-
-private data class TmfLinkData(
-    @JsonProperty("url") val url: String,
-    @JsonProperty("season") val season: Int? = null,
-    @JsonProperty("episode") val episode: Int? = null
-)
-
-// =========================================================
-// 2. HELPER FUNCTIONS & FORMATTERS (EMBEDDED)
+// 1. HELPER FUNCTIONS & FORMATTERS (EMBEDDED)
 // =========================================================
 
 class SpecOption(searchTerms: List<String>, val label: String) {
@@ -163,9 +129,9 @@ private fun getBaseUrl(url: String): String {
 
 private suspend fun getLatestBaseUrl(baseUrl: String, source: String): String {
     return try {
-        val dynamicUrls = app.get("https://raw.githubusercontent.com/SaurabhKaperwan/Utils/refs/heads/main/urls.json")
-            .parsedSafe<Map<String, String>>()
-        dynamicUrls?.get(source)?.takeIf { it.isNotBlank() } ?: baseUrl
+        val jsonText = app.get("https://raw.githubusercontent.com/SaurabhKaperwan/Utils/refs/heads/main/urls.json").text
+        val json = JSONObject(jsonText)
+        json.optString(source).takeIf { it.isNotBlank() } ?: baseUrl
     } catch (e: Exception) { baseUrl }
 }
 
@@ -191,7 +157,7 @@ private fun base64DecodeLocal(str: String): String {
 }
 
 // =========================================================
-// 3. MAIN PROVIDER CLASS
+// 2. MAIN PROVIDER CLASS
 // =========================================================
 
 class TheMoviesFlixProvider : MainAPI() {
@@ -288,23 +254,33 @@ class TheMoviesFlixProvider : MainAPI() {
         val isSeries = document.selectFirst("h2.mfx-section-title")?.text()?.contains("Series Info", ignoreCase = true) == true ||
                 season != null || Regex("""(?i)\bseason\s*\d+\b""").containsMatchIn(title)
         val imdbId = document.selectFirst("a[href*='imdb.com/title/']")?.attr("href")?.substringAfter("/title/")?.substringBefore("/")?.takeIf { it.startsWith("tt") }
-        val cinemetaEpisodes = if (isSeries && !imdbId.isNullOrBlank()) {
-            try { app.get("https://v3-cinemeta.strem.io/meta/series/$imdbId.json").parsed<CinemetaResponse>().meta?.videos.orEmpty() } 
-            catch (e: Exception) { emptyList() }
-        } else emptyList()
+        
+        val cinemetaEpisodes = mutableListOf<Triple<Int, Int, String?>>()
+        if (isSeries && !imdbId.isNullOrBlank()) {
+            try {
+                val jsonText = app.get("https://v3-cinemeta.strem.io/meta/series/$imdbId.json").text
+                val videos = JSONObject(jsonText).optJSONObject("meta")?.optJSONArray("videos")
+                if (videos != null) {
+                    for (i in 0 until videos.length()) {
+                        val v = videos.optJSONObject(i) ?: continue
+                        val s = v.optInt("season", -1)
+                        val e = v.optInt("episode", -1)
+                        if (s != -1 && e != -1) cinemetaEpisodes.add(Triple(s, e, v.optString("title").takeIf { it.isNotBlank() }))
+                    }
+                }
+            } catch (e: Exception) {}
+        }
+
         val ytId = document.selectFirst("div.mfx-yt-lazy")?.attr("data-yt-id")?.takeIf { it.isNotBlank() }
 
         if (isSeries) {
-            val episodes = cinemetaEpisodes.filter { it.season != null && it.episode != null }
-                .sortedWith(compareBy<CinemetaVideo> { it.season ?: 0 }.thenBy { it.episode ?: 0 })
-                .map { video ->
-                    newEpisode(TmfLinkData(url = url, season = video.season, episode = video.episode).toJson()) {
-                        name = video.title
-                        this.season = video.season
-                        this.episode = video.episode
-                        description = video.overview
-                        posterUrl = video.thumbnail
-                        runTime = video.runtime
+            val episodes = cinemetaEpisodes.sortedWith(compareBy<Triple<Int, Int, String?>> { it.first }.thenBy { it.second })
+                .map { (s, e, epTitle) ->
+                    val linkDataString = """{"url":"$url","season":$s,"episode":$e}"""
+                    newEpisode(linkDataString) {
+                        name = epTitle
+                        this.season = s
+                        this.episode = e
                     }
                 }
             return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
@@ -312,14 +288,16 @@ class TheMoviesFlixProvider : MainAPI() {
                 ytId?.let { addTrailer("https://www.youtube.com/watch?v=$it") }
             }
         }
-        return newMovieLoadResponse(title, url, TvType.Movie, TmfLinkData(url = url).toJson()) {
+        
+        val linkDataString = """{"url":"$url"}"""
+        return newMovieLoadResponse(title, url, TvType.Movie, linkDataString) {
             posterUrl = poster; this.year = year; this.plot = plot; this.tags = genres; actors = cast
             ytId?.let { addTrailer("https://www.youtube.com/watch?v=$it") }
         }
     }
 
     // =========================================================
-    // 4. LINK ROUTER & BEAUTIFIER
+    // 3. LINK ROUTER & BEAUTIFIER
     // =========================================================
 
     private suspend fun routeAndLoadExtractor(
@@ -349,12 +327,15 @@ class TheMoviesFlixProvider : MainAPI() {
 
             callback(
                 newExtractorLink(
-                    newSourceName, newName, link.url, type = link.type
-                ) {
-                    this.referer = link.referer
-                    this.quality = link.quality
-                    this.headers = link.headers
-                }
+                    source = newSourceName,
+                    name = newName,
+                    url = link.url,
+                    referer = link.referer ?: "",
+                    quality = link.quality,
+                    type = link.type,
+                    headers = link.headers,
+                    extractorData = link.extractorData
+                )
             )
         }
 
@@ -372,15 +353,24 @@ class TheMoviesFlixProvider : MainAPI() {
             url.contains("driveleech.") || url.contains("driveseed.") -> 
                 EmbeddedDriveleech().getUrl(url, referer, subtitleCallback, processLink)
             url.contains("howblogs.") -> EmbeddedHowblogs().getUrl(url, referer, subtitleCallback, processLink)
-            else -> app.loadExtractor(url, referer, subtitleCallback, processLink) // Native Fallback
+            else -> loadExtractor(url, referer, subtitleCallback, processLink) // 🟢 PERFECTED
         }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val linkData = tryParseJson<TmfLinkData>(data) ?: TmfLinkData(data)
-        val matchedUrl = linkData.url
-        val season = linkData.season
-        val episode = linkData.episode
+        
+        // 🟢 Bulletproof Custom JSON Parser avoiding all external dependencies
+        val (matchedUrl, season, episode) = try {
+            val json = JSONObject(data)
+            Triple(
+                json.optString("url", data),
+                if (json.has("season")) json.getInt("season") else null,
+                if (json.has("episode")) json.getInt("episode") else null
+            )
+        } catch (e: Exception) {
+            Triple(data, null, null)
+        }
+
         val document = try { app.get(matchedUrl, timeout = 30L).document } catch (e: Exception) { return false }
 
         val validButtons = mutableListOf<Element>()
@@ -487,7 +477,7 @@ class TheMoviesFlixProvider : MainAPI() {
 }
 
 // =========================================================
-// 5. INTERNAL EXTRACTORS (INDEPENDENT)
+// 4. INTERNAL EXTRACTORS (INDEPENDENT)
 // =========================================================
 
 open class EmbeddedHubCloud : ExtractorApi() {
@@ -526,7 +516,16 @@ open class EmbeddedHubCloud : ExtractorApi() {
         val quality = getIndexQuality(header)
 
         fun myCallback(finalLink: String, server: String = "") {
-            callback.invoke(newExtractorLink("${name}${server}", "${name}${server} ${header}[${size}]", finalLink, ExtractorLinkType.VIDEO) { this.quality = quality })
+            callback.invoke(
+                newExtractorLink(
+                    source = "${name}${server}",
+                    name = "${name}${server} ${header}[${size}]",
+                    url = finalLink,
+                    referer = "$mainUrl/",
+                    quality = quality,
+                    type = ExtractorLinkType.VIDEO
+                )
+            )
         }
 
         document.select("h2 a.btn").forEach {
@@ -547,7 +546,7 @@ open class EmbeddedHubCloud : ExtractorApi() {
                 if(redirectUrl.contains("link=")) redirectUrl = redirectUrl.substringAfter("link=")
                 myCallback(redirectUrl, "[Download]")
             }
-            else if (text.contains("Gofile")) app.loadExtractor(hlink, "", subtitleCallback, callback)
+            else if (text.contains("Gofile")) loadExtractor(hlink, "", subtitleCallback, callback)
         }
     }
 }
@@ -562,11 +561,31 @@ class EmbeddedFilepress : ExtractorApi() {
             val fileId = url.substringAfterLast("/")
             val apiUrl = "https://${URI(url).host}/api/file/get/$fileId?referrer=https://themoviesflix.actor/"
             val jsonResponse = app.get(apiUrl, headers = mapOf("Referer" to url)).text
-            val downloadUrl = org.json.JSONObject(jsonResponse).optString("url")
-            if (downloadUrl.isNotBlank()) callback.invoke(newExtractorLink(name, "$name [G-Drive]", downloadUrl, ExtractorLinkType.VIDEO) { this.referer = url })
+            val downloadUrl = JSONObject(jsonResponse).optString("url")
+            if (downloadUrl.isNotBlank()) {
+                callback.invoke(
+                    newExtractorLink(
+                        source = name,
+                        name = "$name [G-Drive]",
+                        url = downloadUrl,
+                        referer = url,
+                        quality = Qualities.Unknown.value,
+                        type = ExtractorLinkType.VIDEO
+                    )
+                )
+            }
         } catch (e: Exception) {
             val directLink = url.replace("/file/", "/api/file/get/") + "?download"
-            callback.invoke(newExtractorLink(name, "$name [Fallback]", directLink, ExtractorLinkType.VIDEO))
+            callback.invoke(
+                newExtractorLink(
+                    source = name,
+                    name = "$name [Fallback]",
+                    url = directLink,
+                    referer = url,
+                    quality = Qualities.Unknown.value,
+                    type = ExtractorLinkType.VIDEO
+                )
+            )
         }
     }
 }
@@ -588,7 +607,16 @@ open class EmbeddedGDFlix : ExtractorApi() {
         val quality = getIndexQuality(fileName)
 
         fun myCallback(link: String, server: String = "") {
-            callback.invoke(newExtractorLink("${name}${server}", "${name}${server} ${fileName}[${fileSize}]", link, ExtractorLinkType.VIDEO) { this.quality = quality })
+            callback.invoke(
+                newExtractorLink(
+                    source = "${name}${server}",
+                    name = "${name}${server} ${fileName}[${fileSize}]",
+                    url = link,
+                    referer = url,
+                    quality = quality,
+                    type = ExtractorLinkType.VIDEO
+                )
+            )
         }
 
         document.select("div.text-center a").forEach { anchor ->
@@ -624,7 +652,7 @@ open class EmbeddedGDFlix : ExtractorApi() {
                 text.contains("GoFile") -> {
                     try {
                         app.get(link).document.select(".row .row a").forEach { 
-                            if (it.attr("href").contains("gofile")) app.loadExtractor(it.attr("href"), "", subtitleCallback, callback)
+                            if (it.attr("href").contains("gofile")) loadExtractor(it.attr("href"), "", subtitleCallback, callback)
                         }
                     } catch (e: Exception) {}
                 }
@@ -640,7 +668,7 @@ class EmbeddedFastdlserver : ExtractorApi() {
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         val location = app.get(url, allowRedirects = false).headers["location"]
-        if (location != null) app.loadExtractor(location, "", subtitleCallback, callback)
+        if (location != null) loadExtractor(location, "", subtitleCallback, callback) // 🟢 PERFECTED
     }
 }
 
@@ -651,7 +679,7 @@ class EmbeddedLinksmod : ExtractorApi() {
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         val document = app.get(url).document
-        document.select("div .view-well > a").forEach { app.loadExtractor(it.attr("href"), "", subtitleCallback, callback) }
+        document.select("div .view-well > a").forEach { loadExtractor(it.attr("href"), "", subtitleCallback, callback) } // 🟢 PERFECTED
     }
 }
 
@@ -662,7 +690,7 @@ class EmbeddedHubdrive : ExtractorApi() {
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         val href = app.get(url).document.select(".btn.btn-primary.btn-user.btn-success1.m-1").attr("href")
-        app.loadExtractor(href, "", subtitleCallback, callback)
+        loadExtractor(href, "", subtitleCallback, callback) // 🟢 PERFECTED
     }
 }
 
@@ -683,7 +711,16 @@ open class EmbeddedDriveleech : ExtractorApi() {
         val quality = getIndexQuality(fileName)
 
         fun myCallback(link: String, server: String = "") {
-            callback.invoke(newExtractorLink("${name}${server}", "${name}${server} ${fileName}[${fileSize}]", link, ExtractorLinkType.VIDEO) { this.quality = quality })
+            callback.invoke(
+                newExtractorLink(
+                    source = "${name}${server}",
+                    name = "${name}${server} ${fileName}[${fileSize}]",
+                    url = link,
+                    referer = url,
+                    quality = quality,
+                    type = ExtractorLinkType.VIDEO
+                )
+            )
         }
 
         document.select("div.text-center > a").forEach { element ->
@@ -710,7 +747,7 @@ open class EmbeddedDriveleech : ExtractorApi() {
                         myCallback(link, "[ResumeCloud]")
                     } catch (e: Exception) {}
                 }
-                text.contains("gofile") -> app.loadExtractor(href, "", subtitleCallback, callback)
+                text.contains("gofile") -> loadExtractor(href, "", subtitleCallback, callback) // 🟢 PERFECTED
             }
         }
     }
@@ -722,6 +759,6 @@ class EmbeddedHowblogs : ExtractorApi() {
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
-        app.get(url).document.select("div.center_it a").forEach { app.loadExtractor(it.attr("href"), referer, subtitleCallback, callback) }
+        app.get(url).document.select("div.center_it a").forEach { loadExtractor(it.attr("href"), referer, subtitleCallback, callback) } // 🟢 PERFECTED
     }
 }
