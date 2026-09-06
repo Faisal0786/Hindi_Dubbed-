@@ -25,6 +25,7 @@ android {
 }
 
 cloudstream {
+    language = "hi"
 
     description = "Multi language Movies and Tv shows provider"
 
