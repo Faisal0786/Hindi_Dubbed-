@@ -20,6 +20,8 @@ android {
 }
 
 cloudstream {
+    language = "hi"
+
     description = "TheMoviesFlix provider for Dual Audio, Bollywood and Hollywood Movies and TV Shows"
     authors = listOf("Faisal")
     status = 1
