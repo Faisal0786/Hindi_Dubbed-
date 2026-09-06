@@ -9,7 +9,10 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import java.net.URI
 
-class SpecOption(searchTerms: List<String>, val label: String) {
+class SpecOption(
+    searchTerms: List<String>,
+    val label: String
+) {
     constructor(term: String, label: String) : this(listOf(term), label)
 
     val regex = Regex(
@@ -41,8 +44,14 @@ private val SPEC_OPTIONS = mapOf(
     ),
     "codec" to listOf(
         SpecOption("av1", "AV1"),
-        SpecOption(listOf("x265", "h.265", "hevc"), "HEVC"),
-        SpecOption(listOf("x264", "h.264", "H264", "avc"), "H.264")
+        SpecOption(
+            listOf("x265", "h.265", "hevc"),
+            "HEVC"
+        ),
+        SpecOption(
+            listOf("x264", "h.264", "H264", "avc"),
+            "H.264"
+        )
     ),
     "bitdepth" to listOf(
         SpecOption("12bit", "12bit"),
@@ -52,17 +61,28 @@ private val SPEC_OPTIONS = mapOf(
     "audio" to listOf(
         SpecOption("TrueHD", "Dolby TrueHD"),
         SpecOption("Atmos", "Dolby Atmos"),
-        SpecOption(listOf("DDP5.1", "DDP 5.1"), "DD+ 5.1"),
+        SpecOption(
+            listOf("DDP5.1", "DDP 5.1"),
+            "DD+ 5.1"
+        ),
         SpecOption("7.1", "7.1 Ch"),
         SpecOption("5.1", "5.1 Ch"),
         SpecOption("DTS-HD MA", "DTS-HD MA"),
         SpecOption("DTS-HD", "DTS-HD"),
-        SpecOption(listOf("E-AC3", "DD+", "Dolby Digital Plus"), "DD+"),
+        SpecOption(
+            listOf("E-AC3", "DD+", "Dolby Digital Plus"),
+            "DD+"
+        ),
         SpecOption("AC3", "AC3")
     ),
     "hdr" to listOf(
         SpecOption(
-            listOf("DV", "DoVi", "DOLBYVISION", "Dolby Vision"),
+            listOf(
+                "DV",
+                "DoVi",
+                "DOLBYVISION",
+                "Dolby Vision"
+            ),
             "Dolby Vision"
         ),
         SpecOption("HDR10+", "HDR10+"),
@@ -70,18 +90,36 @@ private val SPEC_OPTIONS = mapOf(
         SpecOption("HDR", "HDR")
     ),
     "language" to listOf(
-        SpecOption(listOf("HIN", "Hindi"), "Hindi"),
-        SpecOption(listOf("ENG", "English"), "English"),
         SpecOption(
-            listOf("Multi-Audio", "Multi Audio", "Multi.Audio"),
+            listOf("HIN", "Hindi"),
+            "Hindi"
+        ),
+        SpecOption(
+            listOf("ENG", "English"),
+            "English"
+        ),
+        SpecOption(
+            listOf(
+                "Multi-Audio",
+                "Multi Audio",
+                "Multi.Audio"
+            ),
             "Multi-Audio 🔊"
         ),
         SpecOption(
-            listOf("Dual.Audio", "Dual Audio", "Dual"),
+            listOf(
+                "Dual.Audio",
+                "Dual Audio",
+                "Dual"
+            ),
             "Dual-Audio 🔊"
         ),
         SpecOption(
-            listOf("Multi-Sub", "MultiSub", "Multi Sub"),
+            listOf(
+                "Multi-Sub",
+                "MultiSub",
+                "Multi Sub"
+            ),
             "Multi-Sub 💬"
         ),
         SpecOption("ESub", "ESub")
@@ -89,12 +127,22 @@ private val SPEC_OPTIONS = mapOf(
 )
 
 private val SIZE_REGEX =
-    """(\d+(?:\.\d+)?\s?(?:MB|GB))""".toRegex(RegexOption.IGNORE_CASE)
+    """(\d+(?:\.\d+)?\s?(?:MB|GB))""".toRegex(
+        RegexOption.IGNORE_CASE
+    )
 
 private val CATEGORY_ORDER =
-    listOf("language", "audio", "hdr", "codec", "quality")
+    listOf(
+        "language",
+        "audio",
+        "hdr",
+        "codec",
+        "quality"
+    )
 
-private fun getSimplifiedTitle(title: String): String {
+private fun getSimplifiedTitle(
+    title: String
+): String {
     var remainingTitle = title
     val matchedLabels = mutableListOf<String>()
 
@@ -102,21 +150,36 @@ private fun getSimplifiedTitle(title: String): String {
         SPEC_OPTIONS[category].orEmpty().forEach { spec ->
             if (spec.regex.containsMatchIn(remainingTitle)) {
                 matchedLabels.add(spec.label)
-                remainingTitle = spec.regex.replace(remainingTitle, " ")
+                remainingTitle =
+                    spec.regex.replace(
+                        remainingTitle,
+                        " "
+                    )
             }
         }
     }
 
-    val sizeMatch = SIZE_REGEX.find(title)?.value?.uppercase()
+    val sizeMatch =
+        SIZE_REGEX
+            .find(title)
+            ?.value
+            ?.uppercase()
 
     val result = listOfNotNull(
-        matchedLabels.distinct()
+        matchedLabels
+            .distinct()
             .joinToString(" • ")
-            .takeIf { it.isNotEmpty() },
+            .takeIf {
+                it.isNotEmpty()
+            },
         sizeMatch
     ).joinToString(" • ")
 
-    return if (result.isEmpty()) "" else " • $result"
+    return if (result.isEmpty()) {
+        ""
+    } else {
+        " • $result"
+    }
 }
 
 private fun String.toSansSerifItalic(): String {
@@ -124,12 +187,19 @@ private fun String.toSansSerifItalic(): String {
 
     for (char in this) {
         val codePoint = when (char) {
-            in 'A'..'Z' -> 0x1D608 + (char - 'A')
-            in 'a'..'z' -> 0x1D622 + (char - 'a')
-            else -> char.code
+            in 'A'..'Z' ->
+                0x1D608 + (char - 'A')
+
+            in 'a'..'z' ->
+                0x1D622 + (char - 'a')
+
+            else ->
+                char.code
         }
 
-        builder.append(Character.toChars(codePoint))
+        builder.append(
+            Character.toChars(codePoint)
+        )
     }
 
     return builder.toString()
@@ -140,19 +210,30 @@ private fun String.toSansSerifBold(): String {
 
     for (char in this) {
         val codePoint = when (char) {
-            in 'A'..'Z' -> 0x1D5D4 + (char - 'A')
-            in 'a'..'z' -> 0x1D5EE + (char - 'a')
-            in '0'..'9' -> 0x1D7EC + (char - '0')
-            else -> char.code
+            in 'A'..'Z' ->
+                0x1D5D4 + (char - 'A')
+
+            in 'a'..'z' ->
+                0x1D5EE + (char - 'a')
+
+            in '0'..'9' ->
+                0x1D7EC + (char - '0')
+
+            else ->
+                char.code
         }
 
-        builder.append(Character.toChars(codePoint))
+        builder.append(
+            Character.toChars(codePoint)
+        )
     }
 
     return builder.toString()
 }
 
-private fun getIndexQuality(str: String?): Int {
+private fun getIndexQuality(
+    str: String?
+): Int {
     if (str.isNullOrBlank()) {
         return Qualities.Unknown.value
     }
@@ -169,14 +250,23 @@ private fun getIndexQuality(str: String?): Int {
     val lowerStr = str.lowercase()
 
     return when {
-        lowerStr.contains("8k") -> 4320
-        lowerStr.contains("4k") -> 2160
-        lowerStr.contains("2k") -> 1440
-        else -> Qualities.Unknown.value
+        lowerStr.contains("8k") ->
+            4320
+
+        lowerStr.contains("4k") ->
+            2160
+
+        lowerStr.contains("2k") ->
+            1440
+
+        else ->
+            Qualities.Unknown.value
     }
 }
 
-private fun getBaseUrl(url: String): String {
+private fun getBaseUrl(
+    url: String
+): String {
     return try {
         URI(url).let {
             "${it.scheme}://${it.host}"
@@ -195,17 +285,22 @@ private suspend fun getLatestBaseUrl(
             "https://raw.githubusercontent.com/SaurabhKaperwan/Utils/refs/heads/main/urls.json"
         ).text
 
-        val json = JSONObject(jsonText)
+        val json =
+            JSONObject(jsonText)
 
         json.optString(source)
-            .takeIf { it.isNotBlank() }
+            .takeIf {
+                it.isNotBlank()
+            }
             ?: baseUrl
     } catch (_: Exception) {
         baseUrl
     }
 }
 
-private suspend fun resolveFinalUrl(startUrl: String): String? {
+private suspend fun resolveFinalUrl(
+    startUrl: String
+): String? {
     var currentUrl = startUrl
     var loopCount = 0
 
@@ -217,8 +312,12 @@ private suspend fun resolveFinalUrl(startUrl: String): String? {
                 timeout = 2500L
             )
 
-            if (response.code == 200 || response.code in 300..399) {
-                val location = response.headers["Location"]
+            if (
+                response.code == 200 ||
+                response.code in 300..399
+            ) {
+                val location =
+                    response.headers["Location"]
 
                 if (location.isNullOrEmpty()) {
                     break
@@ -238,76 +337,127 @@ private suspend fun resolveFinalUrl(startUrl: String): String? {
     return currentUrl
 }
 
-private fun base64DecodeLocal(str: String): String {
-    return String(Base64.decode(str, Base64.DEFAULT))
+private fun base64DecodeLocal(
+    str: String
+): String {
+    return String(
+        Base64.decode(
+            str,
+            Base64.DEFAULT
+        )
+    )
+}
+
+@Suppress("DEPRECATION")
+private fun createExtractorLink(
+    source: String,
+    name: String,
+    url: String,
+    type: ExtractorLinkType,
+    quality: Int = Qualities.Unknown.value,
+    headers: Map<String, String> = emptyMap(),
+    referer: String = "",
+    extractorData: String? = null
+): ExtractorLink {
+    return ExtractorLink(
+        source = source,
+        name = name,
+        url = url,
+        referer = referer,
+        quality = quality,
+        headers = headers,
+        extractorData = extractorData,
+        type = type
+    )
 }
 
 class TheMoviesFlixProvider : MainAPI() {
 
-    override var mainUrl = "https://themoviesflix.actor/"
-    override var name = "TheMoviesFlix"
-    override val hasMainPage = true
-    override var lang = "hi"
+    override var mainUrl =
+        "https://themoviesflix.actor/"
 
-    override val supportedTypes = setOf(
-        TvType.Movie,
-        TvType.TvSeries
-    )
+    override var name =
+        "TheMoviesFlix"
 
-    override val mainPage = mainPageOf(
-        "$mainUrl/category/english/" to "Hollywood",
-        "$mainUrl/category/bollywood/" to "Bollywood",
-        "$mainUrl/category/hindi-dubbed-movies/" to "Hindi Dubbed",
-        "$mainUrl/category/dual-audio-movies/" to "Dual Audio",
-        "$mainUrl/category/web-series/" to "Web Series",
-        "$mainUrl/category/korean-series/" to "Korean Drama",
-        "$mainUrl/category/drama/" to "Drama",
-        "$mainUrl/category/action/" to "Action",
-        "$mainUrl/category/comedy/" to "Comedy",
-        "$mainUrl/category/thriller/" to "Thriller",
-        "$mainUrl/category/romance/" to "Romance",
-        "$mainUrl/category/adventure/" to "Adventure",
-        "$mainUrl/category/crime/" to "Crime",
-        "$mainUrl/category/horror/" to "Horror",
-        "$mainUrl/category/mystery/" to "Mystery",
-        "$mainUrl/category/fantasy/" to "Fantasy",
-        "$mainUrl/category/sci-fi/" to "Sci-Fi",
-        "$mainUrl/category/animation/" to "Animation",
-        "$mainUrl/category/family/" to "Family",
-        "$mainUrl/category/sport/" to "Sport"
-    )
+    override val hasMainPage =
+        true
+
+    override var lang =
+        "hi"
+
+    override val supportedTypes =
+        setOf(
+            TvType.Movie,
+            TvType.TvSeries
+        )
+
+    override val mainPage =
+        mainPageOf(
+            "$mainUrl/category/english/" to "Hollywood",
+            "$mainUrl/category/bollywood/" to "Bollywood",
+            "$mainUrl/category/hindi-dubbed-movies/" to "Hindi Dubbed",
+            "$mainUrl/category/dual-audio-movies/" to "Dual Audio",
+            "$mainUrl/category/web-series/" to "Web Series",
+            "$mainUrl/category/korean-series/" to "Korean Drama",
+            "$mainUrl/category/drama/" to "Drama",
+            "$mainUrl/category/action/" to "Action",
+            "$mainUrl/category/comedy/" to "Comedy",
+            "$mainUrl/category/thriller/" to "Thriller",
+            "$mainUrl/category/romance/" to "Romance",
+            "$mainUrl/category/adventure/" to "Adventure",
+            "$mainUrl/category/crime/" to "Crime",
+            "$mainUrl/category/horror/" to "Horror",
+            "$mainUrl/category/mystery/" to "Mystery",
+            "$mainUrl/category/fantasy/" to "Fantasy",
+            "$mainUrl/category/sci-fi/" to "Sci-Fi",
+            "$mainUrl/category/animation/" to "Animation",
+            "$mainUrl/category/family/" to "Family",
+            "$mainUrl/category/sport/" to "Sport"
+        )
 
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val baseCategoryUrl = request.data.trimEnd('/')
+        val baseCategoryUrl =
+            request.data.trimEnd('/')
 
-        val pageUrl = if (page <= 1) {
-            "$baseCategoryUrl/"
-        } else {
-            "$baseCategoryUrl/page/$page/"
-        }
+        val pageUrl =
+            if (page <= 1) {
+                "$baseCategoryUrl/"
+            } else {
+                "$baseCategoryUrl/page/$page/"
+            }
 
         return try {
-            val document = app.get(
-                pageUrl,
-                timeout = 30L
-            ).document
+            val document =
+                app.get(
+                    pageUrl,
+                    timeout = 30L
+                ).document
 
-            val results = document
-                .select(
-                    ".post-cards > .latestpost, " +
-                        ".post-cards article.latestpost, " +
-                        "article.latestpost"
-                )
-                .mapNotNull { it.toSearchResult() }
-                .distinctBy { it.url }
+            val results =
+                document
+                    .select(
+                        ".post-cards > .latestpost, " +
+                            ".post-cards article.latestpost, " +
+                            "article.latestpost"
+                    )
+                    .mapNotNull {
+                        it.toSearchResult()
+                    }
+                    .distinctBy {
+                        it.url
+                    }
 
             val hasNextPage =
-                document.selectFirst("link[rel=next]") != null ||
+                document.selectFirst(
+                    "link[rel=next]"
+                ) != null ||
                     document.selectFirst(
-                        "a.next, .next a, .pagination .next, .posts-navigation .next"
+                        "a.next, .next a, " +
+                            ".pagination .next, " +
+                            ".posts-navigation .next"
                     ) != null
 
             newHomePageResponse(
@@ -324,61 +474,86 @@ class TheMoviesFlixProvider : MainAPI() {
         }
     }
 
-    private fun Element.toSearchResult(): SearchResponse? {
-        val anchor =
-            selectFirst(".entry-title a[href]")
-                ?: selectFirst("a[title][href]")
-                ?: return null
+    private fun Element.toSearchResult():
+        SearchResponse? {
 
-        val href = anchor.attr("href").trim()
+        val anchor =
+            selectFirst(
+                ".entry-title a[href]"
+            ) ?: selectFirst(
+                "a[title][href]"
+            ) ?: return null
+
+        val href =
+            anchor.attr("href").trim()
 
         if (href.isBlank()) {
             return null
         }
 
-        val rawTitle = when {
-            anchor.attr("title").isNotBlank() ->
-                anchor.attr("title")
+        val rawTitle =
+            when {
+                anchor
+                    .attr("title")
+                    .isNotBlank() ->
+                    anchor.attr("title")
 
-            selectFirst(".entry-title a")?.text()?.isNotBlank() == true ->
-                selectFirst(".entry-title a")!!.text()
+                selectFirst(
+                    ".entry-title a"
+                )?.text()?.isNotBlank() == true ->
+                    selectFirst(
+                        ".entry-title a"
+                    )!!.text()
 
-            anchor.text().isNotBlank() ->
-                anchor.text()
+                anchor.text().isNotBlank() ->
+                    anchor.text()
 
-            else ->
-                return null
-        }
+                else ->
+                    return null
+            }
 
-        val title = rawTitle
-            .replace(
-                Regex("""(?i)^\s*download\s+"""),
-                ""
-            )
-            .replace(
-                Regex("""\s+"""),
-                " "
-            )
-            .trim()
+        val title =
+            rawTitle
+                .replace(
+                    Regex(
+                        """(?i)^\s*download\s+"""
+                    ),
+                    ""
+                )
+                .replace(
+                    Regex("""\s+"""),
+                    " "
+                )
+                .trim()
 
         if (title.isBlank()) {
             return null
         }
 
         val poster =
-            selectFirst(".featured-thumbnail img")
+            selectFirst(
+                ".featured-thumbnail img"
+            )
                 ?.attr("src")
-                ?.takeIf { it.isNotBlank() }
+                ?.takeIf {
+                    it.isNotBlank()
+                }
                 ?: selectFirst("img")
                     ?.attr("src")
-                    ?.takeIf { it.isNotBlank() }
+                    ?.takeIf {
+                        it.isNotBlank()
+                    }
 
-        val isSeries = Regex(
-            """(?i)\b(?:season\s*\d+|s\d{1,2}\b|web\s*series|series)\b"""
-        ).containsMatchIn(title)
+        val isSeries =
+            Regex(
+                """(?i)\b(?:season\s*\d+|s\d{1,2}\b|web\s*series|series)\b"""
+            ).containsMatchIn(title)
 
         return if (isSeries) {
-            newTvSeriesSearchResponse(title, href) {
+            newTvSeriesSearchResponse(
+                title,
+                href
+            ) {
                 posterUrl = poster
             }
         } else {
@@ -395,6 +570,7 @@ class TheMoviesFlixProvider : MainAPI() {
     override suspend fun search(
         query: String
     ): List<SearchResponse> {
+
         val encodedQuery =
             java.net.URLEncoder.encode(
                 query.trim(),
@@ -402,10 +578,11 @@ class TheMoviesFlixProvider : MainAPI() {
             )
 
         return try {
-            val document = app.get(
-                "$mainUrl/?s=$encodedQuery",
-                timeout = 30L
-            ).document
+            val document =
+                app.get(
+                    "$mainUrl/?s=$encodedQuery",
+                    timeout = 30L
+                ).document
 
             document
                 .select(
@@ -413,8 +590,12 @@ class TheMoviesFlixProvider : MainAPI() {
                         ".post-cards article.latestpost, " +
                         "article.latestpost"
                 )
-                .mapNotNull { it.toSearchResult() }
-                .distinctBy { it.url }
+                .mapNotNull {
+                    it.toSearchResult()
+                }
+                .distinctBy {
+                    it.url
+                }
         } catch (_: Exception) {
             emptyList()
         }
@@ -423,75 +604,110 @@ class TheMoviesFlixProvider : MainAPI() {
     override suspend fun load(
         url: String
     ): LoadResponse? {
-        val document = try {
-            app.get(url).document
-        } catch (_: Exception) {
-            return null
-        }
 
-        val title = document
-            .selectFirst("h2.mfx-main-title")
-            ?.text()
-            ?.replace(
-                "Download",
-                "",
-                ignoreCase = true
-            )
-            ?.trim()
-            ?: return null
+        val document =
+            try {
+                app.get(url).document
+            } catch (_: Exception) {
+                return null
+            }
+
+        val title =
+            document
+                .selectFirst(
+                    "h2.mfx-main-title"
+                )
+                ?.text()
+                ?.replace(
+                    "Download",
+                    "",
+                    ignoreCase = true
+                )
+                ?.trim()
+                ?: return null
 
         val poster =
             document
-                .selectFirst("meta[property=og:image]")
+                .selectFirst(
+                    "meta[property=og:image]"
+                )
                 ?.attr("content")
-                ?.takeIf { it.isNotBlank() }
+                ?.takeIf {
+                    it.isNotBlank()
+                }
                 ?: document
-                    .selectFirst(".entry-content img")
+                    .selectFirst(
+                        ".entry-content img"
+                    )
                     ?.attr("src")
-                    ?.takeIf { it.isNotBlank() }
+                    ?.takeIf {
+                        it.isNotBlank()
+                    }
 
         val plot =
             document
-                .selectFirst("div.mfx-plot-box")
+                .selectFirst(
+                    "div.mfx-plot-box"
+                )
                 ?.text()
                 ?.trim()
 
-        fun infoValue(label: String): String? {
-            val li = document
-                .select("div.mfx-info-box ul li")
-                .firstOrNull {
-                    it.selectFirst("strong")
-                        ?.text()
-                        ?.contains(
-                            label,
-                            ignoreCase = true
-                        ) == true
-                }
+        fun infoValue(
+            label: String
+        ): String? {
+
+            val li =
+                document
+                    .select(
+                        "div.mfx-info-box ul li"
+                    )
+                    .firstOrNull {
+                        it.selectFirst("strong")
+                            ?.text()
+                            ?.contains(
+                                label,
+                                ignoreCase = true
+                            ) == true
+                    }
 
             return li
                 ?.text()
                 ?.substringAfter(":")
                 ?.trim()
-                ?.takeIf { it.isNotBlank() }
+                ?.takeIf {
+                    it.isNotBlank()
+                }
         }
 
         val year =
-            infoValue("Release Year")?.toIntOrNull()
-                ?: infoValue("Released Year")?.toIntOrNull()
+            infoValue(
+                "Release Year"
+            )?.toIntOrNull()
+                ?: infoValue(
+                    "Released Year"
+                )?.toIntOrNull()
 
         val genres =
             infoValue("Genres")
                 ?.split(",")
-                ?.map { it.trim() }
-                ?.filter { it.isNotBlank() }
-                ?.takeIf { it.isNotEmpty() }
+                ?.map {
+                    it.trim()
+                }
+                ?.filter {
+                    it.isNotBlank()
+                }
+                ?.takeIf {
+                    it.isNotEmpty()
+                }
 
         val cast =
             infoValue("Cast")
                 ?.split(",")
                 ?.map {
                     ActorData(
-                        actor = Actor(it.trim())
+                        actor = Actor(
+                            it.trim()
+                        )
                     )
                 }
                 ?.filter {
@@ -499,14 +715,20 @@ class TheMoviesFlixProvider : MainAPI() {
                 }
 
         val season =
-            infoValue("Season")?.toIntOrNull()
+            infoValue(
+                "Season"
+            )?.toIntOrNull()
 
         val episode =
-            infoValue("Episode")?.toIntOrNull()
+            infoValue(
+                "Episode"
+            )?.toIntOrNull()
 
         val isSeries =
             document
-                .selectFirst("h2.mfx-section-title")
+                .selectFirst(
+                    "h2.mfx-section-title"
+                )
                 ?.text()
                 ?.contains(
                     "Series Info",
@@ -519,25 +741,32 @@ class TheMoviesFlixProvider : MainAPI() {
 
         val imdbId =
             document
-                .selectFirst("a[href*='imdb.com/title/']")
+                .selectFirst(
+                    "a[href*='imdb.com/title/']"
+                )
                 ?.attr("href")
-                ?.substringAfter("/title/")
+                ?.substringAfter(
+                    "/title/"
+                )
                 ?.substringBefore("/")
                 ?.takeIf {
                     it.startsWith("tt")
                 }
 
         val cinemetaEpisodes =
-            mutableListOf<Triple<Int, Int, String?>>()
+            mutableListOf<
+                Triple<Int, Int, String?>
+            >()
 
         if (
             isSeries &&
             !imdbId.isNullOrBlank()
         ) {
             try {
-                val jsonText = app.get(
-                    "https://v3-cinemeta.strem.io/meta/series/$imdbId.json"
-                ).text
+                val jsonText =
+                    app.get(
+                        "https://v3-cinemeta.strem.io/meta/series/$imdbId.json"
+                    ).text
 
                 val videos =
                     JSONObject(jsonText)
@@ -545,7 +774,9 @@ class TheMoviesFlixProvider : MainAPI() {
                         ?.optJSONArray("videos")
 
                 if (videos != null) {
-                    for (i in 0 until videos.length()) {
+                    for (
+                        i in 0 until videos.length()
+                    ) {
                         val video =
                             videos.optJSONObject(i)
                                 ?: continue
@@ -571,7 +802,9 @@ class TheMoviesFlixProvider : MainAPI() {
                                     s,
                                     e,
                                     video
-                                        .optString("title")
+                                        .optString(
+                                            "title"
+                                        )
                                         .takeIf {
                                             it.isNotBlank()
                                         }
@@ -586,28 +819,47 @@ class TheMoviesFlixProvider : MainAPI() {
 
         val ytId =
             document
-                .selectFirst("div.mfx-yt-lazy")
+                .selectFirst(
+                    "div.mfx-yt-lazy"
+                )
                 ?.attr("data-yt-id")
-                ?.takeIf { it.isNotBlank() }
+                ?.takeIf {
+                    it.isNotBlank()
+                }
 
         if (isSeries) {
+
             val episodes =
                 cinemetaEpisodes
                     .sortedWith(
-                        compareBy<Triple<Int, Int, String?>> {
+                        compareBy<
+                            Triple<
+                                Int,
+                                Int,
+                                String?
+                            >
+                        > {
                             it.first
                         }.thenBy {
                             it.second
                         }
                     )
-                    .map { (s, e, epTitle) ->
-                        val linkDataString =
-                            """{"url":"$url","season":$s,"episode":$e}"""
+                    .map {
+                        (
+                            seasonNumber,
+                            episodeNumber,
+                            epTitle
+                        ) ->
 
-                        newEpisode(linkDataString) {
+                        val linkDataString =
+                            """{"url":"$url","season":$seasonNumber,"episode":$episodeNumber}"""
+
+                        newEpisode(
+                            linkDataString
+                        ) {
                             name = epTitle
-                            season = s
-                            episode = e
+                            season = seasonNumber
+                            episode = episodeNumber
                         }
                     }
 
@@ -660,101 +912,117 @@ class TheMoviesFlixProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val processLink: (ExtractorLink) -> Unit = { link ->
-            val isDownload =
-                link.source.contains(
-                    "Download",
-                    ignoreCase = true
+
+        val processLink: (ExtractorLink) -> Unit =
+            { link ->
+
+                val isDownload =
+                    link.source.contains(
+                        "Download",
+                        ignoreCase = true
+                    )
+
+                val simplifiedTitle =
+                    getSimplifiedTitle(
+                        link.name
+                    )
+
+                val cleanSourceLink =
+                    link.source
+                        .replace(
+                            Regex("\\[|\\]"),
+                            " "
+                        )
+                        .trim()
+                        .replace(
+                            Regex("\\s+"),
+                            " "
+                        )
+
+                val sourceBold =
+                    "TheMoviesFlix"
+                        .toSansSerifBold()
+
+                val parts =
+                    cleanSourceLink.split(
+                        " ",
+                        limit = 2
+                    )
+
+                val hostName =
+                    parts.getOrNull(0)
+                        ?: cleanSourceLink
+
+                val serverName =
+                    parts
+                        .getOrNull(1)
+                        ?.let {
+                            "($it)"
+                        }
+                        ?: ""
+
+                val formattedServer =
+                    if (
+                        serverName.isNotEmpty()
+                    ) {
+                        "$hostName $serverName"
+                    } else {
+                        hostName
+                    }
+
+                val rawDetails =
+                    simplifiedTitle
+                        .replace(
+                            Regex("•\\s*•"),
+                            "•"
+                        )
+                        .trim()
+                        .removePrefix("•")
+                        .trim()
+
+                val detailsItalic =
+                    rawDetails
+                        .toSansSerifItalic()
+
+                val newSourceName =
+                    if (isDownload) {
+                        "Download"
+                    } else {
+                        cleanSourceLink
+                    }
+
+                val newName =
+                    if (
+                        detailsItalic.isNotEmpty()
+                    ) {
+                        "$sourceBold >> $formattedServer • $detailsItalic"
+                    } else {
+                        "$sourceBold >> $formattedServer"
+                    }
+
+                val extractorLink =
+                    createExtractorLink(
+                        source = newSourceName,
+                        name = newName,
+                        url = link.url,
+                        type = link.type,
+                        quality = link.quality,
+                        headers = link.headers,
+                        referer = link.referer ?: "",
+                        extractorData = link.extractorData
+                    )
+
+                callback(
+                    extractorLink
                 )
-
-            val simplifiedTitle =
-                getSimplifiedTitle(link.name)
-
-            val cleanSourceLink =
-                link.source
-                    .replace(
-                        Regex("\\[|\\]"),
-                        " "
-                    )
-                    .trim()
-                    .replace(
-                        Regex("\\s+"),
-                        " "
-                    )
-
-            val sourceBold =
-                "TheMoviesFlix".toSansSerifBold()
-
-            val parts =
-                cleanSourceLink.split(
-                    " ",
-                    limit = 2
-                )
-
-            val hostName =
-                parts.getOrNull(0)
-                    ?: cleanSourceLink
-
-            val serverName =
-                parts
-                    .getOrNull(1)
-                    ?.let { "($it)" }
-                    ?: ""
-
-            val formattedServer =
-                if (serverName.isNotEmpty()) {
-                    "$hostName $serverName"
-                } else {
-                    hostName
-                }
-
-            val rawDetails =
-                simplifiedTitle
-                    .replace(
-                        Regex("•\\s*•"),
-                        "•"
-                    )
-                    .trim()
-                    .removePrefix("•")
-                    .trim()
-
-            val detailsItalic =
-                rawDetails.toSansSerifItalic()
-
-            val newSourceName =
-                if (isDownload) {
-                    "Download"
-                } else {
-                    cleanSourceLink
-                }
-
-            val newName =
-                if (detailsItalic.isNotEmpty()) {
-                    "$sourceBold >> $formattedServer • $detailsItalic"
-                } else {
-                    "$sourceBold >> $formattedServer"
-                }
-
-            val extractorLink = newExtractorLink(
-                newSourceName,
-                newName,
-                link.url,
-                link.type
-            )
-
-            extractorLink.quality = link.quality
-            extractorLink.headers = link.headers
-            extractorLink.extractorData = link.extractorData
-            extractorLink.referer = link.referer ?: ""
-
-            callback(extractorLink)
-        }
+            }
 
         when {
             url.contains("hubcloud.") ||
                 url.contains("vcloud.") ||
                 url.contains("mcloud.") ||
                 url.contains("vicloud.") -> {
+
                 EmbeddedHubCloud().getUrl(
                     url,
                     referer,
@@ -765,6 +1033,7 @@ class TheMoviesFlixProvider : MainAPI() {
 
             url.contains("filepress") ||
                 url.contains("filebee") -> {
+
                 EmbeddedFilepress().getUrl(
                     url,
                     referer,
@@ -775,6 +1044,7 @@ class TheMoviesFlixProvider : MainAPI() {
 
             url.contains("fastdlserver.") ||
                 url.contains("fastdl.") -> {
+
                 EmbeddedFastdlserver().getUrl(
                     url,
                     referer,
@@ -784,6 +1054,7 @@ class TheMoviesFlixProvider : MainAPI() {
             }
 
             url.contains("linksmod.") -> {
+
                 EmbeddedLinksmod().getUrl(
                     url,
                     referer,
@@ -793,6 +1064,7 @@ class TheMoviesFlixProvider : MainAPI() {
             }
 
             url.contains("hubdrive.") -> {
+
                 EmbeddedHubdrive().getUrl(
                     url,
                     referer,
@@ -802,6 +1074,7 @@ class TheMoviesFlixProvider : MainAPI() {
             }
 
             url.contains("howblogs.") -> {
+
                 EmbeddedHowblogs().getUrl(
                     url,
                     referer,
@@ -811,6 +1084,7 @@ class TheMoviesFlixProvider : MainAPI() {
             }
 
             else -> {
+
                 loadExtractor(
                     url,
                     referer,
@@ -828,26 +1102,37 @@ class TheMoviesFlixProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val (matchedUrl, season, episode) = try {
-            val json = JSONObject(data)
+        val (
+            matchedUrl,
+            season,
+            episode
+        ) = try {
+
+            val json =
+                JSONObject(data)
 
             Triple(
                 json.optString(
                     "url",
                     data
                 ),
-                if (json.has("season")) {
+                if (
+                    json.has("season")
+                ) {
                     json.getInt("season")
                 } else {
                     null
                 },
-                if (json.has("episode")) {
+                if (
+                    json.has("episode")
+                ) {
                     json.getInt("episode")
                 } else {
                     null
                 }
             )
         } catch (_: Exception) {
+
             Triple(
                 data,
                 null,
@@ -855,19 +1140,21 @@ class TheMoviesFlixProvider : MainAPI() {
             )
         }
 
-        val document = try {
-            app.get(
-                matchedUrl,
-                timeout = 30L
-            ).document
-        } catch (_: Exception) {
-            return false
-        }
+        val document =
+            try {
+                app.get(
+                    matchedUrl,
+                    timeout = 30L
+                ).document
+            } catch (_: Exception) {
+                return false
+            }
 
         val validButtons =
             mutableListOf<Element>()
 
         if (season != null) {
+
             val seasonRegex =
                 Regex(
                     """(?i)(Season\s*0?$season|S0?$season)"""
@@ -875,22 +1162,35 @@ class TheMoviesFlixProvider : MainAPI() {
 
             val seasonGroups =
                 document
-                    .select("div.mfx-download-group")
+                    .select(
+                        "div.mfx-download-group"
+                    )
                     .filter {
                         it
-                            .select("h3.mfx-quality-title")
+                            .select(
+                                "h3.mfx-quality-title"
+                            )
                             .text()
-                            .contains(seasonRegex)
+                            .contains(
+                                seasonRegex
+                            )
                     }
 
-            if (seasonGroups.isNotEmpty()) {
-                for (group in seasonGroups) {
-                    val btns =
+            if (
+                seasonGroups.isNotEmpty()
+            ) {
+
+                for (
+                    group in seasonGroups
+                ) {
+
+                    val buttons =
                         group.select(
                             "a.mfx-download-link, a.maxbutton"
                         )
 
-                    for (btn in btns) {
+                    for (btn in buttons) {
+
                         val text =
                             btn.text().lowercase()
 
@@ -898,42 +1198,59 @@ class TheMoviesFlixProvider : MainAPI() {
                             !text.contains("zip") &&
                             !text.contains("batch")
                         ) {
-                            validButtons.add(btn)
+                            validButtons.add(
+                                btn
+                            )
                         }
                     }
                 }
+
             } else {
+
                 val headings =
                     document
                         .select("h3, h4")
                         .filter {
                             it.text()
-                                .contains(seasonRegex)
+                                .contains(
+                                    seasonRegex
+                                )
                         }
 
-                for (heading in headings) {
+                for (
+                    heading in headings
+                ) {
+
                     var sibling =
-                        heading.nextElementSibling()
+                        heading
+                            .nextElementSibling()
 
                     while (
                         sibling != null &&
                         sibling.tagName() != "h3" &&
                         sibling.tagName() != "h4"
                     ) {
-                        val btns =
+
+                        val buttons =
                             sibling.select(
                                 "a.mfx-download-link, a.maxbutton"
                             )
 
-                        for (btn in btns) {
+                        for (
+                            btn in buttons
+                        ) {
+
                             val text =
-                                btn.text().lowercase()
+                                btn.text()
+                                    .lowercase()
 
                             if (
                                 !text.contains("zip") &&
                                 !text.contains("batch")
                             ) {
-                                validButtons.add(btn)
+                                validButtons.add(
+                                    btn
+                                )
                             }
                         }
 
@@ -942,13 +1259,18 @@ class TheMoviesFlixProvider : MainAPI() {
                     }
                 }
             }
+
         } else {
-            val btns =
+
+            val buttons =
                 document.select(
-                    "a.mfx-download-link, a.maxbutton, a[href*='mobilejsr']"
+                    "a.mfx-download-link, " +
+                        "a.maxbutton, " +
+                        "a[href*='mobilejsr']"
                 )
 
-            for (btn in btns) {
+            for (btn in buttons) {
+
                 val text =
                     btn.text().lowercase()
 
@@ -956,7 +1278,9 @@ class TheMoviesFlixProvider : MainAPI() {
                     !text.contains("zip") &&
                     !text.contains("batch")
                 ) {
-                    validButtons.add(btn)
+                    validButtons.add(
+                        btn
+                    )
                 }
             }
         }
@@ -969,7 +1293,9 @@ class TheMoviesFlixProvider : MainAPI() {
         suspend fun processEpisodeIndexPage(
             pageUrl: String
         ) {
+
             try {
+
                 val innerDoc =
                     app.get(
                         pageUrl,
@@ -986,6 +1312,7 @@ class TheMoviesFlixProvider : MainAPI() {
                         )
                     )
                 ) {
+
                     val episodeRegex =
                         Regex(
                             """(?i)Episodes?\s*[:-]\s*0?$episode\b"""
@@ -993,24 +1320,36 @@ class TheMoviesFlixProvider : MainAPI() {
 
                     val epHeading =
                         innerDoc
-                            .select("h3, h4, p")
+                            .select(
+                                "h3, h4, p"
+                            )
                             .firstOrNull {
                                 it.text()
-                                    .contains(episodeRegex)
+                                    .contains(
+                                        episodeRegex
+                                    )
                             }
 
-                    val epBtns =
+                    val epButtons =
                         epHeading
                             ?.nextElementSibling()
                             ?.select("a[href]")
                             ?.toList()
                             ?: emptyList()
 
-                    for (epBtn in epBtns) {
-                        val finalUrl =
-                            epBtn.attr("href")
+                    for (
+                        epButton in epButtons
+                    ) {
 
-                        if (finalUrl.isNotBlank()) {
+                        val finalUrl =
+                            epButton.attr(
+                                "href"
+                            )
+
+                        if (
+                            finalUrl.isNotBlank()
+                        ) {
+
                             routeAndLoadExtractor(
                                 finalUrl,
                                 matchedUrl,
@@ -1019,8 +1358,10 @@ class TheMoviesFlixProvider : MainAPI() {
                             )
                         }
                     }
+
                 } else {
-                    val innerBtns =
+
+                    val innerButtons =
                         innerDoc
                             .select(
                                 "a.btn, " +
@@ -1032,11 +1373,19 @@ class TheMoviesFlixProvider : MainAPI() {
                             )
                             .toList()
 
-                    for (innerBtn in innerBtns) {
-                        val finalUrl =
-                            innerBtn.attr("href")
+                    for (
+                        innerButton in innerButtons
+                    ) {
 
-                        if (finalUrl.isNotBlank()) {
+                        val finalUrl =
+                            innerButton.attr(
+                                "href"
+                            )
+
+                        if (
+                            finalUrl.isNotBlank()
+                        ) {
+
                             routeAndLoadExtractor(
                                 finalUrl,
                                 matchedUrl,
@@ -1046,13 +1395,19 @@ class TheMoviesFlixProvider : MainAPI() {
                         }
                     }
                 }
+
             } catch (_: Exception) {
             }
         }
 
-        for (btn in downloadButtons) {
+        for (
+            button in downloadButtons
+        ) {
+
             val link =
-                btn.attr("href").trim()
+                button
+                    .attr("href")
+                    .trim()
 
             if (link.isBlank()) {
                 continue
@@ -1064,19 +1419,32 @@ class TheMoviesFlixProvider : MainAPI() {
                     ignoreCase = true
                 )
             ) {
+
                 try {
+
                     val customHeaders =
                         mapOf(
                             "User-Agent" to
-                                "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 " +
-                                    "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+                                "Mozilla/5.0 (Linux; Android 10; K) " +
+                                    "AppleWebKit/537.36 " +
+                                    "(KHTML, like Gecko) " +
+                                    "Chrome/120.0.0.0 " +
+                                    "Mobile Safari/537.36",
+
                             "Accept" to
-                                "text/html,application/xhtml+xml,application/xml;q=0.9," +
-                                    "image/avif,image/webp,image/apng,*/*;q=0.8",
+                                "text/html,application/xhtml+xml," +
+                                    "application/xml;q=0.9," +
+                                    "image/avif,image/webp," +
+                                    "image/apng,*/*;q=0.8",
+
                             "Accept-Language" to
                                 "en-US,en;q=0.9",
-                            "Upgrade-Insecure-Requests" to "1",
-                            "Referer" to matchedUrl
+
+                            "Upgrade-Insecure-Requests" to
+                                "1",
+
+                            "Referer" to
+                                matchedUrl
                         )
 
                     val jsrHtml =
@@ -1091,13 +1459,21 @@ class TheMoviesFlixProvider : MainAPI() {
                         )
 
                     val matchResult =
-                        base64Regex.find(jsrHtml)
+                        base64Regex.find(
+                            jsrHtml
+                        )
 
-                    if (matchResult != null) {
+                    if (
+                        matchResult != null
+                    ) {
+
                         val cleanBase64 =
                             matchResult
                                 .groupValues[1]
-                                .replace("\\", "")
+                                .replace(
+                                    "\\",
+                                    ""
+                                )
                                 .replace(
                                     Regex("\\s+"),
                                     ""
@@ -1109,16 +1485,20 @@ class TheMoviesFlixProvider : MainAPI() {
                             )
 
                         val decodedDoc =
-                            Jsoup.parse(decodedHtml)
+                            Jsoup.parse(
+                                decodedHtml
+                            )
 
                         if (
                             episode != null &&
-                            decodedDoc.text().contains(
-                                Regex(
-                                    """(?i)Episodes?\s*[:-]\s*0?$episode\b"""
+                            decodedDoc.text()
+                                .contains(
+                                    Regex(
+                                        """(?i)Episodes?\s*[:-]\s*0?$episode\b"""
+                                    )
                                 )
-                            )
                         ) {
+
                             val episodeRegex =
                                 Regex(
                                     """(?i)Episodes?\s*[:-]\s*0?$episode\b"""
@@ -1126,7 +1506,9 @@ class TheMoviesFlixProvider : MainAPI() {
 
                             val epHeading =
                                 decodedDoc
-                                    .select("h3, h4, p")
+                                    .select(
+                                        "h3, h4, p"
+                                    )
                                     .firstOrNull {
                                         it.text()
                                             .contains(
@@ -1134,16 +1516,21 @@ class TheMoviesFlixProvider : MainAPI() {
                                             )
                                     }
 
-                            val epBtns =
+                            val epButtons =
                                 epHeading
                                     ?.nextElementSibling()
                                     ?.select("a[href]")
                                     ?.toList()
                                     ?: emptyList()
 
-                            for (epBtn in epBtns) {
+                            for (
+                                epButton in epButtons
+                            ) {
+
                                 val finalUrl =
-                                    epBtn.attr("href")
+                                    epButton.attr(
+                                        "href"
+                                    )
 
                                 if (
                                     finalUrl.isNotBlank() &&
@@ -1153,6 +1540,7 @@ class TheMoviesFlixProvider : MainAPI() {
                                         true
                                     )
                                 ) {
+
                                     routeAndLoadExtractor(
                                         finalUrl,
                                         matchedUrl,
@@ -1161,15 +1549,24 @@ class TheMoviesFlixProvider : MainAPI() {
                                     )
                                 }
                             }
+
                         } else {
+
                             val finalLinks =
                                 decodedDoc
-                                    .select("a[href]")
+                                    .select(
+                                        "a[href]"
+                                    )
                                     .toList()
 
-                            for (finalBtn in finalLinks) {
+                            for (
+                                finalButton in finalLinks
+                            ) {
+
                                 val finalUrl =
-                                    finalBtn.attr("href")
+                                    finalButton.attr(
+                                        "href"
+                                    )
 
                                 if (
                                     finalUrl.isBlank() ||
@@ -1187,14 +1584,19 @@ class TheMoviesFlixProvider : MainAPI() {
                                         "/links/"
                                     ) ||
                                     finalUrl.contains(
-                                        mainUrl.removeSuffix("/"),
+                                        mainUrl.removeSuffix(
+                                            "/"
+                                        ),
                                         true
                                     )
                                 ) {
+
                                     processEpisodeIndexPage(
                                         finalUrl
                                     )
+
                                 } else {
+
                                     routeAndLoadExtractor(
                                         finalUrl,
                                         matchedUrl,
@@ -1205,8 +1607,10 @@ class TheMoviesFlixProvider : MainAPI() {
                             }
                         }
                     }
+
                 } catch (_: Exception) {
                 }
+
             } else if (
                 link.contains(
                     mainUrl.removeSuffix("/"),
@@ -1217,9 +1621,20 @@ class TheMoviesFlixProvider : MainAPI() {
                     true
                 )
             ) {
-                processEpisodeIndexPage(link)
+
+                processEpisodeIndexPage(
+                    link
+                )
+
             } else {
-                if (!link.contains("mobilejsr", true)) {
+
+                if (
+                    !link.contains(
+                        "mobilejsr",
+                        true
+                    )
+                ) {
+
                     routeAndLoadExtractor(
                         link,
                         matchedUrl,
@@ -1236,13 +1651,19 @@ class TheMoviesFlixProvider : MainAPI() {
 
 open class EmbeddedHubCloud : ExtractorApi() {
 
-    override val name: String = "Hub-Cloud"
-    override val mainUrl: String = "https://hubcloud.*"
-    override val requiresReferer = false
+    override val name =
+        "Hub-Cloud"
+
+    override val mainUrl =
+        "https://hubcloud.*"
+
+    override val requiresReferer =
+        false
 
     private fun extractPxlUrl(
         html: String
     ): String? {
+
         val regex =
             Regex(
                 """var\s+pxl\s*=\s*["']([^"']+)["']"""
@@ -1257,6 +1678,7 @@ open class EmbeddedHubCloud : ExtractorApi() {
     private fun extractDoubleAtob(
         html: String
     ): String? {
+
         val regex =
             Regex(
                 """var\s+url\s*=\s*atob\s*\(\s*atob\s*\(\s*['"]([^'"]+)['"]\s*\)\s*\)"""
@@ -1279,11 +1701,14 @@ open class EmbeddedHubCloud : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+
         var baseUrl =
             getBaseUrl(url)
 
         val latestBaseUrl =
-            if (url.contains("hubcloud")) {
+            if (
+                url.contains("hubcloud")
+            ) {
                 getLatestBaseUrl(
                     baseUrl,
                     "hubcloud"
@@ -1297,28 +1722,38 @@ open class EmbeddedHubCloud : ExtractorApi() {
 
         var newUrl = url
 
-        if (baseUrl != latestBaseUrl) {
+        if (
+            baseUrl != latestBaseUrl
+        ) {
             newUrl =
                 url.replace(
                     baseUrl,
                     latestBaseUrl
                 )
 
-            baseUrl = latestBaseUrl
+            baseUrl =
+                latestBaseUrl
         }
 
         val doc =
             app.get(newUrl).document
 
         var link =
-            if (newUrl.contains("/video/")) {
+            if (
+                newUrl.contains(
+                    "/video/"
+                )
+            ) {
+
                 doc
                     .selectFirst(
                         "div.vd > center > a"
                     )
                     ?.attr("href")
                     ?: ""
+
             } else {
+
                 val scriptTag =
                     doc
                         .selectFirst(
@@ -1327,11 +1762,18 @@ open class EmbeddedHubCloud : ExtractorApi() {
                         ?.toString()
                         ?: ""
 
-                if (newUrl.contains("vcloud")) {
+                if (
+                    newUrl.contains(
+                        "vcloud"
+                    )
+                ) {
+
                     extractDoubleAtob(
                         scriptTag
                     ) ?: ""
+
                 } else {
+
                     Regex(
                         "var url = '([^']*)'"
                     )
@@ -1342,7 +1784,11 @@ open class EmbeddedHubCloud : ExtractorApi() {
                 }
             }
 
-        if (!link.startsWith("https://")) {
+        if (
+            !link.startsWith(
+                "https://"
+            )
+        ) {
             link =
                 baseUrl + link
         }
@@ -1352,7 +1798,9 @@ open class EmbeddedHubCloud : ExtractorApi() {
 
         val header =
             document
-                .select("div.card-header")
+                .select(
+                    "div.card-header"
+                )
                 .text()
 
         val size =
@@ -1367,53 +1815,69 @@ open class EmbeddedHubCloud : ExtractorApi() {
             finalLink: String,
             server: String = ""
         ) {
+
             val extractorLink =
-                newExtractorLink(
-                    "${name}${server}",
-                    "${name}${server} ${header}[${size}]",
-                    finalLink,
-                    ExtractorLinkType.VIDEO
+                createExtractorLink(
+                    source = "${name}${server}",
+                    name = "${name}${server} ${header}[${size}]",
+                    url = finalLink,
+                    type = ExtractorLinkType.VIDEO,
+                    quality = quality,
+                    referer = "$mainUrl/"
                 )
 
-            extractorLink.quality = quality
-            extractorLink.referer =
-                "$mainUrl/"
-
-            callback.invoke(
+            callback(
                 extractorLink
             )
         }
 
-        for (btn in document.select("h2 a.btn")) {
-            val hlink =
-                btn.attr("href")
+        for (
+            button in document.select(
+                "h2 a.btn"
+            )
+        ) {
+
+            val href =
+                button.attr("href")
 
             val text =
-                btn.text()
+                button.text()
 
             when {
-                text.contains("FSL Server") ->
+
+                text.contains(
+                    "FSL Server"
+                ) ->
                     myCallback(
-                        hlink,
+                        href,
                         "[FSL Server]"
                     )
 
-                text.contains("FSLv2") ->
+                text.contains(
+                    "FSLv2"
+                ) ->
                     myCallback(
-                        hlink,
+                        href,
                         "[FSLv2 Server]"
                     )
 
-                text.contains("Mega Server") ->
+                text.contains(
+                    "Mega Server"
+                ) ->
                     myCallback(
-                        hlink,
+                        href,
                         "[Mega Server]"
                     )
 
-                text.contains("Download File") ->
-                    myCallback(hlink)
+                text.contains(
+                    "Download File"
+                ) ->
+                    myCallback(href)
 
-                hlink.contains("pixeldra") -> {
+                href.contains(
+                    "pixeldra"
+                ) -> {
+
                     val pixelLink =
                         extractPxlUrl(
                             document.toString()
@@ -1421,7 +1885,9 @@ open class EmbeddedHubCloud : ExtractorApi() {
                             ?: continue
 
                     val baseUrlLink =
-                        getBaseUrl(pixelLink)
+                        getBaseUrl(
+                            pixelLink
+                        )
 
                     val finalUrl =
                         if (
@@ -1442,13 +1908,19 @@ open class EmbeddedHubCloud : ExtractorApi() {
                     )
                 }
 
-                text.contains("Server : 10Gbps") -> {
+                text.contains(
+                    "Server : 10Gbps"
+                ) -> {
+
                     var redirectUrl =
-                        resolveFinalUrl(hlink)
-                            ?: continue
+                        resolveFinalUrl(
+                            href
+                        ) ?: continue
 
                     if (
-                        redirectUrl.contains("link=")
+                        redirectUrl.contains(
+                            "link="
+                        )
                     ) {
                         redirectUrl =
                             redirectUrl.substringAfter(
@@ -1462,13 +1934,17 @@ open class EmbeddedHubCloud : ExtractorApi() {
                     )
                 }
 
-                text.contains("Gofile") ->
+                text.contains(
+                    "Gofile"
+                ) -> {
+
                     loadExtractor(
-                        hlink,
+                        href,
                         "",
                         subtitleCallback,
                         callback
                     )
+                }
             }
         }
     }
@@ -1476,9 +1952,14 @@ open class EmbeddedHubCloud : ExtractorApi() {
 
 class EmbeddedFilepress : ExtractorApi() {
 
-    override val name = "Filepress"
-    override val mainUrl = "https://filepress.baby"
-    override val requiresReferer = true
+    override val name =
+        "Filepress"
+
+    override val mainUrl =
+        "https://filepress.baby"
+
+    override val requiresReferer =
+        true
 
     override suspend fun getUrl(
         url: String,
@@ -1486,9 +1967,13 @@ class EmbeddedFilepress : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+
         try {
+
             val fileId =
-                url.substringAfterLast("/")
+                url.substringAfterLast(
+                    "/"
+                )
 
             val apiUrl =
                 "https://${URI(url).host}/api/file/get/$fileId" +
@@ -1503,30 +1988,33 @@ class EmbeddedFilepress : ExtractorApi() {
                 ).text
 
             val downloadUrl =
-                JSONObject(jsonResponse)
-                    .optString("url")
+                JSONObject(
+                    jsonResponse
+                ).optString("url")
 
-            if (downloadUrl.isNotBlank()) {
+            if (
+                downloadUrl.isNotBlank()
+            ) {
+
                 val extractorLink =
-                    newExtractorLink(
-                        name,
-                        "$name [G-Drive]",
-                        downloadUrl,
-                        ExtractorLinkType.VIDEO
+                    createExtractorLink(
+                        source = name,
+                        name = "$name [G-Drive]",
+                        url = downloadUrl,
+                        type = ExtractorLinkType.VIDEO,
+                        headers = mapOf(
+                            "Referer" to url
+                        ),
+                        referer = url
                     )
 
-                extractorLink.headers =
-                    mapOf(
-                        "Referer" to url
-                    )
-
-                extractorLink.referer = url
-
-                callback.invoke(
+                callback(
                     extractorLink
                 )
             }
+
         } catch (_: Exception) {
+
             val directLink =
                 url.replace(
                     "/file/",
@@ -1534,21 +2022,18 @@ class EmbeddedFilepress : ExtractorApi() {
                 ) + "?download"
 
             val extractorLink =
-                newExtractorLink(
-                    name,
-                    "$name [Fallback]",
-                    directLink,
-                    ExtractorLinkType.VIDEO
+                createExtractorLink(
+                    source = name,
+                    name = "$name [Fallback]",
+                    url = directLink,
+                    type = ExtractorLinkType.VIDEO,
+                    headers = mapOf(
+                        "Referer" to url
+                    ),
+                    referer = url
                 )
 
-            extractorLink.headers =
-                mapOf(
-                    "Referer" to url
-                )
-
-            extractorLink.referer = url
-
-            callback.invoke(
+            callback(
                 extractorLink
             )
         }
@@ -1557,9 +2042,14 @@ class EmbeddedFilepress : ExtractorApi() {
 
 class EmbeddedFastdlserver : ExtractorApi() {
 
-    override val name = "fastdlserver"
-    override var mainUrl = "https://fastdlserver.*"
-    override val requiresReferer = false
+    override val name =
+        "fastdlserver"
+
+    override var mainUrl =
+        "https://fastdlserver.*"
+
+    override val requiresReferer =
+        false
 
     override suspend fun getUrl(
         url: String,
@@ -1567,13 +2057,17 @@ class EmbeddedFastdlserver : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+
         val location =
             app.get(
                 url,
                 allowRedirects = false
             ).headers["location"]
 
-        if (location != null) {
+        if (
+            location != null
+        ) {
+
             loadExtractor(
                 location,
                 "",
@@ -1586,9 +2080,14 @@ class EmbeddedFastdlserver : ExtractorApi() {
 
 class EmbeddedLinksmod : ExtractorApi() {
 
-    override val name = "Linksmod"
-    override var mainUrl = "https://linksmod.*"
-    override val requiresReferer = false
+    override val name =
+        "Linksmod"
+
+    override var mainUrl =
+        "https://linksmod.*"
+
+    override val requiresReferer =
+        false
 
     override suspend fun getUrl(
         url: String,
@@ -1596,30 +2095,49 @@ class EmbeddedLinksmod : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+
         val document =
             app.get(url).document
 
         val links =
             document
-                .select("div .view-well > a")
+                .select(
+                    "div .view-well > a"
+                )
                 .toList()
 
-        for (link in links) {
-            loadExtractor(
-                link.attr("href"),
-                "",
-                subtitleCallback,
-                callback
-            )
+        for (
+            link in links
+        ) {
+
+            val href =
+                link.attr("href")
+
+            if (
+                href.isNotBlank()
+            ) {
+
+                loadExtractor(
+                    href,
+                    "",
+                    subtitleCallback,
+                    callback
+                )
+            }
         }
     }
 }
 
 class EmbeddedHubdrive : ExtractorApi() {
 
-    override val name = "Hubdrive"
-    override val mainUrl = "https://hubdrive.*"
-    override val requiresReferer = false
+    override val name =
+        "Hubdrive"
+
+    override val mainUrl =
+        "https://hubdrive.*"
+
+    override val requiresReferer =
+        false
 
     override suspend fun getUrl(
         url: String,
@@ -1627,6 +2145,7 @@ class EmbeddedHubdrive : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+
         val href =
             app.get(url)
                 .document
@@ -1635,20 +2154,30 @@ class EmbeddedHubdrive : ExtractorApi() {
                 )
                 .attr("href")
 
-        loadExtractor(
-            href,
-            "",
-            subtitleCallback,
-            callback
-        )
+        if (
+            href.isNotBlank()
+        ) {
+
+            loadExtractor(
+                href,
+                "",
+                subtitleCallback,
+                callback
+            )
+        }
     }
 }
 
 class EmbeddedHowblogs : ExtractorApi() {
 
-    override val name: String = "Howblogs"
-    override val mainUrl: String = "https://howblogs.*"
-    override val requiresReferer = false
+    override val name =
+        "Howblogs"
+
+    override val mainUrl =
+        "https://howblogs.*"
+
+    override val requiresReferer =
+        false
 
     override suspend fun getUrl(
         url: String,
@@ -1656,19 +2185,33 @@ class EmbeddedHowblogs : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+
         val links =
             app.get(url)
                 .document
-                .select("div.center_it a")
+                .select(
+                    "div.center_it a"
+                )
                 .toList()
 
-        for (link in links) {
-            loadExtractor(
-                link.attr("href"),
-                referer,
-                subtitleCallback,
-                callback
-            )
+        for (
+            link in links
+        ) {
+
+            val href =
+                link.attr("href")
+
+            if (
+                href.isNotBlank()
+            ) {
+
+                loadExtractor(
+                    href,
+                    referer,
+                    subtitleCallback,
+                    callback
+                )
+            }
         }
     }
 }
