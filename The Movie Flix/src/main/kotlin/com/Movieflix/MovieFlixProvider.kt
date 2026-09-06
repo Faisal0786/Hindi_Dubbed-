@@ -858,8 +858,8 @@ class TheMoviesFlixProvider : MainAPI() {
                             linkDataString
                         ) {
                             name = epTitle
-                            season = seasonNumber
-                            episode = episodeNumber
+                            this.season = seasonNumber
+    this.episode = episodeNumber
                         }
                     }
 
