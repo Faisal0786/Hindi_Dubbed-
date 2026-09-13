@@ -3,6 +3,7 @@ package com.anime
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.coroutines.delay
