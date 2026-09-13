@@ -3,6 +3,7 @@ package com.anime
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parsedSafe
 
 // =========================================================
@@ -65,15 +66,10 @@ class KitsuAnimeProvider : MainAPI() {
     override var lang = "en"
     override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie)
 
-    // Kitsu API Headers required by their docs
     private val kitsuHeaders = mapOf(
         "Accept" to "application/vnd.api+json",
         "Content-Type" to "application/vnd.api+json"
     )
-
-    // =========================================================
-    // HOME PAGE
-    // =========================================================
 
     override val mainPage = mainPageOf(
         "$mainUrl/anime?sort=-userCount" to "Most Popular",
@@ -83,7 +79,6 @@ class KitsuAnimeProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // Pagination logic for Kitsu (page[limit]=20 & page[offset]=...)
         val offset = (page - 1) * 20
         val url = "${request.data}&page[limit]=20&page[offset]=$offset"
 
@@ -101,13 +96,9 @@ class KitsuAnimeProvider : MainAPI() {
         return newHomePageResponse(request.name, results, hasNext = results.isNotEmpty())
     }
 
-    // =========================================================
-    // SEARCH
-    // =========================================================
-
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/anime?filter[text]=$query&page[limit]=20"
-
+        
         val response = app.get(url, headers = kitsuHeaders).parsedSafe<KitsuSearchResponse>()
 
         return response?.data?.mapNotNull { anime ->
@@ -120,50 +111,40 @@ class KitsuAnimeProvider : MainAPI() {
         } ?: emptyList()
     }
 
-    // =========================================================
-    // LOAD DETAILS & EPISODES
-    // =========================================================
-
     override suspend fun load(url: String): LoadResponse? {
-        // Here, 'url' will actually be the Kitsu ID passed from search/mainPage
         val animeId = url
-
-        // 1. Fetch Anime Metadata
         val detailUrl = "$mainUrl/anime/$animeId"
         val detailResponse = app.get(detailUrl, headers = kitsuHeaders).parsedSafe<KitsuSingleResponse>()?.data ?: return null
-
+        
         val attr = detailResponse.attributes ?: return null
         val title = attr.canonicalTitle ?: return null
         val poster = attr.posterImage?.large ?: attr.posterImage?.original
         val background = attr.coverImage?.large ?: attr.coverImage?.original
         val plot = attr.synopsis
         val year = attr.startDate?.substringBefore("-")?.toIntOrNull()
-
+        
         val tvType = if (attr.showType == "movie") TvType.AnimeMovie else TvType.Anime
 
-        // 2. Fetch Episodes
         val episodesList = mutableListOf<Episode>()
         var nextEpUrl: String? = "$mainUrl/anime/$animeId/episodes?page[limit]=20"
 
-        // Loop to fetch all episodes (Kitsu paginates episodes)
         while (nextEpUrl != null) {
             try {
                 val epJson = app.get(nextEpUrl!!, headers = kitsuHeaders).text
                 val epResponse = org.json.JSONObject(epJson)
-
+                
                 val dataArray = epResponse.optJSONArray("data")
                 if (dataArray != null) {
                     for (i in 0 until dataArray.length()) {
                         val epData = dataArray.getJSONObject(i)
                         val epAttr = epData.optJSONObject("attributes") ?: continue
-
+                        
                         val epNum = epAttr.optInt("number")
                         val epSeason = epAttr.optInt("seasonNumber")
                         val epTitle = epAttr.optString("canonicalTitle").takeIf { it != "null" }
                         val epPlot = epAttr.optString("synopsis").takeIf { it != "null" }
                         val epThumb = epAttr.optJSONObject("thumbnail")?.optString("original")
 
-                        // Passing ID and EpNum to loadLinks via Data String
                         val linkData = """{"kitsuId":"$animeId", "epNum":$epNum, "title":"$title"}"""
 
                         episodesList.add(
@@ -177,7 +158,6 @@ class KitsuAnimeProvider : MainAPI() {
                         )
                     }
                 }
-                // Pagination check
                 nextEpUrl = epResponse.optJSONObject("links")?.optString("next", null)
             } catch (e: Exception) {
                 Log.e("KitsuProvider", "Episode Fetch Error: ${e.message}")
@@ -191,22 +171,18 @@ class KitsuAnimeProvider : MainAPI() {
             this.year = year
             this.plot = plot
             if (episodesList.isNotEmpty()) {
-                addEpisodes(DubStatus.Subbed, episodesList) // You can map dubs if your streaming source supports it
+                addEpisodes(DubStatus.Subbed, episodesList)
             }
         }
     }
 
-    // =========================================================
-    // LOAD LINKS (VIDEO EXTRACTION)
-    // =========================================================
-
+    // Fixed loadLinks override signature and imports
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // Parse the link data we sent from the load() function
         val json = org.json.JSONObject(data)
         val kitsuId = json.optString("kitsuId")
         val epNum = json.optInt("epNum")
@@ -214,18 +190,8 @@ class KitsuAnimeProvider : MainAPI() {
 
         Log.d("KitsuAnime", "Looking for video links for: $title - Episode $epNum")
 
-        /* 
-         * IMPORTANT NOTE: 
-         * Kitsu API DOES NOT provide video links. 
-         * You must use the `title` or `kitsuId` to search an actual streaming site 
-         * (like Gogoanime, Consumet API, AllAnime, etc.) here to get the m3u8/mp4 link.
-         * 
-         * Example Concept:
-         * val searchGogo = app.get("https://gogoanime.website/search?keyword=$title").document
-         * val animeUrl = searchGogo.selectFirst("...").attr("href")
-         * // Then load extractors from that animeUrl
-         */
-
+        // Kitsu sirf metadata deta hai. Asli streaming link dhoondhne ka logic yahan likhna hoga.
+        
         return true
     }
 }
