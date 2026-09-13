@@ -4,7 +4,7 @@ import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.parsedSafe
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 
 // =========================================================
 // 1. KITSU API DATA MODELS (JACKSON)
@@ -82,7 +82,8 @@ class KitsuAnimeProvider : MainAPI() {
         val offset = (page - 1) * 20
         val url = "${request.data}&page[limit]=20&page[offset]=$offset"
 
-        val response = app.get(url, headers = kitsuHeaders).parsedSafe<KitsuSearchResponse>()
+        val jsonText = app.get(url, headers = kitsuHeaders).text
+        val response = tryParseJson<KitsuSearchResponse>(jsonText)
 
         val results = response?.data?.mapNotNull { anime ->
             val title = anime.attributes?.canonicalTitle ?: return@mapNotNull null
@@ -99,7 +100,8 @@ class KitsuAnimeProvider : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/anime?filter[text]=$query&page[limit]=20"
         
-        val response = app.get(url, headers = kitsuHeaders).parsedSafe<KitsuSearchResponse>()
+        val jsonText = app.get(url, headers = kitsuHeaders).text
+        val response = tryParseJson<KitsuSearchResponse>(jsonText)
 
         return response?.data?.mapNotNull { anime ->
             val title = anime.attributes?.canonicalTitle ?: return@mapNotNull null
@@ -114,7 +116,9 @@ class KitsuAnimeProvider : MainAPI() {
     override suspend fun load(url: String): LoadResponse? {
         val animeId = url
         val detailUrl = "$mainUrl/anime/$animeId"
-        val detailResponse = app.get(detailUrl, headers = kitsuHeaders).parsedSafe<KitsuSingleResponse>()?.data ?: return null
+        
+        val detailJson = app.get(detailUrl, headers = kitsuHeaders).text
+        val detailResponse = tryParseJson<KitsuSingleResponse>(detailJson)?.data ?: return null
         
         val attr = detailResponse.attributes ?: return null
         val title = attr.canonicalTitle ?: return null
@@ -176,7 +180,6 @@ class KitsuAnimeProvider : MainAPI() {
         }
     }
 
-    // Fixed loadLinks override signature and imports
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -190,7 +193,7 @@ class KitsuAnimeProvider : MainAPI() {
 
         Log.d("KitsuAnime", "Looking for video links for: $title - Episode $epNum")
 
-        // Kitsu sirf metadata deta hai. Asli streaming link dhoondhne ka logic yahan likhna hoga.
+        // Kitsu sirf metadata deta hai. Streaming link logic yahan aayega.
         
         return true
     }
