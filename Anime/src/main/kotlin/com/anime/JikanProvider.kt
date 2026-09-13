@@ -47,8 +47,6 @@ data class JikanAnime(
     @JsonProperty("year") val year: Int? = null,
     @JsonProperty("type") val type: String? = null, 
     @JsonProperty("trailer") val trailer: JikanTrailer? = null,
-    
-    // 🔥 NAYI FIELDS FOR RICH METADATA
     @JsonProperty("score") val score: Double? = null,
     @JsonProperty("status") val status: String? = null,
     @JsonProperty("duration") val duration: String? = null,
@@ -182,7 +180,6 @@ class JikanProvider : MainAPI() {
         val trailerId = anime.trailer?.youtubeId
         val tvType = if (anime.type?.equals("Movie", true) == true) TvType.AnimeMovie else TvType.Anime
 
-        // 🔥 RICH METADATA EXTRACTION
         val allTags = mutableListOf<String>()
         anime.genres?.forEach { it.name?.let { name -> allTags.add(name) } }
         anime.themes?.forEach { it.name?.let { name -> allTags.add(name) } }
@@ -194,8 +191,9 @@ class JikanProvider : MainAPI() {
             else -> null
         }
 
-        val ratingInt = anime.score?.times(1000)?.toInt() // Converts 8.5 to 8500 (Cloudstream standard)
-        val durationInt = anime.duration?.let { Regex("(\\d+)").find(it)?.value?.toIntOrNull() } // Extracts purely the minute number
+        // 🔥 FIX: Changed mapping logic to support the new 'score' property instead of 'rating'
+        val ratingDouble = anime.score // Jikan gives score like 8.5
+        val durationInt = anime.duration?.let { Regex("(\\d+)").find(it)?.value?.toIntOrNull() } 
         val studios = anime.studios?.mapNotNull { it.name }?.joinToString(", ")
         
         val plot = if (!studios.isNullOrBlank()) {
@@ -204,7 +202,6 @@ class JikanProvider : MainAPI() {
             anime.synopsis
         }
 
-        // FETCH EPISODES
         val episodesList = mutableListOf<Episode>()
         var currentPage = 1
         var hasNextPage = true
@@ -233,7 +230,7 @@ class JikanProvider : MainAPI() {
                 hasNextPage = epResponse?.pagination?.hasNextPage == true
                 if (hasNextPage) {
                     currentPage++
-                    delay(400) // Rate Limit Protection
+                    delay(400) 
                 }
             } catch (e: Exception) {
                 Log.e("Jikan", "Episode Fetch Error: ${e.message}")
@@ -243,12 +240,13 @@ class JikanProvider : MainAPI() {
 
         return newAnimeLoadResponse(title, url, tvType) {
             this.posterUrl = poster
-            this.backgroundPosterUrl = poster // Banner ke taur pe poster image dikhayega
+            this.backgroundPosterUrl = poster 
             this.year = year
             this.plot = plot
             this.tags = allTags.takeIf { it.isNotEmpty() }
             this.showStatus = showStatus
-            this.rating = ratingInt
+            // 🔥 FIX: Used the new 'score' variable
+            this.score = ratingDouble 
             this.duration = durationInt
 
             if (trailerId != null) {
@@ -270,9 +268,6 @@ class JikanProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        
-        // TODO: Implement actual streaming video logic here in the future
-
         return true
     }
 }
