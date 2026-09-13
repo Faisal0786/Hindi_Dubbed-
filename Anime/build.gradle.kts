@@ -7,7 +7,8 @@ plugins {
 version = 1
 
 android {
-    namespace = "com.anistream"
+    // Dhyan rahe, Anime module ke liye yahan "com.anime" hoga aur AniStream ke liye "com.anistream"
+    namespace = "com.anime" 
     compileSdk = 34
 
     defaultConfig {
@@ -22,10 +23,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-
-    kotlinOptions {
-        jvmTarget = "11"
-    }
+    
+    // 🔴 YAHAN SE kotlinOptions HATA DIYA GAYA HAI 🔴
 }
 
 dependencies {
@@ -37,16 +36,9 @@ dependencies {
 cloudstream {
     language = "en"
 
-    description = "Watch anime in HD with English Sub and Dub from AniStream"
+    description = "Watch anime in HD"
     authors = listOf("Faisal")
 
-    /**
-     * Status int:
-     * 0: Down
-     * 1: Ok
-     * 2: Slow
-     * 3: Beta only
-     */
     status = 1
     tvTypes = listOf(
         "Anime",
@@ -55,4 +47,11 @@ cloudstream {
 
     requiresResources = false
     iconUrl = " "
+}
+
+// 🟢 FIX: KOTLIN JVM TARGET KO FILE KE SABSE NEECHE (BAHAR) AISE LIKHNA HAI 🟢
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    kotlinOptions {
+        jvmTarget = "11"
+    }
 }
