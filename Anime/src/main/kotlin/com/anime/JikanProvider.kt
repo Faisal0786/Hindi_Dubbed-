@@ -246,7 +246,7 @@ class JikanProvider : MainAPI() {
             this.tags = allTags.takeIf { it.isNotEmpty() }
             this.showStatus = showStatus
             // 🔥 FIX: Used the new 'score' variable
-            this.score = ratingDouble 
+            //this.score = ratingDouble 
             this.duration = durationInt
 
             if (trailerId != null) {
