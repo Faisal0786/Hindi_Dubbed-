@@ -89,7 +89,8 @@ class KitsuAnimeProvider : MainAPI() {
             val title = anime.attributes?.canonicalTitle ?: return@mapNotNull null
             val poster = anime.attributes.posterImage?.large ?: anime.attributes.posterImage?.original
 
-            newAnimeSearchResponse(title, anime.id) {
+            // 🔥 FIX: Passed the complete and correct URL here
+            newAnimeSearchResponse(title, "$mainUrl/anime/${anime.id}") {
                 this.posterUrl = poster
             }
         } ?: emptyList()
@@ -99,7 +100,7 @@ class KitsuAnimeProvider : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/anime?filter[text]=$query&page[limit]=20"
-        
+
         val jsonText = app.get(url, headers = kitsuHeaders).text
         val response = tryParseJson<KitsuSearchResponse>(jsonText)
 
@@ -107,26 +108,29 @@ class KitsuAnimeProvider : MainAPI() {
             val title = anime.attributes?.canonicalTitle ?: return@mapNotNull null
             val poster = anime.attributes.posterImage?.large ?: anime.attributes.posterImage?.original
 
-            newAnimeSearchResponse(title, anime.id) {
+            // 🔥 FIX: Passed the complete and correct URL here
+            newAnimeSearchResponse(title, "$mainUrl/anime/${anime.id}") {
                 this.posterUrl = poster
             }
         } ?: emptyList()
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val animeId = url
-        val detailUrl = "$mainUrl/anime/$animeId"
-        
+        // 🔥 FIX: Used the exact URL passed from search/mainPage
+        val detailUrl = url
+        // Extract the ID from the end of the URL for the episodes endpoint
+        val animeId = url.substringAfterLast("/")
+
         val detailJson = app.get(detailUrl, headers = kitsuHeaders).text
         val detailResponse = tryParseJson<KitsuSingleResponse>(detailJson)?.data ?: return null
-        
+
         val attr = detailResponse.attributes ?: return null
         val title = attr.canonicalTitle ?: return null
         val poster = attr.posterImage?.large ?: attr.posterImage?.original
         val background = attr.coverImage?.large ?: attr.coverImage?.original
         val plot = attr.synopsis
         val year = attr.startDate?.substringBefore("-")?.toIntOrNull()
-        
+
         val tvType = if (attr.showType == "movie") TvType.AnimeMovie else TvType.Anime
 
         val episodesList = mutableListOf<Episode>()
@@ -134,19 +138,19 @@ class KitsuAnimeProvider : MainAPI() {
 
         while (nextEpUrl != null) {
             try {
-                val epJson = app.get(nextEpUrl!!, headers = kitsuHeaders).text
+                val epJson = app.get(nextEpUrl, headers = kitsuHeaders).text
                 val epResponse = org.json.JSONObject(epJson)
-                
+
                 val dataArray = epResponse.optJSONArray("data")
                 if (dataArray != null) {
                     for (i in 0 until dataArray.length()) {
                         val epData = dataArray.getJSONObject(i)
                         val epAttr = epData.optJSONObject("attributes") ?: continue
-                        
+
                         val epNum = epAttr.optInt("number")
                         val epSeason = epAttr.optInt("seasonNumber")
-                        val epTitle = epAttr.optString("canonicalTitle").takeIf { it != "null" }
-                        val epPlot = epAttr.optString("synopsis").takeIf { it != "null" }
+                        val epTitle = epAttr.optString("canonicalTitle").takeIf { it != "null" && it.isNotBlank() }
+                        val epPlot = epAttr.optString("synopsis").takeIf { it != "null" && it.isNotBlank() }
                         val epThumb = epAttr.optJSONObject("thumbnail")?.optString("original")
 
                         val linkData = """{"kitsuId":"$animeId", "epNum":$epNum, "title":"$title"}"""
@@ -162,14 +166,15 @@ class KitsuAnimeProvider : MainAPI() {
                         )
                     }
                 }
-                nextEpUrl = epResponse.optJSONObject("links")?.optString("next", null)
+                // Safely grab the next URL for pagination
+                nextEpUrl = epResponse.optJSONObject("links")?.optString("next")?.takeIf { it.isNotBlank() }
             } catch (e: Exception) {
                 Log.e("KitsuProvider", "Episode Fetch Error: ${e.message}")
                 break
             }
         }
 
-        return newAnimeLoadResponse(title, animeId, tvType) {
+        return newAnimeLoadResponse(title, url, tvType) {
             this.posterUrl = poster
             this.backgroundPosterUrl = background
             this.year = year
@@ -194,7 +199,7 @@ class KitsuAnimeProvider : MainAPI() {
         Log.d("KitsuAnime", "Looking for video links for: $title - Episode $epNum")
 
         // Kitsu sirf metadata deta hai. Streaming link logic yahan aayega.
-        
+
         return true
     }
 }
