@@ -8,5 +8,6 @@ import com.lagradost.cloudstream3.plugins.Plugin
 class KitsuProviderPlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(KitsuAnimeProvider())
+registerMainAPI(JikanProvider())
     }
 }
