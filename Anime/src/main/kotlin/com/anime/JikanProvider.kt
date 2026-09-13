@@ -208,15 +208,10 @@ class JikanProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val json = org.json.JSONObject(data)
-        val malId = json.optString("malId")
-        val epNum = json.optInt("epNum")
-        val title = json.optString("title")
-
-        Log.d("Jikan", "Looking for video links for: $title - Episode $epNum (MAL ID: $malId)")
-
-        // Jikan sirf metadata deta hai. Streaming link laane ka logic yahan aayega.
         
+        // TODO: Implement actual streaming video logic here in the future
+        // For now, it safely returns true without crashing or doing anything.
+
         return true
     }
 }
