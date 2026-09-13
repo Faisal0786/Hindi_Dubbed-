@@ -54,6 +54,3 @@ cloudstream {
     iconUrl = ""
 }
 
-dependencies {
-    implementation(project(":StreamHubOne"))
-}
