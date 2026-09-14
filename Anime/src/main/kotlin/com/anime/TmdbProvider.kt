@@ -248,7 +248,7 @@ class TmdbProvider : MainAPI() {
                 this.plot = plot
                 this.year = year
                 this.tags = tags
-                this.status = showStatus
+               // this.status = showStatus
                 this.duration = duration
                 if (trailerKey != null) addTrailer("https://www.youtube.com/watch?v=$trailerKey")
             }
@@ -293,7 +293,7 @@ class TmdbProvider : MainAPI() {
                 this.plot = plot
                 this.year = year
                 this.tags = tags
-                this.status = showStatus
+                this.showStatus = parsedShowStatus
                 if (trailerKey != null) addTrailer("https://www.youtube.com/watch?v=$trailerKey")
             }
         }
