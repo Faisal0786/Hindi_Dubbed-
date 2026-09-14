@@ -206,7 +206,6 @@ class TmdbProvider : MainAPI() {
         val videoJson = try { app.get(videoUrl, headers = tmdbHeaders).text } catch (e: Exception) { "" }
         val trailerKey = AppUtils.tryParseJson<TmdbVideoResponse>(videoJson)?.results?.find { it.site == "YouTube" && it.type == "Trailer" }?.key
 
-        // 🔥 FIX: Added Title to linkData for NetMirror search
         val safeTitle = title.replace("\"", "\\\"")
 
         if (type == "movie") {
@@ -286,13 +285,11 @@ class TmdbProvider : MainAPI() {
             val title = parsedData["title"]?.toString() ?: ""
             val isTv = type == "tv"
             
-            // Safely parse numbers from map
             val season = parsedData["season"]?.toString()?.toDoubleOrNull()?.toInt()
             val episode = parsedData["episode"]?.toString()?.toDoubleOrNull()?.toInt()
 
             Log.d("NetMirror", "Calling Extractor for ID: $tmdbId, Title: $title")
 
-            // Magic Begins
             NetmirrorExtractor.invokeNetmirror2(
                 tmdbId = tmdbId,
                 title = title,
@@ -469,14 +466,32 @@ object NetmirrorExtractor {
             }
 
             if (!data.mp4.isNullOrEmpty()) {
-                callback.invoke(ExtractorLink("NetMirror Netflix", "Netflix (Auto)", data.mp4, STREAM_REFERER, Qualities.Unknown.value, data.mp4.contains(".m3u8"), mapOf("Referer" to STREAM_REFERER)))
+                // 🔥 FIX: Changed ExtractorLink to newExtractorLink
+                callback.invoke(newExtractorLink(
+                    source = "NetMirror Netflix",
+                    name = "Netflix (Auto)",
+                    url = data.mp4,
+                    referer = STREAM_REFERER,
+                    quality = Qualities.Unknown.value,
+                    isM3u8 = data.mp4.contains(".m3u8"),
+                    headers = mapOf("Referer" to STREAM_REFERER)
+                ))
             }
 
             data.streams?.filter { !it.url.isNullOrEmpty() }?.forEach { stream ->
                 val resNumber = parseNumber(stream.resolution) ?: 0
                 if (resNumber >= 720) {
                     val qualityName = if (resNumber >= 1080) Qualities.P1080.value else Qualities.P720.value
-                    callback.invoke(ExtractorLink("NetMirror Netflix", "Netflix (${stream.resolution ?: "HD"})", stream.url!!, STREAM_REFERER, qualityName, stream.url.contains(".m3u8"), mapOf("Referer" to STREAM_REFERER)))
+                    // 🔥 FIX: Changed ExtractorLink to newExtractorLink
+                    callback.invoke(newExtractorLink(
+                        source = "NetMirror Netflix",
+                        name = "Netflix (${stream.resolution ?: "HD"})",
+                        url = stream.url!!,
+                        referer = STREAM_REFERER,
+                        quality = qualityName,
+                        isM3u8 = stream.url.contains(".m3u8"),
+                        headers = mapOf("Referer" to STREAM_REFERER)
+                    ))
                 }
             }
         } catch (e: Exception) { Log.e("NetMirror", "Netflix error: ${e.message}") }
@@ -509,7 +524,16 @@ object NetmirrorExtractor {
             
             if (!playerResponse?.videoLink.isNullOrEmpty()) {
                 val pName = if (platform == "primevideo") "Prime Video" else platform.replaceFirstChar { it.uppercase() }
-                callback.invoke(ExtractorLink("NetMirror $pName", "$pName (HD)", playerResponse!!.videoLink!!, playerResponse.referer ?: api, Qualities.P1080.value, playerResponse.videoLink.contains(".m3u8"), mapOf("Referer" to (playerResponse.referer ?: api))))
+                // 🔥 FIX: Changed ExtractorLink to newExtractorLink
+                callback.invoke(newExtractorLink(
+                    source = "NetMirror $pName",
+                    name = "$pName (HD)",
+                    url = playerResponse!!.videoLink!!,
+                    referer = playerResponse.referer ?: api,
+                    quality = Qualities.P1080.value,
+                    isM3u8 = playerResponse.videoLink.contains(".m3u8"),
+                    headers = mapOf("Referer" to (playerResponse.referer ?: api))
+                ))
             }
         } catch (e: Exception) { Log.e("NetMirror", "$platform error: ${e.message}") }
     }
