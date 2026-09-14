@@ -100,7 +100,6 @@ class AnilistProvider : MainAPI() {
     // HOME PAGE (DYNAMIC GRAPHQL SORTING)
     // =========================================================
     
-    // AniList ke native sorting parameters (GraphQL)
     override val mainPage = mainPageOf(
         "TRENDING_DESC" to "Trending Now",
         "POPULARITY_DESC" to "All-Time Popular",
@@ -130,7 +129,6 @@ class AnilistProvider : MainAPI() {
             )
         )
 
-        // Native app.post automatically payload ko fast JSON me convert karta hai
         val jsonText = app.post(mainUrl, headers = alHeaders, json = payload).text
         val response = tryParseJson<ALResponse<ALPageData>>(jsonText)?.data?.page
 
@@ -139,7 +137,7 @@ class AnilistProvider : MainAPI() {
             val poster = anime.coverImage?.extraLarge
             val id = anime.id ?: return@mapNotNull null
 
-            newAnimeSearchResponse(title, "$id") {
+            newAnimeSearchResponse(title, "$mainUrl/$id") {
                 this.posterUrl = poster
             }
         } ?: emptyList()
@@ -178,7 +176,7 @@ class AnilistProvider : MainAPI() {
             val poster = anime.coverImage?.extraLarge
             val id = anime.id ?: return@mapNotNull null
 
-            newAnimeSearchResponse(title, "$id") {
+            newAnimeSearchResponse(title, "$mainUrl/$id") {
                 this.posterUrl = poster
             }
         } ?: emptyList()
@@ -189,7 +187,8 @@ class AnilistProvider : MainAPI() {
     // =========================================================
 
     override suspend fun load(url: String): LoadResponse? {
-        val id = url.toIntOrNull() ?: return null
+        // 🔥 FIX: Aakhri slash ke baad ka id nikala (Jaise https://graphql.anilist.co/199111 -> 199111)
+        val id = url.substringAfterLast("/").toIntOrNull() ?: return null
 
         val query = """
             query(${'$'}id: Int) {
@@ -228,9 +227,8 @@ class AnilistProvider : MainAPI() {
         val title = anime.title?.english ?: anime.title?.romaji ?: return null
         val poster = anime.coverImage?.extraLarge
         
-        // Custom Plot formatting: Score aur Banner info ko plot me append kar rahe hain jisse Score object ki error na aaye
         val ratingText = anime.averageScore?.let { "⭐ Rating: ${it}%" } ?: ""
-        val cleanPlot = anime.description?.replace(Regex("<.*?>"), "") ?: "" // Removes HTML tags from description
+        val cleanPlot = anime.description?.replace(Regex("<.*?>"), "") ?: "" 
         val plot = if (ratingText.isNotBlank()) "$ratingText\n\n$cleanPlot" else cleanPlot
 
         val year = anime.seasonYear
@@ -243,14 +241,12 @@ class AnilistProvider : MainAPI() {
             else -> null
         }
 
-        // Episode logic for AniList
         val totalEpisodes = anime.episodes 
             ?: anime.nextAiringEpisode?.let { it.episode?.minus(1) } 
-            ?: 1 // Fallback if no data
+            ?: 1 
 
         val episodesList = mutableListOf<Episode>()
         for (epNum in 1..totalEpisodes) {
-            // Json serialization library ka use kiye bina raw string banaya hai error se bachne ke liye
             val linkData = """{"alId":$id,"epNum":$epNum}"""
             
             episodesList.add(
@@ -269,7 +265,6 @@ class AnilistProvider : MainAPI() {
             this.showStatus = showStatus
             this.duration = duration
 
-            // Add Trailer if available and is YouTube
             if (anime.trailer?.site == "youtube" && anime.trailer.id != null) {
                 addTrailer("https://www.youtube.com/watch?v=${anime.trailer.id}")
             }
@@ -281,7 +276,7 @@ class AnilistProvider : MainAPI() {
     }
 
     // =========================================================
-    // LOAD LINKS (TODO)
+    // LOAD LINKS
     // =========================================================
 
     override suspend fun loadLinks(
