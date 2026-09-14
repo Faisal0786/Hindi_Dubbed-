@@ -293,7 +293,7 @@ class TmdbProvider : MainAPI() {
                 this.plot = plot
                 this.year = year
                 this.tags = tags
-                this.showStatus = parsedShowStatus
+                this.showStatus = showStatus
                 if (trailerKey != null) addTrailer("https://www.youtube.com/watch?v=$trailerKey")
             }
         }
