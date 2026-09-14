@@ -10,5 +10,6 @@ class KitsuProviderPlugin : Plugin() {
         registerMainAPI(KitsuAnimeProvider())
 registerMainAPI(JikanProvider())
 registerMainAPI(TmdbProvider())
+registerMainAPI(AnilistProvider())
     }
 }
