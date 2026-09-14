@@ -108,7 +108,7 @@ class TmdbProvider : MainAPI() {
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.Anime)
 
     // 🔥 NOTE: Replace with your free TMDb API key from themoviedb.org settings
-    private val apiKey = "YOUR_TMDB_API_KEY_HERE"
+    private val apiKey = "42ae27f7be70ca05f19e9b4d7d5d7ab2"
     private val imageBaseUrl = "https://image.tmdb.org/t/p/original"
 
     private val tmdbHeaders = mapOf(
