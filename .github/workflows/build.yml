@@ -44,14 +44,13 @@ jobs:
           distribution: "adopt"
           java-version: 17
 
-            - name: Setup Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v4.0.1
         with:
           cmdline-tools-version: 14742923
           accept-android-sdk-licenses: true
           log-accepted-android-sdk-licenses: false
           packages: platform-tools
-
 
       - name: Access Secrets & Create Properties
         env:
