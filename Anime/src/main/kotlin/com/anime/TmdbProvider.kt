@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION", "DEPRECATION_ERROR")
 package com.anime
 
 import android.util.Log
@@ -466,8 +467,8 @@ object NetmirrorExtractor {
             }
 
             if (!data.mp4.isNullOrEmpty()) {
-                // 🔥 FIX: Changed ExtractorLink to newExtractorLink
-                callback.invoke(newExtractorLink(
+                // 🔥 Reverted to ExtractorLink, Suppressed Error
+                callback.invoke(ExtractorLink(
                     source = "NetMirror Netflix",
                     name = "Netflix (Auto)",
                     url = data.mp4,
@@ -482,8 +483,8 @@ object NetmirrorExtractor {
                 val resNumber = parseNumber(stream.resolution) ?: 0
                 if (resNumber >= 720) {
                     val qualityName = if (resNumber >= 1080) Qualities.P1080.value else Qualities.P720.value
-                    // 🔥 FIX: Changed ExtractorLink to newExtractorLink
-                    callback.invoke(newExtractorLink(
+                    // 🔥 Reverted to ExtractorLink, Suppressed Error
+                    callback.invoke(ExtractorLink(
                         source = "NetMirror Netflix",
                         name = "Netflix (${stream.resolution ?: "HD"})",
                         url = stream.url!!,
@@ -524,8 +525,8 @@ object NetmirrorExtractor {
             
             if (!playerResponse?.videoLink.isNullOrEmpty()) {
                 val pName = if (platform == "primevideo") "Prime Video" else platform.replaceFirstChar { it.uppercase() }
-                // 🔥 FIX: Changed ExtractorLink to newExtractorLink
-                callback.invoke(newExtractorLink(
+                // 🔥 Reverted to ExtractorLink, Suppressed Error
+                callback.invoke(ExtractorLink(
                     source = "NetMirror $pName",
                     name = "$pName (HD)",
                     url = playerResponse!!.videoLink!!,
