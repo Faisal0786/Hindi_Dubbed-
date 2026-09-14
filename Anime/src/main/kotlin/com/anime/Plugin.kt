@@ -9,5 +9,6 @@ class KitsuProviderPlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(KitsuAnimeProvider())
 registerMainAPI(JikanProvider())
+registerMainAPI(TmdbProvider())
     }
 }
