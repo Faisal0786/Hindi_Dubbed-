@@ -26,14 +26,14 @@ data class TmdbMediaResponse(
 data class TmdbItem(
     @JsonProperty("id") val id: Int? = null,
     @JsonProperty("title") val title: String? = null,
-    @JsonProperty("name") val name: String? = null, // For TV Shows
+    @JsonProperty("name") val name: String? = null,
     @JsonProperty("original_title") val originalTitle: String? = null,
     @JsonProperty("poster_path") val posterPath: String? = null,
     @JsonProperty("backdrop_path") val backdropPath: String? = null,
     @JsonProperty("overview") val overview: String? = null,
     @JsonProperty("release_date") val releaseDate: String? = null,
     @JsonProperty("first_air_date") val firstAirDate: String? = null,
-    @JsonProperty("media_type") val mediaType: String? = null, // movie, tv in multi-search
+    @JsonProperty("media_type") val mediaType: String? = null,
     @JsonProperty("vote_average") val voteAverage: Double? = null,
     @JsonProperty("genre_ids") val genreIds: List<Int>? = emptyList()
 )
@@ -97,7 +97,7 @@ data class TmdbVideo(
 )
 
 // =========================================================
-// 2. MAIN TMDB PROVIDER (20+ CATEGORIES & FULL METADATA)
+// 2. MAIN TMDB PROVIDER (22 CATEGORIES & FULL METADATA)
 // =========================================================
 
 class TmdbProvider : MainAPI() {
@@ -108,7 +108,7 @@ class TmdbProvider : MainAPI() {
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.Anime)
 
     // 🔥 NOTE: Replace with your free TMDb API key from themoviedb.org settings
-    private val apiKey = "TMDB_KEY"
+    private val apiKey = "YOUR_TMDB_API_KEY_HERE"
     private val imageBaseUrl = "https://image.tmdb.org/t/p/original"
 
     private val tmdbHeaders = mapOf(
@@ -117,7 +117,7 @@ class TmdbProvider : MainAPI() {
     )
 
     // =========================================================
-    // 20+ CATEGORIES FOR HOME PAGE
+    // 22 CATEGORIES FOR HOME PAGE
     // =========================================================
 
     override val mainPage = mainPageOf(
@@ -155,10 +155,8 @@ class TmdbProvider : MainAPI() {
         val results = response?.results?.mapNotNull { item ->
             val title = item.title ?: item.name ?: return@mapNotNull null
             val poster = item.posterPath?.let { "$imageBaseUrl$it" }
-            val backdrop = item.backdropPath?.let { "$imageBaseUrl$it" }
             val id = item.id ?: return@mapNotNull null
             
-            // Determine if movie or tv
             val isMovie = item.mediaType == "movie" || item.releaseDate != null || (item.title != null && item.name == null)
             val typeVal = if (isMovie) "movie" else "tv"
             val detailUrl = "$mainUrl/$typeVal/$id?api_key=$apiKey&type=$typeVal"
@@ -166,12 +164,10 @@ class TmdbProvider : MainAPI() {
             if (isMovie) {
                 newMovieSearchResponse(title, detailUrl) {
                     this.posterUrl = poster
-                    this.backgroundPosterUrl = backdrop
                 }
             } else {
                 newTvSeriesSearchResponse(title, detailUrl) {
                     this.posterUrl = poster
-                    this.backgroundPosterUrl = backdrop
                 }
             }
         } ?: emptyList()
@@ -181,7 +177,7 @@ class TmdbProvider : MainAPI() {
     }
 
     // =========================================================
-    // GLOBAL SEARCH (Supports Movies & TV Shows seamlessly)
+    // GLOBAL SEARCH
     // =========================================================
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -192,7 +188,6 @@ class TmdbProvider : MainAPI() {
         return response?.results?.mapNotNull { item ->
             val title = item.title ?: item.name ?: return@mapNotNull null
             val poster = item.posterPath?.let { "$imageBaseUrl$it" }
-            val backdrop = item.backdropPath?.let { "$imageBaseUrl$it" }
             val id = item.id ?: return@mapNotNull null
             
             val isMovie = item.mediaType == "movie" || item.releaseDate != null
@@ -202,12 +197,10 @@ class TmdbProvider : MainAPI() {
             if (isMovie) {
                 newMovieSearchResponse(title, detailUrl) {
                     this.posterUrl = poster
-                    this.backgroundPosterUrl = backdrop
                 }
             } else {
                 newTvSeriesSearchResponse(title, detailUrl) {
                     this.posterUrl = poster
-                    this.backgroundPosterUrl = backdrop
                 }
             }
         } ?: emptyList()
@@ -233,7 +226,6 @@ class TmdbProvider : MainAPI() {
         val plot = detail.overview
         val year = detail.releaseDate?.take(4)?.toIntOrNull() ?: detail.firstAirDate?.take(4)?.toIntOrNull()
         val tags = detail.genres?.mapNotNull { it.name } ?: emptyList()
-        val score = detail.voteAverage
         
         val showStatus = when (detail.status) {
             "Ended" -> ShowStatus.Completed
@@ -241,7 +233,6 @@ class TmdbProvider : MainAPI() {
             else -> null
         }
 
-        // Fetch Trailer
         val id = detail.id
         val videoUrl = "$mainUrl/$type/$id/videos?api_key=$apiKey"
         val videoJson = try { app.get(videoUrl, headers = tmdbHeaders).text } catch (e: Exception) { "" }
@@ -249,7 +240,7 @@ class TmdbProvider : MainAPI() {
 
         if (type == "movie") {
             val duration = detail.runtime
-            val linkData = AppUtils.toJson(mapOf("tmdbId" to id, "type" to "movie"))
+            val linkData = """{"tmdbId":$id,"type":"movie"}"""
 
             return newMovieLoadResponse(title, url, TvType.Movie, linkData) {
                 this.posterUrl = poster
@@ -257,8 +248,7 @@ class TmdbProvider : MainAPI() {
                 this.plot = plot
                 this.year = year
                 this.tags = tags
-                this.score = score
-                this.showStatus = showStatus
+                this.status = showStatus
                 this.duration = duration
                 if (trailerKey != null) addTrailer("https://www.youtube.com/watch?v=$trailerKey")
             }
@@ -268,7 +258,7 @@ class TmdbProvider : MainAPI() {
 
             for (season in seasons) {
                 val seasonNum = season.seasonNumber ?: continue
-                if (seasonNum == 0) continue // Skip Specials if needed, or keep them
+                if (seasonNum == 0) continue
 
                 val seasonUrl = "$mainUrl/tv/$id/season/$seasonNum?api_key=$apiKey"
                 try {
@@ -280,7 +270,7 @@ class TmdbProvider : MainAPI() {
                         val epName = ep.name
                         val epPlot = ep.overview
                         
-                        val linkData = AppUtils.toJson(mapOf("tmdbId" to id, "type" to "tv", "season" to seasonNum, "episode" to epNum))
+                        val linkData = """{"tmdbId":$id,"type":"tv","season":$seasonNum,"episode":$epNum}"""
 
                         episodesList.add(
                             newEpisode(linkData) {
@@ -291,7 +281,7 @@ class TmdbProvider : MainAPI() {
                             }
                         )
                     }
-                    delay(200) // Rate Limit protection for multi-season shows
+                    delay(200)
                 } catch (e: Exception) {
                     Log.e("TMDb", "Season $seasonNum Fetch Error: ${e.message}")
                 }
@@ -303,15 +293,14 @@ class TmdbProvider : MainAPI() {
                 this.plot = plot
                 this.year = year
                 this.tags = tags
-                this.score = score
-                this.showStatus = showStatus
+                this.status = showStatus
                 if (trailerKey != null) addTrailer("https://www.youtube.com/watch?v=$trailerKey")
             }
         }
     }
 
     // =========================================================
-    // LOAD LINKS (VIDEO EXTRACTION)
+    // LOAD LINKS
     // =========================================================
 
     override suspend fun loadLinks(
@@ -320,7 +309,6 @@ class TmdbProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // TODO: Map TMDb ID to streaming sources or extractors (e.g., vidsrc, multi-embed)
         return true
     }
 }
