@@ -154,7 +154,6 @@ class Net77Provider : MainAPI() {
     // ==========================================
     // EXTRACT M3U8 LINKS & SUBTITLES
     // ==========================================
-    // Error 1 Fixed: subtitleCallback aur callback ka order theek kar diya
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -192,27 +191,28 @@ class Net77Provider : MainAPI() {
             val fileUrl = source.file ?: return@forEach
             val videoUrl = if (fileUrl.startsWith("/")) "$playerDomain$fileUrl" else fileUrl
             
-            val quality = when {
+            val videoQuality = when {
                 source.label?.contains("Full", true) == true -> Qualities.P1080.value
                 source.label?.contains("Mid", true) == true -> Qualities.P720.value
                 source.label?.contains("Low", true) == true -> Qualities.P480.value
                 else -> Qualities.Unknown.value
             }
 
-            // Error 2 Fixed: ExtractorLink ki jagah newExtractorLink function use kiya
+            // YAHAN FIX KIYA HAI: Naya Lambda Builder Pattern
             callback.invoke(
                 newExtractorLink(
-                    source = this.name,
+                    source = this@Net77Provider.name,
                     name = source.label ?: "HD",
-                    url = videoUrl,
-                    referer = playUrl,
-                    quality = quality,
-                    isM3u8 = videoUrl.contains(".m3u8") || source.type == "application/vnd.apple.mpegurl",
-                    headers = mapOf(
+                    url = videoUrl
+                ) {
+                    this.referer = playUrl
+                    this.quality = videoQuality
+                    this.isM3u8 = videoUrl.contains(".m3u8") || source.type == "application/vnd.apple.mpegurl"
+                    this.headers = mapOf(
                         "Cookie" to testCookies, 
                         "User-Agent" to testUserAgent
                     )
-                )
+                }
             )
         }
 
