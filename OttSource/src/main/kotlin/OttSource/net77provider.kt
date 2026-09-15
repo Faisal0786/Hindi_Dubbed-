@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 
+@Suppress("DEPRECATION") // Suppresses warnings for older CS3 ExtractorLink constructs
 class Net77Provider : MainAPI() {
     override var mainUrl = "https://net77.cc"
     override var name = "Net77"
@@ -19,7 +20,8 @@ class Net77Provider : MainAPI() {
     // ==========================================
     data class ContentData(val id: String, val title: String)
 
-    data class SearchResponse(@JsonProperty("searchResult") val searchResult: List<SearchResult>? = null)
+    // Renamed to avoid collision with CS3's internal SearchResponse class
+    data class Net77SearchResponse(@JsonProperty("searchResult") val searchResult: List<SearchResult>? = null)
     data class SearchResult(@JsonProperty("id") val id: String?, @JsonProperty("t") val title: String?)
 
     data class DetailResponse(
@@ -28,7 +30,6 @@ class Net77Provider : MainAPI() {
         @JsonProperty("desc") val desc: String? = null,
         @JsonProperty("year") val year: String? = null,
         @JsonProperty("episodes") val episodes: List<EpisodeData>? = null
-        // Note: nextPageShow and nextPage are here in JSON, can be implemented for pagination later
     )
 
     data class EpisodeData(
@@ -45,9 +46,9 @@ class Net77Provider : MainAPI() {
         @JsonProperty("sources") val sources: List<SourceData>? = null,
         @JsonProperty("tracks") val tracks: List<TrackData>? = null
     )
+    
     data class SourceData(@JsonProperty("file") val file: String?, @JsonProperty("label") val label: String?)
     data class TrackData(@JsonProperty("file") val file: String?, @JsonProperty("kind") val kind: String?, @JsonProperty("label") val label: String?)
-
 
     // ==========================================
     // 2. MAIN PAGE (HTML SCRAPING)
@@ -55,24 +56,19 @@ class Net77Provider : MainAPI() {
     override val mainPage = mainPageOf("$mainUrl/home" to "Home")
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // App.get fetches HTML. Interceptor ensures Cloudflare is bypassed if needed.
-        val document = app.get(request.data, referer = mainUrl, interceptor = true).document
+        // Removed `interceptor = true` to fix compilation type mismatch
+        val document = app.get(request.data, referer = mainUrl).document
         val homeItems = arrayListOf<HomePageList>()
 
-        // From screenshot 1000035135.jpg: outer wrapper is div.lolomoRow
         document.select("div.lolomoRow").forEach { row ->
-            // Extract category title (e.g., "Critically Acclaimed TV Shows")
             val categoryName = row.selectFirst("div.row-header-title")?.text() ?: "Trending"
-            val list = arrayListOf<SearchResponse>()
+            val list = arrayListOf<SearchResponse>() // Use CS3's standard SearchResponse here
 
-            // From screenshot 1000035134.jpg: item container is div.title-card-container
             row.select("div.title-card-container").forEach { card ->
-                // Look for data-post attribute in the card or its children
                 val idNode = card.selectFirst("[data-post]") ?: card
                 val id = idNode.attr("data-post")
                 if (id.isEmpty()) return@forEach
 
-                // Extract title and poster
                 val title = card.selectFirst("a[aria-label]")?.attr("aria-label") ?: "Unknown"
                 val imgNode = card.selectFirst("img.boxart-image")
                 val posterUrl = imgNode?.attr("data-src")?.takeIf { it.isNotEmpty() } ?: imgNode?.attr("src")
@@ -99,7 +95,7 @@ class Net77Provider : MainAPI() {
         val url = "$mainUrl/search.php?s=$query&t=$currentTime"
 
         val response = app.get(url, referer = "$mainUrl/home").text
-        val parsed = parseJson<SearchResponse>(response)
+        val parsed = parseJson<Net77SearchResponse>(response)
 
         return parsed.searchResult?.mapNotNull { item ->
             val id = item.id ?: return@mapNotNull null
@@ -129,14 +125,14 @@ class Net77Provider : MainAPI() {
         if (isTvSeries) {
             val episodes = details.episodes?.mapNotNull { ep ->
                 val epId = ep.id ?: return@mapNotNull null
-                // Passing individual episode ID in ContentData
-                Episode(
-                    data = ContentData(epId, title).toJson(),
-                    name = ep.title ?: "Episode ${ep.episodeNum}",
-                    season = ep.season?.replace("S", "")?.toIntOrNull(),
-                    episode = ep.episodeNum?.toIntOrNull(),
-                    description = ep.description
-                )
+                
+                // Fixed: Replaced deprecated constructor with newEpisode builder
+                newEpisode(data = ContentData(epId, title).toJson()) {
+                    this.name = ep.title ?: "Episode ${ep.episodeNum}"
+                    this.season = ep.season?.replace("S", "")?.toIntOrNull()
+                    this.episode = ep.episodeNum?.toIntOrNull()
+                    this.description = ep.description
+                }
             } ?: emptyList()
 
             return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
@@ -154,7 +150,7 @@ class Net77Provider : MainAPI() {
     }
 
     // ==========================================
-    // 5. VIDEO EXTRACTION (PLAY POST -> M3U8)
+    // 5. VIDEO EXTRACTION
     // ==========================================
     override suspend fun loadLinks(
         data: String,
@@ -165,10 +161,9 @@ class Net77Provider : MainAPI() {
         val contentData = parseJson<ContentData>(data)
         val contentId = contentData.id
 
-        // Step 1: Force interceptor to grab fresh cf_clearance & user_token if needed
-        app.get("$mainUrl/home", interceptor = true)
+        // Removed Boolean interceptor parameter
+        app.get("$mainUrl/home")
 
-        // Step 2: Fetch Video Hash
         val postHeaders = mapOf(
             "X-Requested-With" to "XMLHttpRequest",
             "Origin" to mainUrl,
@@ -180,10 +175,8 @@ class Net77Provider : MainAPI() {
         val rawHash = postResponse?.h ?: return false
         val cleanHash = rawHash.replace("in=", "")
         
-        // Extract timestamp (3rd element in hash split)
         val tmValue = cleanHash.split("::").getOrNull(2) ?: ""
 
-        // Step 3: Fetch Playlist JSON from CDN
         val playlistUrl = "https://net52.cc/playlist.php?id=$contentId&t=${contentData.title}&tm=$tmValue&h=$cleanHash"
         val playlistHeaders = mapOf(
             "Referer" to "https://net52.cc/play.php?id=$contentId&in=$cleanHash"
@@ -192,13 +185,9 @@ class Net77Provider : MainAPI() {
         val playlistJson = app.get(playlistUrl, headers = playlistHeaders).text
         val parsedPlaylist = parseJson<List<PlaylistResponse>>(playlistJson).firstOrNull() ?: return false
 
-        // Step 4: Map Sources
         parsedPlaylist.sources?.forEach { source ->
             val rawUrl = source.file ?: return@forEach
-            // Ensure absolute URL
             val finalUrl = if (rawUrl.startsWith("/")) "https://net52.cc$rawUrl" else rawUrl
-            
-            // MAGIC FIX: Replaces the dummy 'in=unknown::ni' param with the real extracted hash string
             val actualUrl = finalUrl.replace("in=unknown::ni", "in=$cleanHash")
 
             callback.invoke(
@@ -206,14 +195,13 @@ class Net77Provider : MainAPI() {
                     source = this.name,
                     name = "${this.name} ${source.label ?: "Auto"}",
                     url = actualUrl,
-                    referer = "https://net52.cc/", // Mandatory for CDN bypass
+                    referer = "https://net52.cc/",
                     quality = Qualities.Unknown.value,
-                    isM3u8 = true // Let ExoPlayer handle the TS chunks & audio tracks
+                    isM3u8 = true
                 )
             )
         }
 
-        // Step 5: Map Subtitles
         parsedPlaylist.tracks?.forEach { track ->
             if (track.kind == "captions") {
                 val subUrl = track.file?.let { if (it.startsWith("//")) "https:$it" else it } ?: return@forEach
