@@ -1,11 +1,9 @@
 @file:Suppress("DEPRECATION", "DEPRECATION_ERROR")
-
 package com.hindi.providers.Source
 
 import com.hindi.providers.*
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.nicehttp.NiceResponse
 import com.lagradost.api.Log
 
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -26,9 +24,6 @@ import android.util.Base64
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
-// ==========================================
-// CASTLE TV CONSTANTS & HEADERS
-// ==========================================
 private const val CASTLE_BASE = "https://api.hlowb.com"
 private const val CASTLE_PKG = "com.external.castle"
 private const val CASTLE_CHANNEL = "IndiaA"
@@ -57,16 +52,11 @@ private val CASTLE_PLAYBACK_HEADERS = mapOf(
 
 private val KNOWN_HEIGHTS = setOf(240, 360, 480, 540, 576, 720, 1080, 1440, 2160)
 
-// ==========================================
-// AES CRYPTO & PARSING UTILS
-// ==========================================
 private fun deriveCastleKey(securityKey: String): ByteArray {
     val keyBytes = Base64.decode(securityKey, Base64.DEFAULT)
     val suffix = "T!BgJB".toByteArray(StandardCharsets.UTF_8)
     var combined = keyBytes + suffix
-    if (combined.size < 16) {
-        combined += ByteArray(16 - combined.size) { 0 }
-    }
+    if (combined.size < 16) combined += ByteArray(16 - combined.size) { 0 }
     return combined.copyOfRange(0, 16)
 }
 
@@ -78,41 +68,24 @@ private fun decryptCastle(cipherText: String, securityKey: String): String {
     return String(decrypted, StandardCharsets.UTF_8)
 }
 
-private fun castleSafeParse(text: String): String {
-    // Prevents precision loss on large IDs
-    return text.replace(Regex("([:\\[,]\\s*)(\\d{16,})"), "$1\"$2\"")
-}
+private fun castleSafeParse(text: String): String = text.replace(Regex("([:\\[,]\\s*)(\\d{16,})"), "$1\"$2\"")
 
 private fun unwrap(node: JsonNode?): JsonNode? {
-    if (node != null && node.has("data") && node.get("data").isObject && !node.get("data").isArray) {
-        return node.get("data")
-    }
+    if (node != null && node.has("data") && node.get("data").isObject && !node.get("data").isArray) return node.get("data")
     return node
 }
 
-private suspend fun extractCipher(res: NiceResponse): String {
+private suspend fun extractCipher(res: com.lagradost.nicehttp.NiceResponse): String {
     val text = res.text.trim()
     if (text.isEmpty()) throw Exception("[CastleTV] Empty response body")
     try {
         val node = parseJson<JsonNode>(text)
-        if (node.has("data") && node.get("data").isTextual) {
-            return node.get("data").asText().trim()
-        }
+        if (node.has("data") && node.get("data").isTextual) return node.get("data").asText().trim()
     } catch (e: Exception) {}
     return text
 }
 
-// ==========================================
-// METADATA FORMATTERS
-// ==========================================
-private fun resolutionNumToLabel(num: Int): String? = when(num) {
-    1 -> "480p"
-    2 -> "720p"
-    3 -> "1080p"
-    4 -> "4K"
-    else -> null
-}
-
+private fun resolutionNumToLabel(num: Int): String? = when(num) { 1 -> "480p"; 2 -> "720p"; 3 -> "1080p"; 4 -> "4K"; else -> null }
 private fun formatSize(bytes: Long?): String {
     if (bytes == null || bytes <= 0) return "Unknown"
     if (bytes > 1_000_000_000) return String.format("%.2f GB", bytes / 1_000_000_000.0)
@@ -122,69 +95,49 @@ private fun formatSize(bytes: Long?): String {
 private fun streamQuality(url: String?, description: String?, resolutionNum: Int, defaultQual: String): String {
     if (!description.isNullOrEmpty()) {
         val m = Regex("(?:SD|HD|FHD|UHD|4K)?\\s*(\\d{3,4})\\s*p?", RegexOption.IGNORE_CASE).find(description.trim())
-        if (m != null) {
-            val h = m.groupValues[1].toIntOrNull()
-            if (h != null && KNOWN_HEIGHTS.contains(h)) return "${h}p"
-        }
+        if (m != null) { val h = m.groupValues[1].toIntOrNull(); if (h != null && KNOWN_HEIGHTS.contains(h)) return "${h}p" }
         if (Regex("4k|uhd", RegexOption.IGNORE_CASE).containsMatchIn(description)) return "4K"
     }
     val numLabel = resolutionNumToLabel(resolutionNum)
     if (numLabel != null) return numLabel
-
     if (!url.isNullOrEmpty()) {
         val tokens = Regex("[^/a-z](?:(\\d{3,4})\\s*p?)[^a-z]", RegexOption.IGNORE_CASE).findAll(url)
         for (t in tokens) {
             val m = Regex("(\\d{3,4})").find(t.value)
-            if (m != null) {
-                val h = m.groupValues[1].toIntOrNull()
-                if (h != null && KNOWN_HEIGHTS.contains(h)) return "${h}p"
-            }
+            if (m != null) { val h = m.groupValues[1].toIntOrNull(); if (h != null && KNOWN_HEIGHTS.contains(h)) return "${h}p" }
         }
     }
     return defaultQual
 }
 
-private fun getQualityFromName(qual: String): Int {
-    return when {
-        qual.contains("4K") -> Qualities.P2160.value
-        qual.contains("1080") -> Qualities.P1080.value
-        qual.contains("720") -> Qualities.P720.value
-        qual.contains("480") -> Qualities.P480.value
-        qual.contains("360") -> Qualities.P360.value
-        else -> Qualities.Unknown.value
-    }
+private fun getQualityFromName(qual: String): Int = when {
+    qual.contains("4K") -> Qualities.P2160.value
+    qual.contains("1080") -> Qualities.P1080.value
+    qual.contains("720") -> Qualities.P720.value
+    qual.contains("480") -> Qualities.P480.value
+    qual.contains("360") -> Qualities.P360.value
+    else -> Qualities.Unknown.value
 }
 
-// ==========================================
-// MAIN INVOKE FUNCTION (CLOUDSTREAM)
-// ==========================================
+// FIX 1: Make callbacks "suspend" so they can be triggered properly
 suspend fun SourceProviders.invokeCastle(
     title: String? = null,
     year: Int? = null,
     season: Int? = null,
     episode: Int? = null,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
+    subtitleCallback: suspend (SubtitleFile) -> Unit,
+    callback: suspend (ExtractorLink) -> Unit
 ) {
     if (title.isNullOrEmpty()) return
 
     try {
-        Log.d("CastleTV", "Fetching streams for Title: $title")
         val isTv = season != null
-        val titleLine = if (isTv) {
-            "$title S${season.toString().padStart(2, '0')}E${(episode ?: 1).toString().padStart(2, '0')}" + (if (year != null) " ($year)" else "")
-        } else {
-            "$title" + (if (year != null) " ($year)" else "")
-        }
-
-        // 1. Get Dynamic Security Key
         val secUrl = "$CASTLE_BASE/v0.1/system/getSecurityKey/1?channel=$CASTLE_CHANNEL&clientType=$CASTLE_CLIENT&lang=$CASTLE_LANG"
         val secRes = app.get(secUrl, headers = CASTLE_API_HEADERS)
         val secNode = parseJson<JsonNode>(secRes.text)
         if (secNode.get("code")?.asInt() != 200 || !secNode.has("data")) throw Exception("Security key failed")
         val secKey = secNode.get("data").asText()
 
-        // 2. Search by Keyword
         val keyword = if (year != null) "$title $year" else title
         val searchUrl = "$CASTLE_BASE/film-api/v1.1.0/movie/searchByKeyword?channel=$CASTLE_CHANNEL&clientType=$CASTLE_CLIENT&keyword=${URLEncoder.encode(keyword, "UTF-8")}&lang=$CASTLE_LANG&mode=1&packageName=$CASTLE_PKG&page=1&size=30"
         
@@ -192,25 +145,18 @@ suspend fun SourceProviders.invokeCastle(
         val searchJson = castleSafeParse(decryptCastle(searchCipher, secKey))
         val searchData = unwrap(parseJson<JsonNode>(searchJson))
         val rows = searchData?.get("rows") ?: return
-        
         if (rows.size() == 0) return
 
-        // 3. Match Correct Title
         var match: JsonNode? = null
         val titleLc = title.lowercase()
         for (r in rows) {
             val name = (r.get("title")?.asText() ?: r.get("name")?.asText() ?: "").lowercase()
-            if (name.contains(titleLc) || titleLc.contains(name)) {
-                match = r
-                break
-            }
+            if (name.contains(titleLc) || titleLc.contains(name)) { match = r; break }
         }
         if (match == null) match = rows.get(0)
-        
         val castleId = match?.get("id")?.asText() ?: match?.get("redirectId")?.asText() ?: match?.get("redirectIdStr")?.asText()
         if (castleId.isNullOrEmpty()) return
 
-        // 4. Fetch Details & Detect Correct Season ID
         suspend fun fetchDetails(cId: String): JsonNode? {
             val dUrl = "$CASTLE_BASE/film-api/v1.9.9/movie?channel=$CASTLE_CHANNEL&clientType=$CASTLE_CLIENT&lang=$CASTLE_LANG&movieId=$cId&packageName=$CASTLE_PKG"
             val dCipher = extractCipher(app.get(dUrl, headers = CASTLE_API_HEADERS))
@@ -236,24 +182,17 @@ suspend fun SourceProviders.invokeCastle(
             }
         }
 
-        // 5. Match Correct Episode ID
         val episodesArr = castleDetails?.get("episodes") ?: return
         var episodeId: String? = null
-        
         if (isTv) {
             for (ep in episodesArr) {
-                if (ep.get("number")?.asInt() == episode) {
-                    episodeId = ep.get("id")?.asText()
-                    break
-                }
+                if (ep.get("number")?.asInt() == episode) { episodeId = ep.get("id")?.asText(); break }
             }
         } else {
             if (episodesArr.size() > 0) episodeId = episodesArr.get(0).get("id")?.asText()
         }
-
         if (episodeId.isNullOrEmpty()) return
 
-        // Extract Tracks
         var epEntry: JsonNode? = null
         for (ep in episodesArr) {
             if (ep.get("id")?.asText() == episodeId) { epEntry = ep; break }
@@ -270,7 +209,6 @@ suspend fun SourceProviders.invokeCastle(
             if (withVideo.isNotEmpty()) { tracks.clear(); tracks.addAll(withVideo) }
         }
 
-        // Helper to Fetch Video Streams (POST Request)
         suspend fun getVideoData(langId: String?, resNum: Int): JsonNode? {
             val bodyMap = mutableMapOf(
                 "mode" to "1",
@@ -288,7 +226,8 @@ suspend fun SourceProviders.invokeCastle(
             if (langId != null) bodyMap["languageId"] = langId
 
             val url = "$CASTLE_BASE/film-api/v2.0.1/movie/getVideo2?clientType=$CASTLE_CLIENT&packageName=$CASTLE_PKG&channel=$CASTLE_CHANNEL&lang=$CASTLE_LANG"
-            val reqBody = toJson(bodyMap).toRequestBody("application/json".toMediaType())
+            // FIX 2: Correct toJson syntax
+            val reqBody = bodyMap.toJson().toRequestBody("application/json".toMediaType())
             
             val response = app.post(url, headers = CASTLE_API_HEADERS, requestBody = reqBody)
             val cipher = extractCipher(response)
@@ -297,8 +236,8 @@ suspend fun SourceProviders.invokeCastle(
 
         val seenUrls = mutableSetOf<String>()
 
-        // Link Builder
-        fun buildStreams(data: JsonNode?, langLabel: String, res: Int) {
+        // FIX 3: Make buildStreams suspendable
+        suspend fun buildStreams(data: JsonNode?, langLabel: String, res: Int) {
             if (data == null) return
             if (!data.has("videoUrl") && (!data.has("videos") || data.get("videos").size() == 0)) return
 
@@ -326,26 +265,28 @@ suspend fun SourceProviders.invokeCastle(
                     val resNum = v.get("resolution")?.asInt() ?: 0
                     val desc = v.get("resolutionDescription")?.asText()
                     val qual = streamQuality(videoUrl, desc, resNum, defaultQual)
-                    val sizeStr = formatSize(v.get("size")?.asLong())
                     
                     val existing = bestByUrl[videoUrl]
                     if (existing != null && existing.first >= resNum) continue
                     
                     val nameTag = if(langLabel.isNotEmpty()) "CastleTV $langLabel" else "CastleTV"
                     
-                    val link = newExtractorLink(
-                        source = "CastleTV",
-                        name = "$nameTag | $qual",
-                        url = videoUrl,
-                        referer = CASTLE_BASE,
-                        quality = getQualityFromName(qual),
-                        isM3u8 = videoUrl.contains(".m3u8"),
-                        headers = CASTLE_PLAYBACK_HEADERS
+                    // FIX 4: Use Positional Parameters to bypass "Missing parameter" issues across Cloudstream updates
+                    val link = ExtractorLink(
+                        "CastleTV",
+                        "$nameTag | $qual",
+                        videoUrl,
+                        CASTLE_BASE,
+                        getQualityFromName(qual),
+                        videoUrl.contains(".m3u8"),
+                        CASTLE_PLAYBACK_HEADERS
                     )
                     bestByUrl[videoUrl] = Pair(resNum, link)
                 }
                 bestByUrl.values.forEach { 
-                    if (seenUrls.add(it.second.url)) callback.invoke(it.second) 
+                    if (seenUrls.add(it.second.url)) {
+                        callback.invoke(it.second)
+                    }
                 }
             } else {
                 val videoUrl = data.get("videoUrl")?.asText()
@@ -354,21 +295,22 @@ suspend fun SourceProviders.invokeCastle(
                     val qual = streamQuality(videoUrl, desc, 0, defaultQual)
                     val nameTag = if(langLabel.isNotEmpty()) "CastleTV $langLabel" else "CastleTV"
                     
-                    val link = newExtractorLink(
-                        source = "CastleTV",
-                        name = "$nameTag | $qual",
-                        url = videoUrl,
-                        referer = CASTLE_BASE,
-                        quality = getQualityFromName(qual),
-                        isM3u8 = videoUrl.contains(".m3u8"),
-                        headers = CASTLE_PLAYBACK_HEADERS
+                    val link = ExtractorLink(
+                        "CastleTV",
+                        "$nameTag | $qual",
+                        videoUrl,
+                        CASTLE_BASE,
+                        getQualityFromName(qual),
+                        videoUrl.contains(".m3u8"),
+                        CASTLE_PLAYBACK_HEADERS
                     )
-                    if (seenUrls.add(link.url)) callback.invoke(link)
+                    if (seenUrls.add(link.url)) {
+                        callback.invoke(link)
+                    }
                 }
             }
         }
 
-        // 6. Fetch Streams (Parallel for Speed)
         if (tracks.isNotEmpty()) {
             coroutineScope {
                 tracks.map { track ->
@@ -390,7 +332,6 @@ suspend fun SourceProviders.invokeCastle(
             }
         }
 
-        // Fallback to Shared Video Endpoint if no track matched
         if (seenUrls.isEmpty()) {
             coroutineScope {
                 listOf(3, 2, 1).map { res ->
