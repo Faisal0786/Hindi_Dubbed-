@@ -5,8 +5,8 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink // NAYA IMPORT ADD KIYA
 
 @Suppress("DEPRECATION")
 class Net77Provider : MainAPI() {
@@ -187,15 +187,15 @@ class Net77Provider : MainAPI() {
             val finalUrl = if (rawUrl.startsWith("/")) "https://net52.cc$rawUrl" else rawUrl
             val actualUrl = finalUrl.replace("in=unknown::ni", "in=$cleanHash")
 
-            // FIXED: Using ExtractorLink with INFER_TYPE to bypass the isM3u8 deprecation error
+            // FIXED: ExtractorLink hata kar newExtractorLink kar diya. `INFER_TYPE` ki jagah boolean `isM3u8` use kiya hai.
             callback.invoke(
-                ExtractorLink(
+                newExtractorLink(
                     source = this.name,
                     name = "${this.name} ${source.label ?: "Auto"}",
                     url = actualUrl,
                     referer = "https://net52.cc/",
                     quality = Qualities.Unknown.value,
-                    type = INFER_TYPE 
+                    isM3u8 = actualUrl.contains(".m3u8")
                 )
             )
         }
