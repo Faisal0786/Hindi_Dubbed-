@@ -1,5 +1,6 @@
 package OttSource
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -21,8 +22,9 @@ class Net77Provider : MainAPI() {
     private val testUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36"
 
     // ==========================================
-    // JSON DATA CLASSES
+    // JSON DATA CLASSES (CRASH-PROOF)
     // ==========================================
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class Net77Details(
         @field:JsonProperty("title") val title: String? = null,
         @field:JsonProperty("year") val year: String? = null,
@@ -33,6 +35,7 @@ class Net77Provider : MainAPI() {
         @field:JsonProperty("episodes") val episodes: List<Net77Episode>? = null
     )
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class Net77Episode(
         @field:JsonProperty("id") val id: String? = null,
         @field:JsonProperty("t") val t: String? = null,
@@ -41,21 +44,25 @@ class Net77Provider : MainAPI() {
         @field:JsonProperty("ep_desc") val epDesc: String? = null
     )
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class TokenResponse(
         @field:JsonProperty("h") val h: String? = null
     )
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PlaylistResponse(
         @field:JsonProperty("sources") val sources: List<SourceData>? = null,
         @field:JsonProperty("tracks") val tracks: List<TrackData>? = null
     )
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class SourceData(
         @field:JsonProperty("file") val file: String? = null,
         @field:JsonProperty("label") val label: String? = null,
         @field:JsonProperty("type") val type: String? = null
     )
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class TrackData(
         @field:JsonProperty("kind") val kind: String? = null,
         @field:JsonProperty("file") val file: String? = null,
@@ -75,7 +82,7 @@ class Net77Provider : MainAPI() {
             url = "https://net77.cc/play.php?id=81993280", 
             type = TvType.TvSeries
         ) {
-            this.posterUrl = "https://imgcdn.kim/poster/1920/81993280.jpg"
+            this.posterUrl = "https://images.metahub.space/poster/medium/tt1190634/img"
         }
 
         return newHomePageResponse(
@@ -94,7 +101,7 @@ class Net77Provider : MainAPI() {
                 url = "https://net77.cc/play.php?id=81993280",
                 type = TvType.TvSeries
             ) {
-                this.posterUrl = "https://imgcdn.kim/poster/1920/81993280.jpg"
+                this.posterUrl = "https://images.metahub.space/poster/medium/tt1190634/img"
             }
         )
     }
@@ -106,7 +113,9 @@ class Net77Provider : MainAPI() {
         val id = url.substringAfter("id=").substringBefore("&")
         if (id.isEmpty()) return null
 
-        val response = app.post(
+        println("NET77_DEBUG: load() called for ID: $id")
+
+        val res = app.post(
             "$mainUrl/play.php",
             headers = mapOf(
                 "Accept" to "*/*",
@@ -117,9 +126,17 @@ class Net77Provider : MainAPI() {
                 "User-Agent" to testUserAgent
             ),
             data = mapOf("id" to id)
-        ).parsedSafe<Net77Details>() ?: return null
+        )
 
-        val title = response.title ?: "Unknown"
+        println("NET77_DEBUG: play.php status: ${res.code}, body: ${res.text.take(300)}")
+
+        val response = res.parsedSafe<Net77Details>()
+        if (response == null) {
+            println("NET77_DEBUG: Parsing failed for Net77Details!")
+            return null
+        }
+
+        val title = response.title ?: "Mousetrap"
         val plot = response.desc
         val year = response.year?.toIntOrNull()
         val tags = response.genre?.split(",")?.map { it.trim() }
@@ -134,19 +151,21 @@ class Net77Provider : MainAPI() {
             }
         } ?: emptyList()
 
+        println("NET77_DEBUG: Successfully parsed ${episodes.size} episodes")
+
         return if (episodes.isEmpty()) {
             newMovieLoadResponse(title, url, TvType.Movie, id) {
                 this.year = year
                 this.plot = plot
                 this.tags = tags
-                this.posterUrl = "https://imgcdn.kim/poster/1920/81993280.jpg"
+                this.posterUrl = "https://images.metahub.space/poster/medium/tt1190634/img"
             }
         } else {
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.year = year
                 this.plot = plot
                 this.tags = tags
-                this.posterUrl = "https://imgcdn.kim/poster/1920/81993280.jpg"
+                this.posterUrl = "https://images.metahub.space/poster/medium/tt1190634/img"
             }
         }
     }
@@ -160,6 +179,7 @@ class Net77Provider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        println("NET77_DEBUG: loadLinks() triggered for ID: $data")
         val playerDomain = "https://net52.cc"
         
         val playUrl = "$playerDomain/play.php?id=$data"
@@ -173,11 +193,14 @@ class Net77Provider : MainAPI() {
             )
         ).parsedSafe<TokenResponse>()
         
-        val hToken = tokenRes?.h ?: return false
-        val tm = (System.currentTimeMillis() / 1000).toString()
+        val hToken = tokenRes?.h
+        println("NET77_DEBUG: Fetched hToken: $hToken")
+        if (hToken == null) return false
 
+        val tm = (System.currentTimeMillis() / 1000).toString()
         val playlistUrl = "$playerDomain/playlist.php?id=$data&tm=$tm&h=$hToken"
-        val playlistData = app.get(
+        
+        val playlistRes = app.get(
             playlistUrl,
             headers = mapOf(
                 "Accept" to "*/*",
@@ -185,7 +208,10 @@ class Net77Provider : MainAPI() {
                 "Cookie" to testCookies,
                 "User-Agent" to testUserAgent
             )
-        ).parsedSafe<List<PlaylistResponse>>()?.firstOrNull() ?: return false
+        )
+        println("NET77_DEBUG: playlist status: ${playlistRes.code}")
+
+        val playlistData = playlistRes.parsedSafe<List<PlaylistResponse>>()?.firstOrNull() ?: return false
 
         playlistData.sources?.forEach { source ->
             val fileUrl = source.file ?: return@forEach
@@ -198,7 +224,8 @@ class Net77Provider : MainAPI() {
                 else -> Qualities.Unknown.value
             }
 
-            // Fixed: Use this.type instead of this.isM3u8 (which is now read-only)
+            println("NET77_DEBUG: Adding stream: $videoUrl")
+
             callback.invoke(
                 newExtractorLink(
                     source = this@Net77Provider.name,
