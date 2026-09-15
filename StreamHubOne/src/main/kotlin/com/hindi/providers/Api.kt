@@ -12,7 +12,7 @@ const val tokyoInsiderAPI = "https://www.tokyoinsider.com"
 const val WYZIESubsAPI = "https://sub.wyzie.io"
 const val MostraguardaAPI = "https://mostraguarda.stream"
 const val CC_COOKIE = BuildConfig.CC_COOKIE
-const val CASTLE_KEY = BuildConfig.CASTLE_KEY
+
 const val MOVIEBLAST_TOKEN = BuildConfig.MOVIEBLAST_TOKEN
 const val MOVIEBLAST_API = BuildConfig.MOVIEBLAST_API
 const val MOVIEBLAST_KEY = BuildConfig.MOVIEBLAST_KEY
@@ -55,7 +55,7 @@ const val animesaltAPI = "https://animesalt.ac"
 const val anidbAPI = "https://anidb.app"
 const val vaPlayerAPI = "https://streamdata.vaplayer.ru"
 const val fshareAPI = "https://fsharetv.cc"
-const val castleAPI = "https://api.hlowb.com"
+//const val castleAPI = "https://api.hlowb.com"
 const val vidcoreAPI = "https://vidcore.net"
 const val anikageAPI = "https://anikage.cc"
 const val hdGharTvAPI = "https://hdghartv.cc"
