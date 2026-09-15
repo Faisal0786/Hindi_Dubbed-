@@ -49,25 +49,7 @@ object SourceRegistry {
             executeStandard = { res, subCb, cb -> invokeShowbox(res.imdbId, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeShowbox(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
-SourceProviderDef(
-    key = "p_streamflix", displayName = "StreamFlix",
-    executeStandard = { res, subCb, cb -> 
-        invokeStreamFlix(
-            tmdbId = res.tmdbId?.toString(), 
-            season = res.season,
-            episode = res.episode,
-            callback = cb
-        ) 
-    },
-    executeAnime = { res, subCb, cb -> 
-        invokeStreamFlix(
-            tmdbId = res.tmdbId?.toString(),
-            season = res.imdbSeason, 
-            episode = res.imdbEpisode,
-            callback = cb
-        ) 
-    }
-),
+
 
         SourceProviderDef(
             key = "p_vidrock", displayName = "Vidrock",
