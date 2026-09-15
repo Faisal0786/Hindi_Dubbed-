@@ -1,4 +1,4 @@
-package OttSource // Error 1 Fixed (Package name matched with Plugin)
+package OttSource
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
@@ -14,14 +14,14 @@ class Net77Provider : MainAPI() {
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     // ==========================================
-    // HARDCODED TESTING TOKENS (PHASE 4 TEST)
+    // HARDCODED TESTING TOKENS
     // ==========================================
     private val testCookies = "user_token=6fa477cec6457daeffe82723de4c5466; 81589995=26%3A3185; SE80113612=81589997; SE81714240=81757104; t_hash_p=b18bf280e2efe9cd3b37f53bf13681ac%3A%3A0f13b1e33c8504423a492842341c87c8%3A%3A1789497353%3A%3Ani%3A%3Ap; SE80237957=81023598; cf_clearance=wM2RHg9jmZ0fNzDIhnyB14P9rSjflSxIcQIWM.jWeCs-1789505502-1.2.1.1-ct7rB4EJutr6RePMbRAAukp1fNPR1pR9qImulzDMLVygjHhW.XPzP1BIKQScv6Y8V_cU71Q84tvB2PvGmJKWEksSYJ25pgy6Q.sGFxGnuKhJ0uthT7aTf43_Xn5hQLdHIXnd_YtHLQsmj5Wcl4zKLcRTp3A2pu42qBj9x5ocI1MxbvOnwPo5lEZmBkklOBROJNSVT_grEzDIlNVL4nEwuLEN9t9g8kHrZoP0_5y1VaxPY5SSgDh5vV7QmmiRO9U7dTrlrpXz80p5gSY_UsS5yP9qP61BimISNQ5YBfxNM4BdQFa7dwKk0_ms3psLIY6dacrY_wklAg2Hg6YozzhBHuU61ZO9v1xQfc1OdVUkUfdagVztOyB8NJxwXPVb_LPpPdN8O17Qd7XW5DcmR7N6cPsgxtU3L3nYZa0zHbIqmIoyC57.pFrUcyvLCNUt.gxR; 82034837=371%3A9621; recentplay=81950460-82034837-SE80237957-SE81714240-SE80113612-82018915; t_hash=337482d2b60a7b7aa505627523f8cbdd%3A%3A1789506042%3A%3Ani"
     
     private val testUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36"
 
     // ==========================================
-    // JSON DATA CLASSES (Warnings Fixed)
+    // JSON DATA CLASSES
     // ==========================================
     data class Net77Details(
         @field:JsonProperty("title") val title: String? = null,
@@ -126,7 +126,6 @@ class Net77Provider : MainAPI() {
 
         val episodes = response.episodes?.mapNotNull { ep ->
             val epId = ep.id ?: return@mapNotNull null
-            // Error 2 Fixed: Using 'newEpisode' instead of 'Episode(...)'
             newEpisode(epId) {
                 this.name = ep.t
                 this.season = ep.s?.replace("S", "")?.toIntOrNull()
@@ -155,11 +154,12 @@ class Net77Provider : MainAPI() {
     // ==========================================
     // EXTRACT M3U8 LINKS & SUBTITLES
     // ==========================================
+    // Error 1 Fixed: subtitleCallback aur callback ka order theek kar diya
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
-        callback: (ExtractorLink) -> Unit,
-        subtitleCallback: (SubtitleFile) -> Unit
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ): Boolean {
         val playerDomain = "https://net52.cc"
         
@@ -199,8 +199,9 @@ class Net77Provider : MainAPI() {
                 else -> Qualities.Unknown.value
             }
 
+            // Error 2 Fixed: ExtractorLink ki jagah newExtractorLink function use kiya
             callback.invoke(
-                ExtractorLink(
+                newExtractorLink(
                     source = this.name,
                     name = source.label ?: "HD",
                     url = videoUrl,
