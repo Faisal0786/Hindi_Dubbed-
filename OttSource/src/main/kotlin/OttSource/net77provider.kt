@@ -1,12 +1,12 @@
-package com.lagradost.cloudstream3.extractors
+package OttSource // Fixed: Package name matched to your GitHub Action folder structure
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.newExtractorLink
 
 @Suppress("DEPRECATION")
 class Net77Provider : MainAPI() {
@@ -187,15 +187,15 @@ class Net77Provider : MainAPI() {
             val finalUrl = if (rawUrl.startsWith("/")) "https://net52.cc$rawUrl" else rawUrl
             val actualUrl = finalUrl.replace("in=unknown::ni", "in=$cleanHash")
 
-            // FIXED: Using newExtractorLink instead of ExtractorLink constructor
+            // FIXED: Using ExtractorLink with INFER_TYPE to bypass the isM3u8 deprecation error
             callback.invoke(
-                newExtractorLink(
+                ExtractorLink(
                     source = this.name,
                     name = "${this.name} ${source.label ?: "Auto"}",
                     url = actualUrl,
                     referer = "https://net52.cc/",
                     quality = Qualities.Unknown.value,
-                    isM3u8 = true
+                    type = INFER_TYPE 
                 )
             )
         }
