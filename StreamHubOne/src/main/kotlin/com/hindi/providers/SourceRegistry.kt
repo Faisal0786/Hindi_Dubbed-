@@ -67,7 +67,7 @@ SourceProviderDef(
             callback = cb
         ) 
     }
-)
+),
 
         SourceProviderDef(
             key = "p_vidrock", displayName = "Vidrock",
