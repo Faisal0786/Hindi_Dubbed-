@@ -100,15 +100,18 @@ private fun streamQuality(url: String?, description: String?, resolutionNum: Int
     }
     val numLabel = resolutionNumToLabel(resolutionNum)
     if (numLabel != null) return numLabel
+    
     if (!url.isNullOrEmpty()) {
-        val tokens = Regex("[^/a-z](?:(\\d{3,4})\\s*p?)[^a-z]", RegexOption.IGNORE_CASE).findAll(url)
-        for (t in tokens) {
-            val m = Regex("(\\d{3,4})").find(t.value)
-            if (m != null) { val h = m.groupValues[1].toIntOrNull(); if (h != null && KNOWN_HEIGHTS.contains(h)) return "${h}p" }
+        
+        val m = Regex("[/\\-_](\\d{3,4})[p/\\-_.]", RegexOption.IGNORE_CASE).find(url)
+        if (m != null) { 
+            val h = m.groupValues[1].toIntOrNull()
+            if (h != null && KNOWN_HEIGHTS.contains(h)) return "${h}p" 
         }
     }
     return defaultQual
 }
+
 
 private fun getQualityFromName(qual: String): Int = when {
     qual.contains("4K") -> Qualities.P2160.value
