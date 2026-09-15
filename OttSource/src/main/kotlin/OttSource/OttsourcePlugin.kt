@@ -19,6 +19,7 @@ open class OttSourcePlugin : Plugin() {
         HotStarMirrorProvider.context = context
 
         // Main providers
+registerMainAPI(Net77Provider())
         registerMainAPI(NetflixMirrorProvider())
         registerMainAPI(PrimeVideoMirrorProvider())
         registerMainAPI(HotStarMirrorProvider())
@@ -28,5 +29,6 @@ open class OttSourcePlugin : Plugin() {
         registerMainAPI(DisneyStudioProvider("marvel", "Marvel"))
         registerMainAPI(DisneyStudioProvider("starwars", "Star Wars"))
         registerMainAPI(DisneyStudioProvider("pixar", "Pixar"))
+
     }
 }
