@@ -57,7 +57,7 @@ jobs:
           SIMKL_API: ${{ secrets.SIMKL_API }}
           TMDB_KEY: ${{ secrets.TMDB_KEY }}
           CC_COOKIE: ${{ secrets.CC_COOKIE }}
-          CASTLE_KEY: ${{ secrets.CASTLE_KEY }}
+          
           MOVIEBLAST_TOKEN: ${{ secrets.MOVIEBLAST_TOKEN }}
           MOVIEBLAST_API: ${{ secrets.MOVIEBLAST_API }}
           MOVIEBLAST_KEY: ${{ secrets.MOVIEBLAST_KEY }}
