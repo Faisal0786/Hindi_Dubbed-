@@ -8,7 +8,6 @@ import com.lagradost.api.Log
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import java.net.URriterside // or java.net.URLEncoder
 import java.net.URLEncoder
 
 // 👉 Yahan apni verified cookies hardcode kar di hain testing ke liye
