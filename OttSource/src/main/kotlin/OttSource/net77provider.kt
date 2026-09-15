@@ -1,4 +1,4 @@
-package OttSource
+package com.lagradost.cloudstream3.extractors
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
@@ -6,8 +6,9 @@ import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink
 
-@Suppress("DEPRECATION") // Suppresses warnings for older CS3 ExtractorLink constructs
+@Suppress("DEPRECATION")
 class Net77Provider : MainAPI() {
     override var mainUrl = "https://net77.cc"
     override var name = "Net77"
@@ -20,7 +21,6 @@ class Net77Provider : MainAPI() {
     // ==========================================
     data class ContentData(val id: String, val title: String)
 
-    // Renamed to avoid collision with CS3's internal SearchResponse class
     data class Net77SearchResponse(@JsonProperty("searchResult") val searchResult: List<SearchResult>? = null)
     data class SearchResult(@JsonProperty("id") val id: String?, @JsonProperty("t") val title: String?)
 
@@ -56,13 +56,12 @@ class Net77Provider : MainAPI() {
     override val mainPage = mainPageOf("$mainUrl/home" to "Home")
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // Removed `interceptor = true` to fix compilation type mismatch
         val document = app.get(request.data, referer = mainUrl).document
         val homeItems = arrayListOf<HomePageList>()
 
         document.select("div.lolomoRow").forEach { row ->
             val categoryName = row.selectFirst("div.row-header-title")?.text() ?: "Trending"
-            val list = arrayListOf<SearchResponse>() // Use CS3's standard SearchResponse here
+            val list = arrayListOf<SearchResponse>() 
 
             row.select("div.title-card-container").forEach { card ->
                 val idNode = card.selectFirst("[data-post]") ?: card
@@ -126,7 +125,6 @@ class Net77Provider : MainAPI() {
             val episodes = details.episodes?.mapNotNull { ep ->
                 val epId = ep.id ?: return@mapNotNull null
                 
-                // Fixed: Replaced deprecated constructor with newEpisode builder
                 newEpisode(data = ContentData(epId, title).toJson()) {
                     this.name = ep.title ?: "Episode ${ep.episodeNum}"
                     this.season = ep.season?.replace("S", "")?.toIntOrNull()
@@ -161,7 +159,6 @@ class Net77Provider : MainAPI() {
         val contentData = parseJson<ContentData>(data)
         val contentId = contentData.id
 
-        // Removed Boolean interceptor parameter
         app.get("$mainUrl/home")
 
         val postHeaders = mapOf(
@@ -190,8 +187,9 @@ class Net77Provider : MainAPI() {
             val finalUrl = if (rawUrl.startsWith("/")) "https://net52.cc$rawUrl" else rawUrl
             val actualUrl = finalUrl.replace("in=unknown::ni", "in=$cleanHash")
 
+            // FIXED: Using newExtractorLink instead of ExtractorLink constructor
             callback.invoke(
-                ExtractorLink(
+                newExtractorLink(
                     source = this.name,
                     name = "${this.name} ${source.label ?: "Auto"}",
                     url = actualUrl,
