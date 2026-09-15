@@ -159,10 +159,29 @@ object SourceRegistry {
             executeAnime = { res, _, cb -> invokeAv1encodes(res.imdbTitle, res.imdbSeason, res.imdbEpisode, cb) }
         ),
         SourceProviderDef(
-            key = "p_castle", displayName = "Castle",
-            executeStandard = { res, subCb, cb -> invokeCastle(res.title, res.season, res.episode, subCb, cb) },
-            executeAnime = { res, subCb, cb -> invokeCastle(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
-        ),
+    key = "p_castle", displayName = "Castle",
+    executeStandard = { res, subCb, cb -> 
+        invokeCastle(
+            title = res.title,
+            year = res.year,
+            season = res.season,
+            episode = res.episode,
+            subtitleCallback = subCb,
+            callback = cb
+        ) 
+    },
+    executeAnime = { res, subCb, cb -> 
+        invokeCastle(
+            title = res.imdbTitle,
+            year = res.year, // Ya res.imdbYear agar tumhara data model support karta hai
+            season = res.imdbSeason,
+            episode = res.imdbEpisode,
+            subtitleCallback = subCb,
+            callback = cb
+        ) 
+    }
+),
+
         
         SourceProviderDef(
             key = "p_zinkmovies", displayName = "Zinkmovies", category = ProviderCategory.HINDI,
