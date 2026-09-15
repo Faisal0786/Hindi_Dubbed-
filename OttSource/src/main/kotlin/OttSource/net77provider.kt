@@ -1,4 +1,4 @@
-package com.lagradost.cloudstream3.extractors // Apne package ke hisaab se change kar lena agar zaroorat ho
+package OttSource // Error 1 Fixed (Package name matched with Plugin)
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
@@ -21,50 +21,50 @@ class Net77Provider : MainAPI() {
     private val testUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36"
 
     // ==========================================
-    // JSON DATA CLASSES
+    // JSON DATA CLASSES (Warnings Fixed)
     // ==========================================
     data class Net77Details(
-        @JsonProperty("title") val title: String? = null,
-        @JsonProperty("year") val year: String? = null,
-        @JsonProperty("desc") val desc: String? = null,
-        @JsonProperty("cast") val cast: String? = null,
-        @JsonProperty("genre") val genre: String? = null,
-        @JsonProperty("image2") val image2: String? = null,
-        @JsonProperty("episodes") val episodes: List<Net77Episode>? = null
+        @field:JsonProperty("title") val title: String? = null,
+        @field:JsonProperty("year") val year: String? = null,
+        @field:JsonProperty("desc") val desc: String? = null,
+        @field:JsonProperty("cast") val cast: String? = null,
+        @field:JsonProperty("genre") val genre: String? = null,
+        @field:JsonProperty("image2") val image2: String? = null,
+        @field:JsonProperty("episodes") val episodes: List<Net77Episode>? = null
     )
 
     data class Net77Episode(
-        @JsonProperty("id") val id: String? = null,
-        @JsonProperty("t") val t: String? = null,
-        @JsonProperty("s") val s: String? = null,
-        @JsonProperty("ep") val ep: String? = null,
-        @JsonProperty("ep_desc") val epDesc: String? = null
+        @field:JsonProperty("id") val id: String? = null,
+        @field:JsonProperty("t") val t: String? = null,
+        @field:JsonProperty("s") val s: String? = null,
+        @field:JsonProperty("ep") val ep: String? = null,
+        @field:JsonProperty("ep_desc") val epDesc: String? = null
     )
 
     data class TokenResponse(
-        @JsonProperty("h") val h: String? = null
+        @field:JsonProperty("h") val h: String? = null
     )
 
     data class PlaylistResponse(
-        @JsonProperty("sources") val sources: List<SourceData>? = null,
-        @JsonProperty("tracks") val tracks: List<TrackData>? = null
+        @field:JsonProperty("sources") val sources: List<SourceData>? = null,
+        @field:JsonProperty("tracks") val tracks: List<TrackData>? = null
     )
 
     data class SourceData(
-        @JsonProperty("file") val file: String? = null,
-        @JsonProperty("label") val label: String? = null,
-        @JsonProperty("type") val type: String? = null
+        @field:JsonProperty("file") val file: String? = null,
+        @field:JsonProperty("label") val label: String? = null,
+        @field:JsonProperty("type") val type: String? = null
     )
 
     data class TrackData(
-        @JsonProperty("kind") val kind: String? = null,
-        @JsonProperty("file") val file: String? = null,
-        @JsonProperty("label") val label: String? = null,
-        @JsonProperty("language") val language: String? = null
+        @field:JsonProperty("kind") val kind: String? = null,
+        @field:JsonProperty("file") val file: String? = null,
+        @field:JsonProperty("label") val label: String? = null,
+        @field:JsonProperty("language") val language: String? = null
     )
 
     // ==========================================
-    // DUMMY MAIN PAGE (FOR TESTING)
+    // DUMMY MAIN PAGE
     // ==========================================
     override suspend fun getMainPage(
         page: Int,
@@ -87,9 +87,6 @@ class Net77Provider : MainAPI() {
         )
     }
 
-    // ==========================================
-    // DUMMY SEARCH
-    // ==========================================
     override suspend fun search(query: String): List<SearchResponse> {
         return listOf(
             newTvSeriesSearchResponse(
@@ -129,13 +126,13 @@ class Net77Provider : MainAPI() {
 
         val episodes = response.episodes?.mapNotNull { ep ->
             val epId = ep.id ?: return@mapNotNull null
-            Episode(
-                data = epId, 
-                name = ep.t,
-                season = ep.s?.replace("S", "")?.toIntOrNull(),
-                episode = ep.ep?.toIntOrNull(),
-                description = ep.epDesc
-            )
+            // Error 2 Fixed: Using 'newEpisode' instead of 'Episode(...)'
+            newEpisode(epId) {
+                this.name = ep.t
+                this.season = ep.s?.replace("S", "")?.toIntOrNull()
+                this.episode = ep.ep?.toIntOrNull()
+                this.description = ep.epDesc
+            }
         } ?: emptyList()
 
         return if (episodes.isEmpty()) {
@@ -166,7 +163,6 @@ class Net77Provider : MainAPI() {
     ): Boolean {
         val playerDomain = "https://net52.cc"
         
-        // 1. GET Request to fetch 'h' token
         val playUrl = "$playerDomain/play.php?id=$data"
         val tokenRes = app.get(
             playUrl,
@@ -181,7 +177,6 @@ class Net77Provider : MainAPI() {
         val hToken = tokenRes?.h ?: return false
         val tm = (System.currentTimeMillis() / 1000).toString()
 
-        // 2. Fetch Playlist with token
         val playlistUrl = "$playerDomain/playlist.php?id=$data&tm=$tm&h=$hToken"
         val playlistData = app.get(
             playlistUrl,
@@ -193,7 +188,6 @@ class Net77Provider : MainAPI() {
             )
         ).parsedSafe<List<PlaylistResponse>>()?.firstOrNull() ?: return false
 
-        // 3. Parse HLS Sources
         playlistData.sources?.forEach { source ->
             val fileUrl = source.file ?: return@forEach
             val videoUrl = if (fileUrl.startsWith("/")) "$playerDomain$fileUrl" else fileUrl
@@ -221,7 +215,6 @@ class Net77Provider : MainAPI() {
             )
         }
 
-        // 4. Parse Subtitles
         playlistData.tracks?.filter { it.kind == "captions" }?.forEach { track ->
             val trackUrl = track.file ?: return@forEach
             val subUrl = when {
