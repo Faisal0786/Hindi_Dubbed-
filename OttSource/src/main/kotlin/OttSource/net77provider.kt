@@ -198,7 +198,7 @@ class Net77Provider : MainAPI() {
                 else -> Qualities.Unknown.value
             }
 
-            // YAHAN FIX KIYA HAI: Naya Lambda Builder Pattern
+            // Fixed: Use this.type instead of this.isM3u8 (which is now read-only)
             callback.invoke(
                 newExtractorLink(
                     source = this@Net77Provider.name,
@@ -207,7 +207,11 @@ class Net77Provider : MainAPI() {
                 ) {
                     this.referer = playUrl
                     this.quality = videoQuality
-                    this.isM3u8 = videoUrl.contains(".m3u8") || source.type == "application/vnd.apple.mpegurl"
+                    this.type = if (videoUrl.contains(".m3u8") || source.type == "application/vnd.apple.mpegurl") {
+                        ExtractorLinkType.M3U8
+                    } else {
+                        ExtractorLinkType.VIDEO
+                    }
                     this.headers = mapOf(
                         "Cookie" to testCookies, 
                         "User-Agent" to testUserAgent
