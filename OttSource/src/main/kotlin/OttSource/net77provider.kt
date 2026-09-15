@@ -1,177 +1,160 @@
-package OttSource
+package com.lagradost.cloudstream3.extractors
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.Qualities
 
-@Suppress("DEPRECATION", "NAME_SHADOWING")
 class Net77Provider : MainAPI() {
     override var mainUrl = "https://net77.cc"
-    override var name = "Net77 (Test Build)"
+    override var name = "Net77"
     override val hasMainPage = true
-    override var lang = "en"
-    override val hasDownloadSupport = true
+    override var lang = "hi"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     // ==========================================
-    // HARDCODED TESTING TOKENS
+    // 1. DATA CLASSES (JSON MAPPING)
     // ==========================================
-    private val testCookies = "user_token=6fa477cec6457daeffe82723de4c5466; 81589995=26%3A3185; SE80113612=81589997; SE81714240=81757104; t_hash_p=b18bf280e2efe9cd3b37f53bf13681ac%3A%3A0f13b1e33c8504423a492842341c87c8%3A%3A1789497353%3A%3Ani%3A%3Ap; SE80237957=81023598; cf_clearance=wM2RHg9jmZ0fNzDIhnyB14P9rSjflSxIcQIWM.jWeCs-1789505502-1.2.1.1-ct7rB4EJutr6RePMbRAAukp1fNPR1pR9qImulzDMLVygjHhW.XPzP1BIKQScv6Y8V_cU71Q84tvB2PvGmJKWEksSYJ25pgy6Q.sGFxGnuKhJ0uthT7aTf43_Xn5hQLdHIXnd_YtHLQsmj5Wcl4zKLcRTp3A2pu42qBj9x5ocI1MxbvOnwPo5lEZmBkklOBROJNSVT_grEzDIlNVL4nEwuLEN9t9g8kHrZoP0_5y1VaxPY5SSgDh5vV7QmmiRO9U7dTrlrpXz80p5gSY_UsS5yP9qP61BimISNQ5YBfxNM4BdQFa7dwKk0_ms3psLIY6dacrY_wklAg2Hg6YozzhBHuU61ZO9v1xQfc1OdVUkUfdagVztOyB8NJxwXPVb_LPpPdN8O17Qd7XW5DcmR7N6cPsgxtU3L3nYZa0zHbIqmIoyC57.pFrUcyvLCNUt.gxR; 82034837=371%3A9621; recentplay=81950460-82034837-SE80237957-SE81714240-SE80113612-82018915; t_hash=337482d2b60a7b7aa505627523f8cbdd%3A%3A1789506042%3A%3Ani"
-    
-    private val testUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36"
+    data class ContentData(val id: String, val title: String)
 
-    // ==========================================
-    // JSON DATA CLASSES (CRASH-PROOF)
-    // ==========================================
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class Net77Details(
-        @field:JsonProperty("title") val title: String? = null,
-        @field:JsonProperty("year") val year: String? = null,
-        @field:JsonProperty("desc") val desc: String? = null,
-        @field:JsonProperty("cast") val cast: String? = null,
-        @field:JsonProperty("genre") val genre: String? = null,
-        @field:JsonProperty("image2") val image2: String? = null,
-        @field:JsonProperty("episodes") val episodes: List<Net77Episode>? = null
+    data class SearchResponse(@JsonProperty("searchResult") val searchResult: List<SearchResult>? = null)
+    data class SearchResult(@JsonProperty("id") val id: String?, @JsonProperty("t") val title: String?)
+
+    data class DetailResponse(
+        @JsonProperty("type") val type: String? = null,
+        @JsonProperty("title") val title: String? = null,
+        @JsonProperty("desc") val desc: String? = null,
+        @JsonProperty("year") val year: String? = null,
+        @JsonProperty("episodes") val episodes: List<EpisodeData>? = null
+        // Note: nextPageShow and nextPage are here in JSON, can be implemented for pagination later
     )
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class Net77Episode(
-        @field:JsonProperty("id") val id: String? = null,
-        @field:JsonProperty("t") val t: String? = null,
-        @field:JsonProperty("s") val s: String? = null,
-        @field:JsonProperty("ep") val ep: String? = null,
-        @field:JsonProperty("ep_desc") val epDesc: String? = null
+    data class EpisodeData(
+        @JsonProperty("id") val id: String?,
+        @JsonProperty("t") val title: String?,
+        @JsonProperty("s") val season: String?,
+        @JsonProperty("ep") val episodeNum: String?,
+        @JsonProperty("ep_desc") val description: String?
     )
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class TokenResponse(
-        @field:JsonProperty("h") val h: String? = null
-    )
+    data class PlayResponse(@JsonProperty("h") val h: String? = null)
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     data class PlaylistResponse(
-        @field:JsonProperty("sources") val sources: List<SourceData>? = null,
-        @field:JsonProperty("tracks") val tracks: List<TrackData>? = null
+        @JsonProperty("sources") val sources: List<SourceData>? = null,
+        @JsonProperty("tracks") val tracks: List<TrackData>? = null
     )
+    data class SourceData(@JsonProperty("file") val file: String?, @JsonProperty("label") val label: String?)
+    data class TrackData(@JsonProperty("file") val file: String?, @JsonProperty("kind") val kind: String?, @JsonProperty("label") val label: String?)
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class SourceData(
-        @field:JsonProperty("file") val file: String? = null,
-        @field:JsonProperty("label") val label: String? = null,
-        @field:JsonProperty("type") val type: String? = null
-    )
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class TrackData(
-        @field:JsonProperty("kind") val kind: String? = null,
-        @field:JsonProperty("file") val file: String? = null,
-        @field:JsonProperty("label") val label: String? = null,
-        @field:JsonProperty("language") val language: String? = null
-    )
 
     // ==========================================
-    // DUMMY MAIN PAGE
+    // 2. MAIN PAGE (HTML SCRAPING)
     // ==========================================
-    override suspend fun getMainPage(
-        page: Int,
-        request: MainPageRequest
-    ): HomePageResponse {
-        val testItem = newTvSeriesSearchResponse(
-            name = "Mousetrap (Testing)",
-            url = "https://net77.cc/play.php?id=81993280", 
-            type = TvType.TvSeries
-        ) {
-            this.posterUrl = "https://images.metahub.space/poster/medium/tt1190634/img"
-        }
+    override val mainPage = mainPageOf("$mainUrl/home" to "Home")
 
-        return newHomePageResponse(
-            HomePageList(
-                name = "Testing Extractor",
-                list = listOf(testItem)
-            ),
-            hasNext = false
-        )
-    }
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        // App.get fetches HTML. Interceptor ensures Cloudflare is bypassed if needed.
+        val document = app.get(request.data, referer = mainUrl, interceptor = true).document
+        val homeItems = arrayListOf<HomePageList>()
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        return listOf(
-            newTvSeriesSearchResponse(
-                name = "Mousetrap (Test Search)",
-                url = "https://net77.cc/play.php?id=81993280",
-                type = TvType.TvSeries
-            ) {
-                this.posterUrl = "https://images.metahub.space/poster/medium/tt1190634/img"
+        // From screenshot 1000035135.jpg: outer wrapper is div.lolomoRow
+        document.select("div.lolomoRow").forEach { row ->
+            // Extract category title (e.g., "Critically Acclaimed TV Shows")
+            val categoryName = row.selectFirst("div.row-header-title")?.text() ?: "Trending"
+            val list = arrayListOf<SearchResponse>()
+
+            // From screenshot 1000035134.jpg: item container is div.title-card-container
+            row.select("div.title-card-container").forEach { card ->
+                // Look for data-post attribute in the card or its children
+                val idNode = card.selectFirst("[data-post]") ?: card
+                val id = idNode.attr("data-post")
+                if (id.isEmpty()) return@forEach
+
+                // Extract title and poster
+                val title = card.selectFirst("a[aria-label]")?.attr("aria-label") ?: "Unknown"
+                val imgNode = card.selectFirst("img.boxart-image")
+                val posterUrl = imgNode?.attr("data-src")?.takeIf { it.isNotEmpty() } ?: imgNode?.attr("src")
+
+                list.add(
+                    newMovieSearchResponse(title, ContentData(id, title).toJson(), TvType.Movie) {
+                        this.posterUrl = posterUrl
+                    }
+                )
             }
-        )
+
+            if (list.isNotEmpty()) {
+                homeItems.add(HomePageList(categoryName, list))
+            }
+        }
+        return newHomePageResponse(homeItems)
     }
 
     // ==========================================
-    // LOAD MOVIE / TV SERIES DETAILS
+    // 3. SEARCH (JSON API)
     // ==========================================
-    override suspend fun load(url: String): LoadResponse? {
-        val id = url.substringAfter("id=").substringBefore("&")
-        if (id.isEmpty()) return null
+    override suspend fun search(query: String): List<SearchResponse> {
+        val currentTime = (System.currentTimeMillis() / 1000).toString()
+        val url = "$mainUrl/search.php?s=$query&t=$currentTime"
 
-        println("NET77_DEBUG: load() called for ID: $id")
+        val response = app.get(url, referer = "$mainUrl/home").text
+        val parsed = parseJson<SearchResponse>(response)
 
-        val res = app.post(
-            "$mainUrl/play.php",
-            headers = mapOf(
-                "Accept" to "*/*",
-                "X-Requested-With" to "XMLHttpRequest",
-                "Origin" to mainUrl,
-                "Referer" to "$mainUrl/home",
-                "Cookie" to testCookies,
-                "User-Agent" to testUserAgent
-            ),
-            data = mapOf("id" to id)
-        )
+        return parsed.searchResult?.mapNotNull { item ->
+            val id = item.id ?: return@mapNotNull null
+            val title = item.title ?: return@mapNotNull null
 
-        println("NET77_DEBUG: play.php status: ${res.code}, body: ${res.text.take(300)}")
-
-        val response = res.parsedSafe<Net77Details>()
-        if (response == null) {
-            println("NET77_DEBUG: Parsing failed for Net77Details!")
-            return null
-        }
-
-        val title = response.title ?: "Mousetrap"
-        val plot = response.desc
-        val year = response.year?.toIntOrNull()
-        val tags = response.genre?.split(",")?.map { it.trim() }
-
-        val episodes = response.episodes?.mapNotNull { ep ->
-            val epId = ep.id ?: return@mapNotNull null
-            newEpisode(epId) {
-                this.name = ep.t
-                this.season = ep.s?.replace("S", "")?.toIntOrNull()
-                this.episode = ep.ep?.toIntOrNull()
-                this.description = ep.epDesc
+            newMovieSearchResponse(title, ContentData(id, title).toJson(), TvType.Movie) {
+                this.posterUrl = "https://imgcdn.kim/poster/1920/$id.jpg"
             }
         } ?: emptyList()
+    }
 
-        println("NET77_DEBUG: Successfully parsed ${episodes.size} episodes")
+    // ==========================================
+    // 4. LOAD DETAILS & EPISODES
+    // ==========================================
+    override suspend fun load(url: String): LoadResponse? {
+        val data = parseJson<ContentData>(url)
+        val currentTime = (System.currentTimeMillis() / 1000).toString()
+        val postUrl = "$mainUrl/post.php?id=${data.id}&t=$currentTime"
 
-        return if (episodes.isEmpty()) {
-            newMovieLoadResponse(title, url, TvType.Movie, id) {
-                this.year = year
-                this.plot = plot
-                this.tags = tags
-                this.posterUrl = "https://images.metahub.space/poster/medium/tt1190634/img"
+        val response = app.get(postUrl, referer = "$mainUrl/home").text
+        val details = parseJson<DetailResponse>(response)
+
+        val title = details.title ?: data.title
+        val poster = "https://imgcdn.kim/poster/1920/${data.id}.jpg"
+        val isTvSeries = details.type == "t"
+
+        if (isTvSeries) {
+            val episodes = details.episodes?.mapNotNull { ep ->
+                val epId = ep.id ?: return@mapNotNull null
+                // Passing individual episode ID in ContentData
+                Episode(
+                    data = ContentData(epId, title).toJson(),
+                    name = ep.title ?: "Episode ${ep.episodeNum}",
+                    season = ep.season?.replace("S", "")?.toIntOrNull(),
+                    episode = ep.episodeNum?.toIntOrNull(),
+                    description = ep.description
+                )
+            } ?: emptyList()
+
+            return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+                this.posterUrl = poster
+                this.plot = details.desc
+                this.year = details.year?.toIntOrNull()
             }
         } else {
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-                this.year = year
-                this.plot = plot
-                this.tags = tags
-                this.posterUrl = "https://images.metahub.space/poster/medium/tt1190634/img"
+            return newMovieLoadResponse(title, url, TvType.Movie, url) {
+                this.posterUrl = poster
+                this.plot = details.desc
+                this.year = details.year?.toIntOrNull()
             }
         }
     }
 
     // ==========================================
-    // EXTRACT M3U8 LINKS & SUBTITLES
+    // 5. VIDEO EXTRACTION (PLAY POST -> M3U8)
     // ==========================================
     override suspend fun loadLinks(
         data: String,
@@ -179,90 +162,67 @@ class Net77Provider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        println("NET77_DEBUG: loadLinks() triggered for ID: $data")
-        val playerDomain = "https://net52.cc"
-        
-        val playUrl = "$playerDomain/play.php?id=$data"
-        val tokenRes = app.get(
-            playUrl,
-            headers = mapOf(
-                "Accept" to "application/json",
-                "Referer" to "$mainUrl/",
-                "Cookie" to testCookies,
-                "User-Agent" to testUserAgent
-            )
-        ).parsedSafe<TokenResponse>()
-        
-        val hToken = tokenRes?.h
-        println("NET77_DEBUG: Fetched hToken: $hToken")
-        if (hToken == null) return false
+        val contentData = parseJson<ContentData>(data)
+        val contentId = contentData.id
 
-        val tm = (System.currentTimeMillis() / 1000).toString()
-        val playlistUrl = "$playerDomain/playlist.php?id=$data&tm=$tm&h=$hToken"
-        
-        val playlistRes = app.get(
-            playlistUrl,
-            headers = mapOf(
-                "Accept" to "*/*",
-                "Referer" to playUrl,
-                "Cookie" to testCookies,
-                "User-Agent" to testUserAgent
-            )
+        // Step 1: Force interceptor to grab fresh cf_clearance & user_token if needed
+        app.get("$mainUrl/home", interceptor = true)
+
+        // Step 2: Fetch Video Hash
+        val postHeaders = mapOf(
+            "X-Requested-With" to "XMLHttpRequest",
+            "Origin" to mainUrl,
+            "Referer" to "$mainUrl/home"
         )
-        println("NET77_DEBUG: playlist status: ${playlistRes.code}")
+        val postData = mapOf("id" to contentId)
 
-        val playlistData = playlistRes.parsedSafe<List<PlaylistResponse>>()?.firstOrNull() ?: return false
+        val postResponse = app.post("$mainUrl/play.php", headers = postHeaders, data = postData).parsedSafe<PlayResponse>()
+        val rawHash = postResponse?.h ?: return false
+        val cleanHash = rawHash.replace("in=", "")
+        
+        // Extract timestamp (3rd element in hash split)
+        val tmValue = cleanHash.split("::").getOrNull(2) ?: ""
 
-        playlistData.sources?.forEach { source ->
-            val fileUrl = source.file ?: return@forEach
-            val videoUrl = if (fileUrl.startsWith("/")) "$playerDomain$fileUrl" else fileUrl
+        // Step 3: Fetch Playlist JSON from CDN
+        val playlistUrl = "https://net52.cc/playlist.php?id=$contentId&t=${contentData.title}&tm=$tmValue&h=$cleanHash"
+        val playlistHeaders = mapOf(
+            "Referer" to "https://net52.cc/play.php?id=$contentId&in=$cleanHash"
+        )
+
+        val playlistJson = app.get(playlistUrl, headers = playlistHeaders).text
+        val parsedPlaylist = parseJson<List<PlaylistResponse>>(playlistJson).firstOrNull() ?: return false
+
+        // Step 4: Map Sources
+        parsedPlaylist.sources?.forEach { source ->
+            val rawUrl = source.file ?: return@forEach
+            // Ensure absolute URL
+            val finalUrl = if (rawUrl.startsWith("/")) "https://net52.cc$rawUrl" else rawUrl
             
-            val videoQuality = when {
-                source.label?.contains("Full", true) == true -> Qualities.P1080.value
-                source.label?.contains("Mid", true) == true -> Qualities.P720.value
-                source.label?.contains("Low", true) == true -> Qualities.P480.value
-                else -> Qualities.Unknown.value
-            }
-
-            println("NET77_DEBUG: Adding stream: $videoUrl")
+            // MAGIC FIX: Replaces the dummy 'in=unknown::ni' param with the real extracted hash string
+            val actualUrl = finalUrl.replace("in=unknown::ni", "in=$cleanHash")
 
             callback.invoke(
-                newExtractorLink(
-                    source = this@Net77Provider.name,
-                    name = source.label ?: "HD",
-                    url = videoUrl
-                ) {
-                    this.referer = playUrl
-                    this.quality = videoQuality
-                    this.type = if (videoUrl.contains(".m3u8") || source.type == "application/vnd.apple.mpegurl") {
-                        ExtractorLinkType.M3U8
-                    } else {
-                        ExtractorLinkType.VIDEO
-                    }
-                    this.headers = mapOf(
-                        "Cookie" to testCookies, 
-                        "User-Agent" to testUserAgent
-                    )
-                }
-            )
-        }
-
-        playlistData.tracks?.filter { it.kind == "captions" }?.forEach { track ->
-            val trackUrl = track.file ?: return@forEach
-            val subUrl = when {
-                trackUrl.startsWith("//") -> "https:$trackUrl"
-                trackUrl.startsWith("/") -> "$playerDomain$trackUrl"
-                else -> trackUrl
-            }
-            
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    lang = track.label ?: track.language ?: "Unknown",
-                    url = subUrl
+                ExtractorLink(
+                    source = this.name,
+                    name = "${this.name} ${source.label ?: "Auto"}",
+                    url = actualUrl,
+                    referer = "https://net52.cc/", // Mandatory for CDN bypass
+                    quality = Qualities.Unknown.value,
+                    isM3u8 = true // Let ExoPlayer handle the TS chunks & audio tracks
                 )
             )
         }
 
+        // Step 5: Map Subtitles
+        parsedPlaylist.tracks?.forEach { track ->
+            if (track.kind == "captions") {
+                val subUrl = track.file?.let { if (it.startsWith("//")) "https:$it" else it } ?: return@forEach
+                subtitleCallback.invoke(
+                    SubtitleFile(track.label ?: "Unknown", subUrl)
+                )
+            }
+        }
+        
         return true
     }
 }
