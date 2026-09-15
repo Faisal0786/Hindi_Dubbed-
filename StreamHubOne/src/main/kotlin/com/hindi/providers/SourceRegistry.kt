@@ -55,14 +55,14 @@ SourceProviderDef(
     // Yahan executeStandard aur executeAnime mein invoke lagao
     executeStandard = { res, subCb, cb -> 
         invokeNetMirrorLinks(
-            data = res.data, // Yahan dataString paas hoga
+             // Yahan dataString paas hoga
             subtitleCallback = subCb,
             callback = cb
         ) 
     },
     executeAnime = { res, subCb, cb -> 
         invokeNetMirrorLinks(
-            data = res.data,
+            
             subtitleCallback = subCb,
             callback = cb
         ) 
