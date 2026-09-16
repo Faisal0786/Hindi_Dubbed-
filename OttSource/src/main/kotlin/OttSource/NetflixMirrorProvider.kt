@@ -924,48 +924,129 @@ class NetflixMirrorProvider : MainAPI() {
     }
 }
 
-    @Suppress("ObjectLiteralToLambda")
-    override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
-        return object : Interceptor {
-            override fun intercept(chain: Interceptor.Chain): Response {
-                val request = chain.request()
+    private var debugM3u8Count = 0
+private var debugSegmentCount = 0
 
-                // 🔥 Include .js and .woff2 to intercept fake video chunks 🔥
-                if (request.url.toString().contains(".m3u8") || request.url.toString().contains(".ts") || request.url.toString().contains(".js") || request.url.toString().contains(".woff2")) {
+@Suppress("ObjectLiteralToLambda")
+override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
+    return object : Interceptor {
 
-                    val originalCookies = request.header("Cookie") ?: ""
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val request = chain.request()
+            val url = request.url.toString()
 
-                    // 🔥 CLIENT HINTS FIX 🔥
-                    val newRequestBuilder = request.newBuilder()
-                        .header("Accept", "*/*")
-                        .header("Origin", "https://net52.cc")
-                        .header("Referer", "https://net52.cc/")
-                        .header("Sec-Fetch-Dest", "empty")
-                        .header("Sec-Fetch-Mode", "cors")
-                        .header("Sec-Fetch-Site", "cross-site")
-                        .header("User-Agent", "Mozilla/5.0 (Linux; Android 13; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36")
-                        .header("sec-ch-ua", "\"Chromium\";v=\"114\", \"Not)A;Brand\";v=\"24\", \"Google Chrome\";v=\"114\"")
-                        .header("sec-ch-ua-mobile", "?1")
-                        .header("sec-ch-ua-platform", "\"Android\"")
+            val isM3u8 = url.contains(".m3u8", ignoreCase = true)
+            val isSegment =
+                url.contains(".ts", ignoreCase = true) ||
+                url.contains(".m4s", ignoreCase = true) ||
+                url.contains(".mp4", ignoreCase = true)
 
-                    // Cookie fallback handling
-                    if (originalCookies.isNotEmpty()) {
-                        val finalCookies = if (!originalCookies.contains("cf_clearance")) {
+            if (isM3u8 || isSegment) {
+
+                if (isM3u8) {
+                    debugM3u8Count++
+
+                    Log.d(
+                        "NetflixMirror",
+                        "========== HLS REQUEST #$debugM3u8Count =========="
+                    )
+                    Log.d(
+                        "NetflixMirror",
+                        "Extractor = ${extractorLink.name}"
+                    )
+                    Log.d(
+                        "NetflixMirror",
+                        "M3U8 URL = ${url}"
+                    )
+                }
+
+                if (isSegment && debugSegmentCount < 10) {
+                    debugSegmentCount++
+
+                    Log.d(
+                        "NetflixMirror",
+                        "========== MEDIA REQUEST #$debugSegmentCount =========="
+                    )
+                    Log.d(
+                        "NetflixMirror",
+                        "Extractor = ${extractorLink.name}"
+                    )
+                    Log.d(
+                        "NetflixMirror",
+                        "MEDIA URL = ${url}"
+                    )
+                }
+
+                val originalCookies =
+                    request.header("Cookie") ?: ""
+
+                val newRequestBuilder = request.newBuilder()
+                    .header("Accept", "*/*")
+                    .header("Origin", "https://net52.cc")
+                    .header("Referer", "https://net52.cc/")
+                    .header(
+                        "User-Agent",
+                        "Mozilla/5.0 (Linux; Android 13; Pixel 5) " +
+                            "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                            "Chrome/114.0.0.0 Mobile Safari/537.36"
+                    )
+
+                if (originalCookies.isNotEmpty()) {
+                    val finalCookies =
+                        if (!originalCookies.contains("cf_clearance")) {
                             "$originalCookies; $cookie_value"
                         } else {
                             originalCookies
                         }
-                        newRequestBuilder.header("Cookie", finalCookies)
-                    } else {
-                        newRequestBuilder.header("Cookie", cookie_value)
-                    }
 
-                    return chain.proceed(newRequestBuilder.build())
+                    newRequestBuilder.header(
+                        "Cookie",
+                        finalCookies
+                    )
+                } else {
+                    newRequestBuilder.header(
+                        "Cookie",
+                        cookie_value
+                    )
                 }
-                return chain.proceed(request)
+
+                val response =
+                    chain.proceed(newRequestBuilder.build())
+
+                if (isM3u8) {
+                    Log.d(
+                        "NetflixMirror",
+                        "M3U8 RESPONSE = ${response.code}"
+                    )
+                    Log.d(
+                        "NetflixMirror",
+                        "M3U8 CONTENT-TYPE = ${
+                            response.header("Content-Type")
+                        }"
+                    )
+                    Log.d(
+                        "NetflixMirror",
+                        "M3U8 LENGTH = ${
+                            response.header("Content-Length")
+                        }"
+                    )
+                }
+
+                if (isSegment && debugSegmentCount <= 10) {
+                    Log.d(
+                        "NetflixMirror",
+                        "MEDIA RESPONSE = ${response.code}"
+                    )
+                }
+
+                return response
             }
+
+            return chain.proceed(request)
         }
     }
+}
+
     data class Id(
         val id: String
     )
