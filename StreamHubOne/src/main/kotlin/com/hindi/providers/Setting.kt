@@ -112,7 +112,7 @@ fun only480p() = getKey<Boolean>(ONLY_480P) ?: true
     BypassDomain("cinemacity.cc", "CinemaCity"),
     BypassDomain("anidao.to/search?q=hi", "AniDao"),
     BypassDomain("animepahe.pw", "AnimePahe"),
-    BypassDomain("netmirror.gg", "NetMirror")
+    BypassDomain("net77.cc/verify2", "NetMirror")
 )
 
     fun getCloudflareBypassDomains(): List<BypassDomain> = CLOUDFLARE_BYPASS_SITES
