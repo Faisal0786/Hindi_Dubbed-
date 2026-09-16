@@ -390,16 +390,20 @@ class NetflixMirrorProvider : MainAPI() {
         }
     }
 
-    @Suppress("ObjectLiteralToLambda")
+@Suppress("ObjectLiteralToLambda")
     override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
         return object : Interceptor {
             override fun intercept(chain: Interceptor.Chain): Response {
                 val request = chain.request()
-                // Agar URL m3u8 ya .ts (video chunks) ka hai
+                
+                // Sirf .m3u8 aur .ts requests ko intercept karo
                 if (request.url.toString().contains(".m3u8") || request.url.toString().contains(".ts")) {
                     
-                    // Naye aur ekdum original player wale Headers
-                    val newRequest = request.newBuilder()
+                    // Original requests se cookies uthao (jo humne loadLinks me bheji thi)
+                    val originalCookies = request.header("Cookie") ?: ""
+                    
+                    // Naye aur ekdum strict original player wale Headers
+                    val newRequestBuilder = request.newBuilder()
                         .header("Accept", "*/*")
                         .header("Origin", "https://net52.cc")
                         .header("Referer", "https://net52.cc/")
@@ -407,16 +411,26 @@ class NetflixMirrorProvider : MainAPI() {
                         .header("Sec-Fetch-Mode", "cors")
                         .header("Sec-Fetch-Site", "cross-site")
                         .header("User-Agent", "Mozilla/5.0 (Linux; Android 13; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36")
-                        // 🔥 BUG FIX: Yahan se ".header("Cookie")" line HATA di gayi hai! 
-                        // Taaki interceptor upar wali ExtractoLink ki "user_token" wali cookie ko overwrite na kare.
-                        .build()
-                    return chain.proceed(newRequest)
+                        
+                    // Agar original cookies mein t_hash_t nahi hai, toh explicitly jodo (Fallback)
+                    if (originalCookies.isNotEmpty()) {
+                        val finalCookies = if (!originalCookies.contains("t_hash_t")) {
+                            "$originalCookies; t_hash_t=$cookie_value"
+                        } else {
+                            originalCookies
+                        }
+                        newRequestBuilder.header("Cookie", finalCookies)
+                    } else {
+                        // Agar somehow ExoPlayer ne saari cookies gira di hain, toh force feed karo
+                        newRequestBuilder.header("Cookie", "t_hash_t=$cookie_value; hd=on; ott=nf")
+                    }
+
+                    return chain.proceed(newRequestBuilder.build())
                 }
                 return chain.proceed(request)
             }
         }
     }
-
     data class Id(
         val id: String
     )
