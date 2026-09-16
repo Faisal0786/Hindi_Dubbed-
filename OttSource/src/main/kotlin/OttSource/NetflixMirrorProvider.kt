@@ -264,11 +264,12 @@ class NetflixMirrorProvider : MainAPI() {
     }
 
     fun hasCookie(cookie: String?, name: String): Boolean {
-        return cookie
-            ?.split(";")
-            ?.any { it.trim().startsWith("$name=") }
-            == true
-    }
+    if (cookie.isNullOrBlank()) return false
+
+    return cookie
+        .split(";")
+        .any { it.trim().startsWith("$name=") }
+}
 
     fun safeUrl(url: String): String {
         return try {
