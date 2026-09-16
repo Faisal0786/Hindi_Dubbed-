@@ -213,7 +213,7 @@ class NetflixMirrorProvider : MainAPI() {
         return episodes
     }
 
-        override suspend fun loadLinks(
+            override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -226,6 +226,10 @@ class NetflixMirrorProvider : MainAPI() {
 
             Log.d("NetflixMirror", "▶️ loadLinks ID: $contentId, Title: $title")
 
+            // DOMAIN SEPARATION (Crucial Fix)
+            val apiDomain = "https://net77.cc"     // Main site (Hash Generator)
+            val playerDomain = "https://net52.cc"  // CDN/Player (Video/Playlist)
+
             // Ensure bypass cookie is ready
             cookie_value = if (cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
             val currentCookies = mapOf(
@@ -235,46 +239,41 @@ class NetflixMirrorProvider : MainAPI() {
             )
 
             // STEP 1: FETCH TOKEN/HASH VIA POST
-            // Explicitly set x-www-form-urlencoded to mimic exact browser behavior
-                        // STEP 1: FETCH TOKEN/HASH VIA POST
-                        // STEP 1: FETCH TOKEN/HASH VIA POST
             val postHeaders = mapOf(
                 "Accept" to "application/json, text/javascript, */*; q=0.01",
-                "Origin" to mainUrl,
-                "Referer" to "$mainUrl/home",
-                "User-Agent" to "Mozilla/5.0 (Linux; Android 13; Pixel 5 Build/TQ3A.230901.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/144.0.7559.132 Safari/537.36 /OS.Gatu v3.0",
+                "Origin" to apiDomain,
+                "Referer" to "$apiDomain/home",
+                "User-Agent" to "Mozilla/5.0 (Linux; Android 13; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36",
                 "X-Requested-With" to "XMLHttpRequest"
             )
             
-            // 🔥 The Magic Fix: Force strict Form-UrlEncoded Data instead of JSON Map
+            // Force strict Form-UrlEncoded Data
             val formBody = okhttp3.FormBody.Builder()
                 .add("id", contentId)
                 .build()
 
-            val postUrl = "$mainUrl/play.php"
+            val postUrl = "$apiDomain/play.php"
             Log.d("NetflixMirror", "⏳ Hitting POST API: $postUrl")
 
-            // 'data' ki jagah 'requestBody' parameter use karenge
             val postResponse = app.post(
                 postUrl,
                 headers = postHeaders,
-                requestBody = formBody, 
+                requestBody = formBody,
                 cookies = currentCookies
             )
 
             Log.d("NetflixMirror", "🟢 POST Status: ${postResponse.code}")
             
             if (!postResponse.isSuccessful || !postResponse.text.contains("{")) {
-                Log.d("NetflixMirror", "❌ POST Failed or Blocked (HTML returned): ${postResponse.text}")
+                Log.d("NetflixMirror", "❌ POST Failed or Blocked: ${postResponse.text}")
                 return false
             }
 
             val postJson = JSONObject(postResponse.text)
             val rawHash = postJson.optString("h", "")
-
             
             if (rawHash.isEmpty()) {
-                Log.d("NetflixMirror", "❌ Hash Empty in response: ${postResponse.text}")
+                Log.d("NetflixMirror", "❌ Hash Empty in response")
                 return false
             }
 
@@ -283,10 +282,10 @@ class NetflixMirrorProvider : MainAPI() {
             Log.d("NetflixMirror", "✅ Hash Extracted: $cleanHash | TM: $tmValue")
 
             // STEP 2: FETCH PLAYLIST
-            val playlistUrl = "$mainUrl/playlist.php?id=$contentId&t=$title&tm=$tmValue&h=$cleanHash"
+            val playlistUrl = "$playerDomain/playlist.php?id=$contentId&t=$title&tm=$tmValue&h=$cleanHash"
             val playlistHeaders = mapOf(
                 "X-Requested-With" to "XMLHttpRequest",
-                "Referer" to "$mainUrl/play.php?id=$contentId&in=$cleanHash",
+                "Referer" to "$playerDomain/play.php?id=$contentId&in=$cleanHash",
                 "Accept" to "*/*"
             )
 
@@ -304,10 +303,7 @@ class NetflixMirrorProvider : MainAPI() {
             }
 
             val playlistArray = JSONArray(playlistResponse.text)
-            if (playlistArray.length() == 0) {
-                 Log.d("NetflixMirror", "❌ Playlist Array Empty")
-                 return false
-            }
+            if (playlistArray.length() == 0) return false
             val firstItem = playlistArray.getJSONObject(0)
 
             // STEP 3: EXTRACT VIDEO SOURCES
@@ -320,9 +316,7 @@ class NetflixMirrorProvider : MainAPI() {
                     if (rawUrl.isEmpty()) continue
                     
                     val label = source.optString("label", "Auto")
-                    val finalUrl = if (rawUrl.startsWith("/")) "$mainUrl$rawUrl" else rawUrl
-                    
-                    // The magic trick to inject the hash into the CDN url
+                    val finalUrl = if (rawUrl.startsWith("/")) "$playerDomain$rawUrl" else rawUrl
                     val actualUrl = finalUrl.replace("in=unknown::ni", "in=$cleanHash")
 
                     Log.d("NetflixMirror", "🎬 Found Stream: $label -> $actualUrl")
@@ -334,7 +328,7 @@ class NetflixMirrorProvider : MainAPI() {
                             actualUrl,
                             type = INFER_TYPE
                         ) {
-                            this.referer = "$mainUrl/"
+                            this.referer = "$playerDomain/"
                         }
                     )
                     linksFound++
@@ -346,22 +340,19 @@ class NetflixMirrorProvider : MainAPI() {
                 val tracks = firstItem.getJSONArray("tracks")
                 for (i in 0 until tracks.length()) {
                     val track = tracks.getJSONObject(i)
-                    val kind = track.optString("kind", "")
-                    if (kind.equals("captions", ignoreCase = true)) {
+                    if (track.optString("kind", "").equals("captions", ignoreCase = true)) {
                         val subUrlRaw = track.optString("file", "")
                         if (subUrlRaw.isEmpty()) continue
                         
                         val subLang = track.optString("label", "Unknown")
                         val subUrl = when {
                             subUrlRaw.startsWith("//") -> "https:$subUrlRaw"
-                            subUrlRaw.startsWith("/") -> "$mainUrl$subUrlRaw"
+                            subUrlRaw.startsWith("/") -> "$playerDomain$subUrlRaw"
                             else -> subUrlRaw
                         }
 
                         @Suppress("DEPRECATION")
-                        subtitleCallback.invoke(
-                            SubtitleFile(subLang, subUrl)
-                        )
+                        subtitleCallback.invoke(SubtitleFile(subLang, subUrl))
                     }
                 }
             }
