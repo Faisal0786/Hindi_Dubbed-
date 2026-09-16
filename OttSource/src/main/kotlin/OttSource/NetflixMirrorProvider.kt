@@ -213,28 +213,7 @@ class NetflixMirrorProvider : MainAPI() {
         return episodes
     }
 
-                // 🔥 THE REAL COOKIE HARVESTER (Cloudflare Bypass) 🔥
-    private suspend fun fetchRealCookies(url: String): String {
-        Log.d("NetflixMirror", "⏳ Opening invisible WebView to solve Cloudflare at: $url")
-
-        // Yeh headless browser chalayega aur CF clear hone ka wait karega
-        val newCookies = bypass(url) 
-
-        if (newCookies.isNotEmpty()) {
-            Log.d("NetflixMirror", "✅ WebView Bypass Success! Raw Cookies Grabbed.")
-
-            // Check specifically for cf_clearance
-            if (newCookies.contains("cf_clearance")) {
-                Log.d("NetflixMirror", "🚀 BOOM! cf_clearance is PRESENT!")
-            } else {
-                Log.d("NetflixMirror", "⚠️ WARNING: cf_clearance is MISSING from WebView cookies.")
-            }
-        } else {
-            Log.d("NetflixMirror", "❌ WebView failed to get cookies (Empty string).")
-        }
-        return newCookies
-    }
-
+                
 
         // 🔥 THE REAL COOKIE HARVESTER (Cloudflare Bypass) 🔥
     private suspend fun fetchRealCookies(url: String): String {
