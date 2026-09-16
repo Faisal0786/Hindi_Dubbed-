@@ -369,4 +369,32 @@ class NetflixMirrorProvider : MainAPI() {
             return false
         }
     }
+
+        return true
+    }
+
+    @Suppress("ObjectLiteralToLambda")
+    override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
+        return object : Interceptor {
+            override fun intercept(chain: Interceptor.Chain): Response {
+                val request = chain.request()
+                if (request.url.toString().contains(".m3u8")) {
+                    val newRequest = request.newBuilder()
+                        .header("Cookie", "hd=on")
+                        .build()
+                    return chain.proceed(newRequest)
+                }
+                return chain.proceed(request)
+            }
+        }
+    }
+
+    data class Id(
+        val id: String
+    )
+
+    data class LoadData(
+        val title: String, val id: String
+    )
 }
+
