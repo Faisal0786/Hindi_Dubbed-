@@ -369,3 +369,4 @@ class NetflixMirrorProvider : MainAPI() {
             return false
         }
     }
+}
