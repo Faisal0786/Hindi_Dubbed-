@@ -370,9 +370,7 @@ class NetflixMirrorProvider : MainAPI() {
         }
     }
 
-        return true
-    }
-
+        
     @Suppress("ObjectLiteralToLambda")
     override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
         return object : Interceptor {
