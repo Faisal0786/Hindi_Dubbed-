@@ -239,176 +239,689 @@ class NetflixMirrorProvider : MainAPI() {
 
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        try {
-            val loadData = parseJson<LoadData>(data)
-            val contentId = loadData.id
-            val title = loadData.title
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
 
-            Log.d("NetflixMirror", "▶️ loadLinks ID: $contentId, Title: $title")
+    fun mask(value: String?, visible: Int = 6): String {
+        if (value.isNullOrEmpty()) return "<EMPTY>"
+        if (value.length <= visible * 2) return "***"
+        return value.take(visible) + "..." + value.takeLast(visible)
+    }
 
-            val apiDomain = "https://net77.cc"     // Main site
-            val playerDomain = "https://net52.cc"  // Player
-
-            // 🔥 STEP 0: FETCH STRICT REAL COOKIES VIA WEBVIEW 🔥
-            Log.d("NetflixMirror", "⏳ Step 0: Initializing Cookie Check...")
-            
-            // Agar pehle se cookie nahi hai, ya usme clearance nahi hai, toh wapas bypass chalao
-            if (cookie_value.isEmpty() || !cookie_value.contains("cf_clearance") || !cookie_value.contains("user_token")) {
-                cookie_value = fetchRealCookies("$apiDomain/home")
+    fun cookieNames(cookie: String?): String {
+        if (cookie.isNullOrBlank()) return "<EMPTY>"
+        return cookie
+            .split(";")
+            .mapNotNull {
+                it.trim()
+                    .substringBefore("=")
+                    .takeIf { name -> name.isNotBlank() }
             }
+            .joinToString(", ")
+    }
 
-            if (cookie_value.isEmpty()) {
-                Log.d("NetflixMirror", "❌ CRITICAL: Could not get any cookies from WebView. Aborting.")
-                return false
-            }
+    fun hasCookie(cookie: String?, name: String): Boolean {
+        return cookie
+            ?.split(";")
+            ?.any { it.trim().startsWith("$name=") }
+            == true
+    }
 
-            // Print isolated values for debugging
-            val userToken = cookie_value.split(";").find { it.trim().startsWith("user_token=") }?.substringAfter("=") ?: ""
-            val clearance = cookie_value.split(";").find { it.trim().startsWith("cf_clearance=") }?.substringAfter("=") ?: ""
-            Log.d("NetflixMirror", "🔍 Parsed user_token: $userToken")
-            Log.d("NetflixMirror", "🔍 Parsed cf_clearance: $clearance")
+    fun safeUrl(url: String): String {
+        return try {
+            url.replace(
+                Regex("""([?&](?:in|tm|h|token|user_token|cf_clearance)=)[^&]*"""),
+                "$1***"
+            )
+        } catch (_: Exception) {
+            "<URL_MASK_ERROR>"
+        }
+    }
 
-            // STEP 1: FETCH TOKEN/HASH VIA POST
-            val postHeaders = mapOf(
-                "Accept" to "application/json, text/javascript, */*; q=0.01",
-                "Origin" to apiDomain,
-                "Referer" to "$apiDomain/home",
-                "Cookie" to cookie_value, // 🔥 Inject real cookies directly
-                "User-Agent" to "Mozilla/5.0 (Linux; Android 13; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36",
-                "X-Requested-With" to "XMLHttpRequest"
+    try {
+        Log.d("NetflixMirror", "================ LOAD LINKS START ================")
+        Log.d("NetflixMirror", "Casting = $isCasting")
+        Log.d("NetflixMirror", "Raw data length = ${data.length}")
+
+        // ---------------------------------------------------------
+        // STEP 0: Parse LoadData
+        // ---------------------------------------------------------
+        val loadData = try {
+            parseJson<LoadData>(data)
+        } catch (e: Exception) {
+            Log.d("NetflixMirror", "❌ LoadData JSON parse failed: ${e.message}")
+            Log.d("NetflixMirror", "Raw data = ${data.take(500)}")
+            return false
+        }
+
+        val contentId = loadData.id
+        val title = loadData.title
+
+        Log.d("NetflixMirror", "✅ Parsed LoadData")
+        Log.d("NetflixMirror", "Title = $title")
+        Log.d("NetflixMirror", "Content ID = $contentId")
+
+        if (contentId.isBlank()) {
+            Log.d("NetflixMirror", "❌ Content ID is empty")
+            return false
+        }
+
+        // ---------------------------------------------------------
+        // STEP 1: Domains
+        // ---------------------------------------------------------
+        val apiDomain = "https://net77.cc"
+        val playerDomain = "https://net52.cc"
+
+        Log.d("NetflixMirror", "API Domain = $apiDomain")
+        Log.d("NetflixMirror", "Player Domain = $playerDomain")
+
+        // ---------------------------------------------------------
+        // STEP 2: Cookie state
+        // ---------------------------------------------------------
+        Log.d("NetflixMirror", "----------- COOKIE CHECK -----------")
+        Log.d(
+            "NetflixMirror",
+            "Existing cookie length = ${cookie_value.length}"
+        )
+        Log.d(
+            "NetflixMirror",
+            "Cookie names = ${cookieNames(cookie_value)}"
+        )
+
+        val hasCf = hasCookie(cookie_value, "cf_clearance")
+        val hasUserToken = hasCookie(cookie_value, "user_token")
+        val hasTHash = hasCookie(cookie_value, "t_hash_t")
+
+        Log.d("NetflixMirror", "Has cf_clearance = $hasCf")
+        Log.d("NetflixMirror", "Has user_token = $hasUserToken")
+        Log.d("NetflixMirror", "Has t_hash_t = $hasTHash")
+
+        // ---------------------------------------------------------
+        // STEP 3: WebView / Cloudflare bypass
+        // ---------------------------------------------------------
+        if (
+            cookie_value.isEmpty() ||
+            !hasCf ||
+            !hasUserToken
+        ) {
+            Log.d(
+                "NetflixMirror",
+                "⚠️ Required cookies missing. Starting bypass..."
             )
 
-            val formBody = okhttp3.FormBody.Builder()
-                .add("id", contentId)
-                .build()
+            val cookieResult = try {
+                fetchRealCookies("$apiDomain/home")
+            } catch (e: Exception) {
+                Log.d(
+                    "NetflixMirror",
+                    "❌ fetchRealCookies exception = ${e.message}"
+                )
+                ""
+            }
 
-            val postUrl = "$apiDomain/play.php"
-            Log.d("NetflixMirror", "⏳ Hitting POST API: $postUrl")
+            cookie_value = cookieResult
 
-            val postResponse = app.post(
+            Log.d(
+                "NetflixMirror",
+                "Bypass returned cookie length = ${cookie_value.length}"
+            )
+            Log.d(
+                "NetflixMirror",
+                "Returned cookie names = ${cookieNames(cookie_value)}"
+            )
+
+            Log.d(
+                "NetflixMirror",
+                "Returned cf_clearance = ${hasCookie(cookie_value, "cf_clearance")}"
+            )
+            Log.d(
+                "NetflixMirror",
+                "Returned user_token = ${hasCookie(cookie_value, "user_token")}"
+            )
+            Log.d(
+                "NetflixMirror",
+                "Returned t_hash_t = ${hasCookie(cookie_value, "t_hash_t")}"
+            )
+        } else {
+            Log.d(
+                "NetflixMirror",
+                "✅ Existing cookies appear usable. Bypass skipped."
+            )
+        }
+
+        if (cookie_value.isEmpty()) {
+            Log.d("NetflixMirror", "❌ CRITICAL: cookie_value is EMPTY")
+            return false
+        }
+
+        // ---------------------------------------------------------
+        // STEP 4: Extract individual cookie values
+        // ---------------------------------------------------------
+        val userToken = cookie_value
+            .split(";")
+            .find { it.trim().startsWith("user_token=") }
+            ?.substringAfter("=")
+            ?.trim()
+            ?: ""
+
+        val clearance = cookie_value
+            .split(";")
+            .find { it.trim().startsWith("cf_clearance=") }
+            ?.substringAfter("=")
+            ?.trim()
+            ?: ""
+
+        val tHash = cookie_value
+            .split(";")
+            .find { it.trim().startsWith("t_hash_t=") }
+            ?.substringAfter("=")
+            ?.trim()
+            ?: ""
+
+        Log.d("NetflixMirror", "----------- COOKIE VALUES -----------")
+        Log.d("NetflixMirror", "user_token = ${mask(userToken)}")
+        Log.d("NetflixMirror", "user_token length = ${userToken.length}")
+        Log.d("NetflixMirror", "cf_clearance = ${mask(clearance)}")
+        Log.d("NetflixMirror", "cf_clearance length = ${clearance.length}")
+        Log.d("NetflixMirror", "t_hash_t = ${mask(tHash)}")
+        Log.d("NetflixMirror", "t_hash_t length = ${tHash.length}")
+
+        // ---------------------------------------------------------
+        // STEP 5: POST /play.php
+        // ---------------------------------------------------------
+        val postHeaders = mapOf(
+            "Accept" to "application/json, text/javascript, */*; q=0.01",
+            "Origin" to apiDomain,
+            "Referer" to "$apiDomain/home",
+            "Cookie" to cookie_value,
+            "User-Agent" to
+                "Mozilla/5.0 (Linux; Android 13; Pixel 5) " +
+                "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                "Chrome/114.0.0.0 Mobile Safari/537.36",
+            "X-Requested-With" to "XMLHttpRequest"
+        )
+
+        val formBody = okhttp3.FormBody.Builder()
+            .add("id", contentId)
+            .build()
+
+        val postUrl = "$apiDomain/play.php"
+
+        Log.d("NetflixMirror", "----------- PLAY API -----------")
+        Log.d("NetflixMirror", "POST URL = $postUrl")
+        Log.d("NetflixMirror", "POST contentId = $contentId")
+        Log.d("NetflixMirror", "POST cookie names = ${cookieNames(cookie_value)}")
+
+        val postResponse = try {
+            app.post(
                 postUrl,
                 headers = postHeaders,
                 requestBody = formBody
             )
-
-            Log.d("NetflixMirror", "🟢 POST Status: ${postResponse.code}")
-
-            if (!postResponse.isSuccessful || !postResponse.text.contains("{")) {
-                Log.d("NetflixMirror", "❌ POST Failed or Blocked: ${postResponse.text}")
-                return false
-            }
-
-            val postJson = JSONObject(postResponse.text)
-            val rawHash = postJson.optString("h", "")
-
-            if (rawHash.isEmpty()) {
-                Log.d("NetflixMirror", "❌ Hash Empty in response")
-                return false
-            }
-
-            val cleanHash = rawHash.replace("in=", "")
-            val tmValue = cleanHash.split("::").getOrNull(2) ?: ""
-            Log.d("NetflixMirror", "✅ Hash Extracted: $cleanHash | TM: $tmValue")
-
-            // STEP 2: FETCH PLAYLIST
-            val playlistUrl = "$playerDomain/playlist.php?id=$contentId&t=$title&tm=$tmValue&h=$cleanHash"
-            val playlistHeaders = mapOf(
-                "X-Requested-With" to "XMLHttpRequest",
-                "Referer" to "$playerDomain/play.php?id=$contentId&in=$cleanHash",
-                "Accept" to "*/*",
-                "Cookie" to cookie_value // Ensure playlist gets cookies too
-            )
-
-            Log.d("NetflixMirror", "⏳ Hitting Playlist API: $playlistUrl")
-
-            val playlistResponse = app.get(
-                playlistUrl,
-                headers = playlistHeaders
-            )
-
-            if (!playlistResponse.isSuccessful) {
-                Log.d("NetflixMirror", "❌ Playlist fetch failed: ${playlistResponse.code}")
-                return false
-            }
-
-            val playlistArray = JSONArray(playlistResponse.text)
-            if (playlistArray.length() == 0) return false
-            val firstItem = playlistArray.getJSONObject(0)
-
-            // STEP 3: EXTRACT VIDEO SOURCES
-            var linksFound = 0
-            if (firstItem.has("sources")) {
-                val sources = firstItem.getJSONArray("sources")
-                for (i in 0 until sources.length()) {
-                    val source = sources.getJSONObject(i)
-                    val rawUrl = source.optString("file", "")
-                    if (rawUrl.isEmpty()) continue
-
-                    val label = source.optString("label", "Auto")
-                    val finalUrl = if (rawUrl.startsWith("/")) "$playerDomain$rawUrl" else rawUrl
-                    
-                    // 🔥 THE HASH SUFFIX FIX (ni::p) 🔥
-                    val baseCleanHash = cleanHash.substringBefore("::ni")
-                    val actualUrl = finalUrl.substringBefore("?") + "?in=${baseCleanHash}::ni::p"
-                    
-                    Log.d("NetflixMirror", "🎬 Found Stream: $label -> $actualUrl")
-
-                    // Extractor Link pass karte waqt yeh headers dena bohot zaroori hai
-                    callback.invoke(
-                        newExtractorLink(
-                            this.name,
-                            "${this.name} $label",
-                            actualUrl,
-                            type = INFER_TYPE
-                        ) {
-                            this.referer = "$playerDomain/"
-                            // 🔥 Saari cookies player ko pass kar rahe hain
-                            this.headers = mapOf(
-                                "Origin" to playerDomain,
-                                "User-Agent" to "Mozilla/5.0 (Linux; Android 13; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36",
-                                "Cookie" to cookie_value 
-                            )
-                        }
-                    )
-                    linksFound++
-                } 
-            } 
-
-            // STEP 4: EXTRACT SUBTITLES
-            if (firstItem.has("tracks")) {
-                val tracks = firstItem.getJSONArray("tracks")
-                for (i in 0 until tracks.length()) {
-                    val track = tracks.getJSONObject(i)
-                    if (track.optString("kind", "").equals("captions", ignoreCase = true)) {
-                        val subUrlRaw = track.optString("file", "")
-                        if (subUrlRaw.isEmpty()) continue
-
-                        val subLang = track.optString("label", "Unknown")
-                        val subUrl = when {
-                            subUrlRaw.startsWith("//") -> "https:$subUrlRaw"
-                            subUrlRaw.startsWith("/") -> "$playerDomain$subUrlRaw"
-                            else -> subUrlRaw
-                        }
-
-                        @Suppress("DEPRECATION")
-                        subtitleCallback.invoke(SubtitleFile(subLang, subUrl))
-                    }
-                }
-            }
-
-            return linksFound > 0
-
         } catch (e: Exception) {
-            Log.d("NetflixMirror", "❌ Exception in loadLinks: ${e.message}")
+            Log.d("NetflixMirror", "❌ POST exception = ${e.message}")
             e.printStackTrace()
             return false
         }
+
+        Log.d("NetflixMirror", "POST status = ${postResponse.code}")
+        Log.d("NetflixMirror", "POST success = ${postResponse.isSuccessful}")
+        Log.d("NetflixMirror", "POST response length = ${postResponse.text.length}")
+        Log.d(
+            "NetflixMirror",
+            "POST content-type = ${postResponse.headers["Content-Type"]}"
+        )
+
+        if (!postResponse.isSuccessful) {
+            Log.d(
+                "NetflixMirror",
+                "❌ POST HTTP failure body = ${postResponse.text.take(1000)}"
+            )
+            return false
+        }
+
+        if (!postResponse.text.contains("{")) {
+            Log.d(
+                "NetflixMirror",
+                "❌ POST does not look like JSON"
+            )
+            Log.d(
+                "NetflixMirror",
+                "POST body preview = ${postResponse.text.take(1000)}"
+            )
+            return false
+        }
+
+        // ---------------------------------------------------------
+        // STEP 6: Parse POST JSON
+        // ---------------------------------------------------------
+        val postJson = try {
+            JSONObject(postResponse.text)
+        } catch (e: Exception) {
+            Log.d(
+                "NetflixMirror",
+                "❌ POST JSON parse failed = ${e.message}"
+            )
+            Log.d(
+                "NetflixMirror",
+                "POST body = ${postResponse.text.take(1500)}"
+            )
+            return false
+        }
+
+        Log.d("NetflixMirror", "POST JSON keys = ${postJson.keys().asSequence().toList()}")
+
+        val rawHash = postJson.optString("h", "")
+
+        Log.d("NetflixMirror", "Raw hash present = ${rawHash.isNotEmpty()}")
+        Log.d("NetflixMirror", "Raw hash length = ${rawHash.length}")
+        Log.d("NetflixMirror", "Raw hash masked = ${mask(rawHash, 10)}")
+
+        if (rawHash.isEmpty()) {
+            Log.d("NetflixMirror", "❌ Hash 'h' missing/empty")
+            return false
+        }
+
+        val cleanHash = rawHash.replace("in=", "")
+
+        Log.d("NetflixMirror", "Clean hash length = ${cleanHash.length}")
+        Log.d("NetflixMirror", "Clean hash masked = ${mask(cleanHash, 10)}")
+
+        val hashParts = cleanHash.split("::")
+
+        Log.d("NetflixMirror", "Hash parts count = ${hashParts.size}")
+
+        hashParts.forEachIndexed { index, part ->
+            Log.d(
+                "NetflixMirror",
+                "Hash part[$index] length=${part.length} value=${mask(part, 8)}"
+            )
+        }
+
+        val tmValue = hashParts.getOrNull(2) ?: ""
+
+        Log.d("NetflixMirror", "TM value length = ${tmValue.length}")
+        Log.d("NetflixMirror", "TM value masked = ${mask(tmValue)}")
+
+        if (tmValue.isEmpty()) {
+            Log.d("NetflixMirror", "⚠️ WARNING: TM value empty")
+        }
+
+        // ---------------------------------------------------------
+        // STEP 7: Playlist request
+        // ---------------------------------------------------------
+        val playlistUrl =
+            "$playerDomain/playlist.php" +
+            "?id=$contentId" +
+            "&t=$title" +
+            "&tm=$tmValue" +
+            "&h=$cleanHash"
+
+        val playlistHeaders = mapOf(
+            "X-Requested-With" to "XMLHttpRequest",
+            "Referer" to "$playerDomain/play.php?id=$contentId&in=$cleanHash",
+            "Accept" to "*/*",
+            "Cookie" to cookie_value
+        )
+
+        Log.d("NetflixMirror", "----------- PLAYLIST API -----------")
+        Log.d("NetflixMirror", "Playlist URL = ${safeUrl(playlistUrl)}")
+        Log.d("NetflixMirror", "Playlist contentId = $contentId")
+        Log.d("NetflixMirror", "Playlist cookie names = ${cookieNames(cookie_value)}")
+
+        val playlistResponse = try {
+            app.get(
+                playlistUrl,
+                headers = playlistHeaders
+            )
+        } catch (e: Exception) {
+            Log.d(
+                "NetflixMirror",
+                "❌ Playlist request exception = ${e.message}"
+            )
+            e.printStackTrace()
+            return false
+        }
+
+        Log.d("NetflixMirror", "Playlist status = ${playlistResponse.code}")
+        Log.d(
+            "NetflixMirror",
+            "Playlist success = ${playlistResponse.isSuccessful}"
+        )
+        Log.d(
+            "NetflixMirror",
+            "Playlist body length = ${playlistResponse.text.length}"
+        )
+        Log.d(
+            "NetflixMirror",
+            "Playlist content-type = ${playlistResponse.headers["Content-Type"]}"
+        )
+
+        if (!playlistResponse.isSuccessful) {
+            Log.d(
+                "NetflixMirror",
+                "❌ Playlist HTTP failure"
+            )
+            Log.d(
+                "NetflixMirror",
+                "Playlist body preview = ${playlistResponse.text.take(1500)}"
+            )
+            return false
+        }
+
+        Log.d(
+            "NetflixMirror",
+            "Playlist body preview = ${playlistResponse.text.take(2000)}"
+        )
+
+        // ---------------------------------------------------------
+        // STEP 8: Parse playlist JSON array
+        // ---------------------------------------------------------
+        val playlistArray = try {
+            JSONArray(playlistResponse.text)
+        } catch (e: Exception) {
+            Log.d(
+                "NetflixMirror",
+                "❌ Playlist is not valid JSONArray = ${e.message}"
+            )
+            return false
+        }
+
+        Log.d(
+            "NetflixMirror",
+            "Playlist array size = ${playlistArray.length()}"
+        )
+
+        if (playlistArray.length() == 0) {
+            Log.d("NetflixMirror", "❌ Playlist array EMPTY")
+            return false
+        }
+
+        for (i in 0 until playlistArray.length()) {
+            try {
+                val obj = playlistArray.getJSONObject(i)
+                Log.d(
+                    "NetflixMirror",
+                    "Playlist item[$i] keys = ${
+                        obj.keys().asSequence().toList()
+                    }"
+                )
+            } catch (e: Exception) {
+                Log.d(
+                    "NetflixMirror",
+                    "⚠️ Could not inspect playlist item[$i]: ${e.message}"
+                )
+            }
+        }
+
+        val firstItem = playlistArray.getJSONObject(0)
+
+        Log.d("NetflixMirror", "----------- FIRST PLAYLIST ITEM -----------")
+        Log.d(
+            "NetflixMirror",
+            "First item keys = ${firstItem.keys().asSequence().toList()}"
+        )
+
+        // ---------------------------------------------------------
+        // STEP 9: Sources / video
+        // ---------------------------------------------------------
+        var linksFound = 0
+
+        if (!firstItem.has("sources")) {
+            Log.d("NetflixMirror", "❌ 'sources' key missing")
+        } else {
+            val sources = try {
+                firstItem.getJSONArray("sources")
+            } catch (e: Exception) {
+                Log.d("NetflixMirror", "❌ sources parse failed = ${e.message}")
+                null
+            }
+
+            if (sources != null) {
+
+                Log.d("NetflixMirror", "Sources count = ${sources.length()}")
+
+                for (i in 0 until sources.length()) {
+
+                    try {
+                        val source = sources.getJSONObject(i)
+
+                        Log.d(
+                            "NetflixMirror",
+                            "----------- SOURCE[$i] -----------"
+                        )
+                        Log.d(
+                            "NetflixMirror",
+                            "Source keys = ${source.keys().asSequence().toList()}"
+                        )
+
+                        val rawUrl = source.optString("file", "")
+                        val label = source.optString("label", "Auto")
+                        val sourceType = source.optString("type", "")
+                        val sourceMime = source.optString("mime", "")
+
+                        Log.d("NetflixMirror", "Label = $label")
+                        Log.d("NetflixMirror", "Type = $sourceType")
+                        Log.d("NetflixMirror", "Mime = $sourceMime")
+                        Log.d("NetflixMirror", "Raw file present = ${rawUrl.isNotEmpty()}")
+                        Log.d("NetflixMirror", "Raw file length = ${rawUrl.length}")
+                        Log.d("NetflixMirror", "Raw file = ${safeUrl(rawUrl)}")
+
+                        if (rawUrl.isEmpty()) {
+                            Log.d("NetflixMirror", "⚠️ Source[$i] file EMPTY")
+                            continue
+                        }
+
+                        val finalUrl =
+                            if (rawUrl.startsWith("/")) {
+                                "$playerDomain$rawUrl"
+                            } else {
+                                rawUrl
+                            }
+
+                        Log.d(
+                            "NetflixMirror",
+                            "Final source URL = ${safeUrl(finalUrl)}"
+                        )
+
+                        val baseCleanHash =
+                            cleanHash.substringBefore("::ni")
+
+                        Log.d(
+                            "NetflixMirror",
+                            "Base clean hash = ${mask(baseCleanHash, 8)}"
+                        )
+
+                        val actualUrl =
+                            finalUrl.substringBefore("?") +
+                            "?in=${baseCleanHash}::ni::p"
+
+                        Log.d(
+                            "NetflixMirror",
+                            "⚠️ MODIFIED URL = ${safeUrl(actualUrl)}"
+                        )
+
+                        Log.d(
+                            "NetflixMirror",
+                            "URL base before '?' = ${
+                                safeUrl(finalUrl.substringBefore("?"))
+                            }"
+                        )
+
+                        Log.d(
+                            "NetflixMirror",
+                            "URL had original query = ${finalUrl.contains("?")}"
+                        )
+
+                        callback.invoke(
+                            newExtractorLink(
+                                this.name,
+                                "${this.name} $label",
+                                actualUrl,
+                                type = INFER_TYPE
+                            ) {
+                                this.referer = "$playerDomain/"
+
+                                this.headers = mapOf(
+                                    "Origin" to playerDomain,
+                                    "User-Agent" to
+                                        "Mozilla/5.0 (Linux; Android 13; Pixel 5) " +
+                                        "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                                        "Chrome/114.0.0.0 Mobile Safari/537.36",
+                                    "Cookie" to cookie_value
+                                )
+                            }
+                        )
+
+                        linksFound++
+
+                        Log.d(
+                            "NetflixMirror",
+                            "✅ ExtractorLink created for source[$i]"
+                        )
+
+                    } catch (e: Exception) {
+                        Log.d(
+                            "NetflixMirror",
+                            "❌ Source[$i] exception = ${e.message}"
+                        )
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+
+        // ---------------------------------------------------------
+        // STEP 10: Subtitle tracks
+        // ---------------------------------------------------------
+        Log.d("NetflixMirror", "----------- TRACKS / SUBTITLES -----------")
+
+        if (!firstItem.has("tracks")) {
+            Log.d("NetflixMirror", "No 'tracks' key")
+        } else {
+            try {
+                val tracks = firstItem.getJSONArray("tracks")
+
+                Log.d(
+                    "NetflixMirror",
+                    "Tracks count = ${tracks.length()}"
+                )
+
+                for (i in 0 until tracks.length()) {
+
+                    try {
+                        val track = tracks.getJSONObject(i)
+
+                        Log.d(
+                            "NetflixMirror",
+                            "Track[$i] keys = ${
+                                track.keys().asSequence().toList()
+                            }"
+                        )
+
+                        val kind = track.optString("kind", "")
+                        val subUrlRaw = track.optString("file", "")
+                        val subLang = track.optString("label", "Unknown")
+
+                        Log.d("NetflixMirror", "Track[$i] kind = $kind")
+                        Log.d("NetflixMirror", "Track[$i] label = $subLang")
+                        Log.d(
+                            "NetflixMirror",
+                            "Track[$i] file present = ${subUrlRaw.isNotEmpty()}"
+                        )
+                        Log.d(
+                            "NetflixMirror",
+                            "Track[$i] file = ${safeUrl(subUrlRaw)}"
+                        )
+
+                        if (
+                            kind.equals("captions", ignoreCase = true) &&
+                            subUrlRaw.isNotEmpty()
+                        ) {
+
+                            val subUrl = when {
+                                subUrlRaw.startsWith("//") ->
+                                    "https:$subUrlRaw"
+
+                                subUrlRaw.startsWith("/") ->
+                                    "$playerDomain$subUrlRaw"
+
+                                else ->
+                                    subUrlRaw
+                            }
+
+                            Log.d(
+                                "NetflixMirror",
+                                "✅ Subtitle accepted"
+                            )
+                            Log.d(
+                                "NetflixMirror",
+                                "Subtitle URL = ${safeUrl(subUrl)}"
+                            )
+
+                            @Suppress("DEPRECATION")
+                            subtitleCallback.invoke(
+                                SubtitleFile(
+                                    subLang,
+                                    subUrl
+                                )
+                            )
+                        } else {
+                            Log.d(
+                                "NetflixMirror",
+                                "ℹ️ Track[$i] ignored"
+                            )
+                        }
+
+                    } catch (e: Exception) {
+                        Log.d(
+                            "NetflixMirror",
+                            "❌ Track[$i] exception = ${e.message}"
+                        )
+                    }
+                }
+
+            } catch (e: Exception) {
+                Log.d(
+                    "NetflixMirror",
+                    "❌ Tracks parse exception = ${e.message}"
+                )
+            }
+        }
+
+        // ---------------------------------------------------------
+        // STEP 11: Final summary
+        // ---------------------------------------------------------
+        Log.d("NetflixMirror", "================ LOAD LINKS SUMMARY ================")
+        Log.d("NetflixMirror", "Title = $title")
+        Log.d("NetflixMirror", "Content ID = $contentId")
+        Log.d("NetflixMirror", "Cookies available = ${cookie_value.isNotEmpty()}")
+        Log.d("NetflixMirror", "Has cf_clearance = ${hasCookie(cookie_value, "cf_clearance")}")
+        Log.d("NetflixMirror", "Has user_token = ${hasCookie(cookie_value, "user_token")}")
+        Log.d("NetflixMirror", "Has t_hash_t = ${hasCookie(cookie_value, "t_hash_t")}")
+        Log.d("NetflixMirror", "Playlist items = ${playlistArray.length()}")
+        Log.d("NetflixMirror", "Extractor links found = $linksFound")
+        Log.d("NetflixMirror", "======================================================")
+
+        if (linksFound == 0) {
+            Log.d("NetflixMirror", "❌ No playable links found")
+            return false
+        }
+
+        return true
+
+    } catch (e: Exception) {
+        Log.d(
+            "NetflixMirror",
+            "❌ FATAL loadLinks exception = ${e.message}"
+        )
+        e.printStackTrace()
+        return false
     }
+}
 
     @Suppress("ObjectLiteralToLambda")
     override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
