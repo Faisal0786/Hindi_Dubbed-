@@ -21,14 +21,14 @@ open class OttSourcePlugin : Plugin() {
         // Main providers
 registerMainAPI(Net77Provider())
         registerMainAPI(NetflixMirrorProvider())
-        registerMainAPI(PrimeVideoMirrorProvider())
-        registerMainAPI(HotStarMirrorProvider())
+        //registerMainAPI(PrimeVideoMirrorProvider())
+        //registerMainAPI(HotStarMirrorProvider())
 
         // Disney studio providers
-        registerMainAPI(DisneyStudioProvider("disney", "Disney"))
-        registerMainAPI(DisneyStudioProvider("marvel", "Marvel"))
-        registerMainAPI(DisneyStudioProvider("starwars", "Star Wars"))
-        registerMainAPI(DisneyStudioProvider("pixar", "Pixar"))
+        //registerMainAPI(DisneyStudioProvider("disney", "Disney"))
+        //registerMainAPI(DisneyStudioProvider("marvel", "Marvel"))
+        //registerMainAPI(DisneyStudioProvider("starwars", "Star Wars"))
+        //registerMainAPI(DisneyStudioProvider("pixar", "Pixar"))
 
     }
 }
