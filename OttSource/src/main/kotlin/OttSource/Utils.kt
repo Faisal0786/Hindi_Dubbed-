@@ -157,31 +157,30 @@ val newTvBaseHeaders = mapOf(
 
 val newTvDomains = listOf(
     "aHR0cHM6Ly9tb2JpbGVkZXRlY3RzLmNvbQ==",
-    "aHR0cHM6Ly9tb2JpbGVkZXRlY3QuYXBw",
+    "aHR0cHM6Ly9tb2JpbGVkZXR0LmFwcA==",
     "aHR0cHM6Ly9tb2JpZGV0ZWN0LmFydA==",
     "aHR0cHM6Ly9tb2JpZGV0ZWN0LmNj",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0LmNsaWNr",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0Lmluaw==",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0LmxpdmU=",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0LnBybw==",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0LnNob3A=",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0LnNpdGU=",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0LnNwYWNl",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0LnN0b3Jl",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0LnZpcA==",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0Lndpa2k=",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0Lnh5eg==",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5hcnQ=",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5jYw==",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5pbmZv",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5pbms=",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5saXZl",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5wcm8=",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5zdG9yZQ==",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy50b3A=",
-    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy54eXo="
+    "aHR0cHM6Ly9tb2JpbGVkZXRlY3QuY2xpY2s=",
+    "aHR0cHM6Ly9tb2JpbGVkZXRlY3QuaW5r",
+    "aHR0cHM6Ly9tb2JpbGVkZXRlY3QubGl2ZQ==",
+    "aHR0cHM6Ly9tb2JpbGVkZXRlY3QucHJv",
+    "aHR0cHM6Ly9tb2JpbGVkZXRlY3Quc2hvcA==",
+    "aHR0cHM6Ly9tb2JpbGVkZXRlY3Quc2l0ZQ==",
+    "aHR0cHM6Ly9tb2JpbGVkZXRlY3Quc3BhY2U=",
+    "aHR0cHM6Ly9tb2JpbGVkZXRlY3Quc3RvcmU=",
+    "aHR0cHM6Ly9tb2JpbGVkZXRlY3Qudmlw",
+    "aHR0cHM6Ly9tb2JpbGVkZXRlY3Qud2lraQ==",
+    "aHR0cHM6Ly9tb2JpbGVkZXRlY3QueHl6",
+    "aHR0cHM6Ly9tb2JpbGVkZXRzLmFydA==",
+    "aHR0cHM6Ly9tb2JpbGVkZXRzLmNj",
+    "aHR0cHM6Ly9tb2JpbGVkZXRzLmluZm8=",
+    "aHR0cHM6Ly9tb2JpbGVkZXRzLmluaw==",
+    "aHR0cHM6Ly9tb2JpbGVkZXRzLmxpdmU=",
+    "aHR0cHM6Ly9tb2JpbGVkZXRzLnBybw==",
+    "aHR0cHM6Ly9tb2JpbGVkZXRzLnN0b3Jl",
+    "aHR0cHM6Ly9tb2JpbGVkZXRzLnRvcA==",
+    "aHR0cHM6Ly9tb2JpbGVkZXRzLnh5eg=="
 )
-
 fun decodeBase64(value: String): String {
     return String(Base64.getDecoder().decode(value))
 }
