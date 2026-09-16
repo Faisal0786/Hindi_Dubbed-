@@ -213,28 +213,6 @@ class NetflixMirrorProvider : MainAPI() {
         return episodes
     }
 
-                // 🔥 THE REAL COOKIE HARVESTER (Cloudflare Bypass) 🔥
-    private suspend fun fetchRealCookies(url: String): String {
-        Log.d("NetflixMirror", "⏳ Opening invisible WebView to solve Cloudflare at: $url")
-        
-        // Yeh headless browser chalayega aur CF clear hone ka wait karega
-        val newCookies = bypass(url) 
-        
-        if (newCookies.isNotEmpty()) {
-            Log.d("NetflixMirror", "✅ WebView Bypass Success! Raw Cookies Grabbed.")
-            
-            // Check specifically for cf_clearance
-            if (newCookies.contains("cf_clearance")) {
-                Log.d("NetflixMirror", "🚀 BOOM! cf_clearance is PRESENT!")
-            } else {
-                Log.d("NetflixMirror", "⚠️ WARNING: cf_clearance is MISSING from WebView cookies.")
-            }
-        } else {
-            Log.d("NetflixMirror", "❌ WebView failed to get cookies (Empty string).")
-        }
-        return newCookies
-    }
-
 
     override suspend fun loadLinks(
         data: String,
@@ -249,49 +227,40 @@ class NetflixMirrorProvider : MainAPI() {
 
             Log.d("NetflixMirror", "▶️ loadLinks ID: $contentId, Title: $title")
 
-                        val apiDomain = "https://net77.cc"     // Main site
+            val apiDomain = "https://net77.cc"     // Main site
             val playerDomain = "https://net52.cc"  // Player
 
-            // 🔥 STEP 0: FETCH COOKIES VIA STRICT CHROME IMITATION 🔥
-            Log.d("NetflixMirror", "⏳ Hitting root domain to steal user_token...")
-            
-            // Full Chrome Android Headers to bypass Cloudflare initial check
-            val initHeaders = mapOf(
-                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                "Accept-Language" to "en-IN,en;q=0.9",
-                "Connection" to "keep-alive",
-                "Sec-Fetch-Dest" to "document",
-                "Sec-Fetch-Mode" to "navigate",
-                "Sec-Fetch-Site" to "none",
-                "Sec-Fetch-User" to "?1",
-                "Upgrade-Insecure-Requests" to "1",
-                "User-Agent" to "Mozilla/5.0 (Linux; Android 13; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36",
-                "sec-ch-ua" to "\"Chromium\";v=\"114\", \"Not)A;Brand\";v=\"24\", \"Google Chrome\";v=\"114\"",
-                "sec-ch-ua-mobile" to "?1",
-                "sec-ch-ua-platform" to "\"Android\""
-            )
+            // 🔥 STEP 0: MANUAL CAPTCHA BYPASS POPUP 🔥
+            if (cookie_value.isEmpty() || !cookie_value.contains("user_token")) {
+                Log.d("NetflixMirror", "⚠️ Triggering Manual Cloudflare Popup...")
 
-            val initResponse = app.get("$apiDomain/", headers = initHeaders)
-            Log.d("NetflixMirror", "🌐 Init Response Code: ${initResponse.code}")
-            
-            // OkHttp directly cookies object mein save kar leta hai
-            val userToken = initResponse.cookies["user_token"] ?: ""
-            Log.d("NetflixMirror", "🔍 Stolen user_token: $userToken")
+                // Yeh WebView tab tak khula rahega jab tak regex match nahi karta (matlab solve ho gaya)
+                val bypassResponse = app.get(
+                    "$apiDomain/home",
+                    interceptor = WebViewResolver(
+                        Regex("""user_token|cf_clearance""")
+                    )
+                )
 
-            if (userToken.isEmpty()) {
-                Log.d("NetflixMirror", "❌ CRITICAL: Could not steal user_token. Cloudflare is blocking OkHttp completely.")
-                return false
+                // Popup solve hone ke baad cookies extract karo
+                val newToken = bypassResponse.cookies["user_token"] ?: ""
+                val newCf = bypassResponse.cookies["cf_clearance"] ?: ""
+
+                if (newToken.isNotEmpty()) {
+                    cookie_value = "user_token=$newToken; cf_clearance=$newCf; hd=on; ott=nf;"
+                    Log.d("NetflixMirror", "✅ Manual Bypass Success! Stored Cookies: $cookie_value")
+                } else {
+                    Log.d("NetflixMirror", "❌ Manual Bypass Failed or User closed popup.")
+                    return false // Agar popup fail hua toh yahi se rukh jao
+                }
             }
 
-            // Master cookie string banao
-            cookie_value = "user_token=$userToken; hd=on; ott=nf;"
-            
             // STEP 1: FETCH TOKEN/HASH VIA POST
             val postHeaders = mapOf(
                 "Accept" to "application/json, text/javascript, */*; q=0.01",
                 "Origin" to apiDomain,
                 "Referer" to "$apiDomain/home",
-                "Cookie" to cookie_value, // Inject the stolen user_token
+                "Cookie" to cookie_value, // Masti me solve kiye gaye cookies yaha jayenge
                 "User-Agent" to "Mozilla/5.0 (Linux; Android 13; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36",
                 "X-Requested-With" to "XMLHttpRequest"
             )
@@ -365,11 +334,11 @@ class NetflixMirrorProvider : MainAPI() {
 
                     val label = source.optString("label", "Auto")
                     val finalUrl = if (rawUrl.startsWith("/")) "$playerDomain$rawUrl" else rawUrl
-                    
+
                     // 🔥 THE HASH SUFFIX FIX (ni::p) 🔥
                     val baseCleanHash = cleanHash.substringBefore("::ni")
                     val actualUrl = finalUrl.substringBefore("?") + "?in=${baseCleanHash}::ni::p"
-                    
+
                     Log.d("NetflixMirror", "🎬 Found Stream: $label -> $actualUrl")
 
                     // Extractor Link pass karte waqt yeh headers dena bohot zaroori hai
@@ -475,4 +444,3 @@ class NetflixMirrorProvider : MainAPI() {
         val title: String, val id: String
     )
 }
-
