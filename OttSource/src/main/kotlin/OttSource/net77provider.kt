@@ -188,8 +188,9 @@ class Net77Provider : MainAPI() {
             val actualUrl = finalUrl.replace("in=unknown::ni", "in=$cleanHash")
 
             // FIXED: ExtractorLink hata kar newExtractorLink kar diya. `INFER_TYPE` ki jagah boolean `isM3u8` use kiya hai.
+                        // FIXED: Wapas ExtractorLink lagaya aur naya isM3u8 parameter use kiya
             callback.invoke(
-                newExtractorLink(
+                ExtractorLink(
                     source = this.name,
                     name = "${this.name} ${source.label ?: "Auto"}",
                     url = actualUrl,
@@ -198,6 +199,7 @@ class Net77Provider : MainAPI() {
                     isM3u8 = actualUrl.contains(".m3u8")
                 )
             )
+
         }
 
         parsedPlaylist.tracks?.forEach { track ->
