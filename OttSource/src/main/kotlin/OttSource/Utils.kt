@@ -98,8 +98,8 @@ suspend fun bypass(mainUrl: String): String {
             "Cache-Control" to "max-age=0",
             "Connection" to "keep-alive",
             "Content-Type" to "application/x-www-form-urlencoded",
-            "Origin" to "https://net52.cc",
-            "Referer" to "https://net77.cc/verify2",
+            "Origin" to "https://net22.cc",
+            "Referer" to "https://net22.cc/verify2",
             "sec-ch-ua" to "\"Google Chrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
             "sec-ch-ua-mobile" to "?0",
             "sec-ch-ua-platform" to "\"Windows\"",
@@ -118,7 +118,7 @@ suspend fun bypass(mainUrl: String): String {
             .followSslRedirects(false)
             .build()
         val request = Request.Builder()
-            .url("https://net77.cc/verify.php")
+            .url("https://net52.cc/verify.php")
             .post(formBody)
             .apply {
                 headers.forEach { (key, value) ->
@@ -157,30 +157,31 @@ val newTvBaseHeaders = mapOf(
 
 val newTvDomains = listOf(
     "aHR0cHM6Ly9tb2JpbGVkZXRlY3RzLmNvbQ==",
-    "aHR0cHM6Ly9tb2JpbGVkZXR0LmFwcA==",
+    "aHR0cHM6Ly9tb2JpbGVkZXRlY3QuYXBw",
     "aHR0cHM6Ly9tb2JpZGV0ZWN0LmFydA==",
     "aHR0cHM6Ly9tb2JpZGV0ZWN0LmNj",
-    "aHR0cHM6Ly9tb2JpbGVkZXRlY3QuY2xpY2s=",
-    "aHR0cHM6Ly9tb2JpbGVkZXRlY3QuaW5r",
-    "aHR0cHM6Ly9tb2JpbGVkZXRlY3QubGl2ZQ==",
-    "aHR0cHM6Ly9tb2JpbGVkZXRlY3QucHJv",
-    "aHR0cHM6Ly9tb2JpbGVkZXRlY3Quc2hvcA==",
-    "aHR0cHM6Ly9tb2JpbGVkZXRlY3Quc2l0ZQ==",
-    "aHR0cHM6Ly9tb2JpbGVkZXRlY3Quc3BhY2U=",
-    "aHR0cHM6Ly9tb2JpbGVkZXRlY3Quc3RvcmU=",
-    "aHR0cHM6Ly9tb2JpbGVkZXRlY3Qudmlw",
-    "aHR0cHM6Ly9tb2JpbGVkZXRlY3Qud2lraQ==",
-    "aHR0cHM6Ly9tb2JpbGVkZXRlY3QueHl6",
-    "aHR0cHM6Ly9tb2JpbGVkZXRzLmFydA==",
-    "aHR0cHM6Ly9tb2JpbGVkZXRzLmNj",
-    "aHR0cHM6Ly9tb2JpbGVkZXRzLmluZm8=",
-    "aHR0cHM6Ly9tb2JpbGVkZXRzLmluaw==",
-    "aHR0cHM6Ly9tb2JpbGVkZXRzLmxpdmU=",
-    "aHR0cHM6Ly9tb2JpbGVkZXRzLnBybw==",
-    "aHR0cHM6Ly9tb2JpbGVkZXRzLnN0b3Jl",
-    "aHR0cHM6Ly9tb2JpbGVkZXRzLnRvcA==",
-    "aHR0cHM6Ly9tb2JpbGVkZXRzLnh5eg=="
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0LmNsaWNr",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0Lmluaw==",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0LmxpdmU=",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0LnBybw==",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0LnNob3A=",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0LnNpdGU=",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0LnNwYWNl",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0LnN0b3Jl",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0LnZpcA==",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0Lndpa2k=",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0Lnh5eg==",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5hcnQ=",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5jYw==",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5pbmZv",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5pbms=",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5saXZl",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5wcm8=",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy5zdG9yZQ==",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy50b3A=",
+    "aHR0cHM6Ly9tb2JpZGV0ZWN0cy54eXo="
 )
+
 fun decodeBase64(value: String): String {
     return String(Base64.getDecoder().decode(value))
 }
@@ -223,4 +224,4 @@ data class NewTvPlayerResponse(
     val status: String? = null,
     val video_link: String? = null,
     val referer: String? = null
-) 
+)
