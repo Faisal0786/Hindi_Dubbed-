@@ -15,6 +15,8 @@ import com.lagradost.cloudstream3.APIHolder.unixTime
 import org.json.JSONObject
 import org.json.JSONArray
 import com.lagradost.api.Log
+import com.lagradost.cloudstream3.network.WebViewResolver
+
 
 class NetflixMirrorProvider : MainAPI() {
     companion object {
