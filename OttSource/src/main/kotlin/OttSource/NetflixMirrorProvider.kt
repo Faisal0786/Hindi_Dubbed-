@@ -249,37 +249,53 @@ class NetflixMirrorProvider : MainAPI() {
 
             Log.d("NetflixMirror", "▶️ loadLinks ID: $contentId, Title: $title")
 
-            val apiDomain = "https://net77.cc"     // Main site
+                        val apiDomain = "https://net77.cc"     // Main site
             val playerDomain = "https://net52.cc"  // Player
 
-            // 🔥 STEP 0: FETCH STRICT REAL COOKIES VIA WEBVIEW 🔥
-            Log.d("NetflixMirror", "⏳ Step 0: Initializing Cookie Check...")
+            // 🔥 STEP 0: FETCH COOKIES VIA STRICT CHROME IMITATION 🔥
+            Log.d("NetflixMirror", "⏳ Hitting root domain to steal user_token...")
             
-            // Agar pehle se cookie nahi hai, ya usme clearance nahi hai, toh wapas bypass chalao
-            if (cookie_value.isEmpty() || !cookie_value.contains("cf_clearance") || !cookie_value.contains("user_token")) {
-                cookie_value = fetchRealCookies("$apiDomain/home")
-            }
+            // Full Chrome Android Headers to bypass Cloudflare initial check
+            val initHeaders = mapOf(
+                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language" to "en-IN,en;q=0.9",
+                "Connection" to "keep-alive",
+                "Sec-Fetch-Dest" to "document",
+                "Sec-Fetch-Mode" to "navigate",
+                "Sec-Fetch-Site" to "none",
+                "Sec-Fetch-User" to "?1",
+                "Upgrade-Insecure-Requests" to "1",
+                "User-Agent" to "Mozilla/5.0 (Linux; Android 13; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36",
+                "sec-ch-ua" to "\"Chromium\";v=\"114\", \"Not)A;Brand\";v=\"24\", \"Google Chrome\";v=\"114\"",
+                "sec-ch-ua-mobile" to "?1",
+                "sec-ch-ua-platform" to "\"Android\""
+            )
 
-            if (cookie_value.isEmpty()) {
-                Log.d("NetflixMirror", "❌ CRITICAL: Could not get any cookies from WebView. Aborting.")
+            val initResponse = app.get("$apiDomain/", headers = initHeaders)
+            Log.d("NetflixMirror", "🌐 Init Response Code: ${initResponse.code}")
+            
+            // OkHttp directly cookies object mein save kar leta hai
+            val userToken = initResponse.cookies["user_token"] ?: ""
+            Log.d("NetflixMirror", "🔍 Stolen user_token: $userToken")
+
+            if (userToken.isEmpty()) {
+                Log.d("NetflixMirror", "❌ CRITICAL: Could not steal user_token. Cloudflare is blocking OkHttp completely.")
                 return false
             }
 
-            // Print isolated values for debugging
-            val userToken = cookie_value.split(";").find { it.trim().startsWith("user_token=") }?.substringAfter("=") ?: ""
-            val clearance = cookie_value.split(";").find { it.trim().startsWith("cf_clearance=") }?.substringAfter("=") ?: ""
-            Log.d("NetflixMirror", "🔍 Parsed user_token: $userToken")
-            Log.d("NetflixMirror", "🔍 Parsed cf_clearance: $clearance")
-
+            // Master cookie string banao
+            cookie_value = "user_token=$userToken; hd=on; ott=nf;"
+            
             // STEP 1: FETCH TOKEN/HASH VIA POST
             val postHeaders = mapOf(
                 "Accept" to "application/json, text/javascript, */*; q=0.01",
                 "Origin" to apiDomain,
                 "Referer" to "$apiDomain/home",
-                "Cookie" to cookie_value, // 🔥 Inject real cookies directly
+                "Cookie" to cookie_value, // Inject the stolen user_token
                 "User-Agent" to "Mozilla/5.0 (Linux; Android 13; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36",
                 "X-Requested-With" to "XMLHttpRequest"
             )
+
 
             val formBody = okhttp3.FormBody.Builder()
                 .add("id", contentId)
