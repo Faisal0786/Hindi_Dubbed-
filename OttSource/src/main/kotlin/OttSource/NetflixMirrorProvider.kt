@@ -1,23 +1,23 @@
 package OttSource
 
 import android.content.Context
+import android.util.Log
 import OttSource.entities.EpisodesData
 import OttSource.entities.PostData
 import OttSource.entities.SearchData
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import okhttp3.Headers
 import okhttp3.Interceptor
 import okhttp3.Response
 import org.jsoup.nodes.Element
-import com.lagradost.cloudstream3.APIHolder.unixTime
 
+@Suppress("DEPRECATION")
 class NetflixMirrorProvider : MainAPI() {
     companion object {
         var context: Context? = null
-   
     }
 
     override val supportedTypes = setOf(
@@ -51,8 +51,7 @@ class NetflixMirrorProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
-        
-        cookie_value = if(cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
+        cookie_value = if (cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
         val cookies = mapOf(
             "t_hash_t" to cookie_value,
             "ott" to "nf",
@@ -80,9 +79,6 @@ class NetflixMirrorProvider : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val id = selectFirst("a")?.attr("data-post") ?: attr("data-post")
-        // val posterUrl =
-        //     fixUrlNull(selectFirst(".card-img-container img, .top10-img img")?.attr("data-src"))
-
         return newAnimeSearchResponse("", Id(id).toJson()) {
             this.posterUrl = "https://imgcdn.kim/poster/v/$id.jpg"
             posterHeaders = mapOf("Referer" to "$mainUrl/home")
@@ -90,15 +86,14 @@ class NetflixMirrorProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-
-        cookie_value = if(cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
+        cookie_value = if (cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
         val cookies = mapOf(
             "t_hash_t" to cookie_value,
             "hd" to "on",
             "ott" to "nf"
         )
         val url = "$mainUrl/mobile/search.php?s=$query&t=${APIHolder.unixTime}"
-        val data = app.get(url, referer = "$mainUrl/home", cookies = cookies).parsed<SearchData>()
+        val data = parseJson<SearchData>(app.get(url, referer = "$mainUrl/home", cookies = cookies).text)
 
         return data.searchResult.map {
             newAnimeSearchResponse(it.t, Id(it.id).toJson()) {
@@ -109,33 +104,26 @@ class NetflixMirrorProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        cookie_value = if(cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
+        cookie_value = if (cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
         val id = parseJson<Id>(url).id
         val cookies = mapOf(
             "t_hash_t" to cookie_value,
             "hd" to "on",
             "ott" to "nf"
         )
-        val data = app.get(
+        val response = app.get(
             "$mainUrl/mobile/post.php?id=$id&t=${APIHolder.unixTime}",
             headers,
             referer = "$mainUrl/home",
             cookies = cookies
-        ).parsed<PostData>()
+        ).text
+        val data = parseJson<PostData>(response)
 
         val episodes = arrayListOf<Episode>()
-
         val title = data.title
         val castList = data.cast?.split(",")?.map { it.trim() } ?: emptyList()
-        val cast = castList.map {
-            ActorData(
-                Actor(it),
-            )
-        }
-        val genre = data.genre?.split(",")
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
-
+        val cast = castList.map { ActorData(Actor(it)) }
+        val genre = data.genre?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
         val rating = data.match?.replace("IMDb ", "")
         val runTime = convertRuntimeToMinutes(data.runtime.toString())
 
@@ -147,17 +135,16 @@ class NetflixMirrorProvider : MainAPI() {
         }
 
         if (data.episodes.first() == null) {
-            episodes.add(newEpisode(LoadData(title, id)) {
-                name = data.title
+            episodes.add(newEpisode(data = LoadData(title, id).toJson()) {
+                this.name = data.title
             })
         } else {
             data.episodes.filterNotNull().mapTo(episodes) {
-                newEpisode(LoadData(title, it.id)) {
+                newEpisode(data = LoadData(title, it.id).toJson()) {
                     this.name = it.t
                     this.episode = it.ep.replace("E", "").toIntOrNull()
                     this.season = it.s.replace("S", "").toIntOrNull()
                     this.posterUrl = "https://imgcdn.kim/poster/v/150/${it.id}.jpg"
-                    this.runTime = it.time.replace("m", "").toIntOrNull()
                 }
             }
 
@@ -180,7 +167,7 @@ class NetflixMirrorProvider : MainAPI() {
             year = data.year.toIntOrNull()
             tags = genre
             actors = cast
-            this.score =  Score.from10(rating)
+            this.score = Score.from10(rating)
             this.duration = runTime
             this.contentRating = data.ua
             this.recommendations = suggest
@@ -198,19 +185,20 @@ class NetflixMirrorProvider : MainAPI() {
         )
         var pg = page
         while (true) {
-            val data = app.get(
+            val res = app.get(
                 "$mainUrl/mobile/episodes.php?s=$sid&series=$eid&t=${APIHolder.unixTime}&page=$pg",
                 headers,
                 referer = "$mainUrl/home",
                 cookies = cookies
-            ).parsed<EpisodesData>()
+            ).text
+            val data = parseJson<EpisodesData>(res)
+            
             data.episodes?.mapTo(episodes) {
-                newEpisode(LoadData(title, it.id)) {
-                    name = it.t
-                    episode = it.ep.replace("E", "").toIntOrNull()
-                    season = it.s.replace("S", "").toIntOrNull()
+                newEpisode(data = LoadData(title, it.id).toJson()) {
+                    this.name = it.t
+                    this.episode = it.ep.replace("E", "").toIntOrNull()
+                    this.season = it.s.replace("S", "").toIntOrNull()
                     this.posterUrl = "https://imgcdn.kim/epimg/150/${it.id}.jpg"
-                    this.runTime = it.time.replace("m", "").toIntOrNull()
                 }
             }
             if (data.nextPageShow == 0) break
@@ -218,9 +206,8 @@ class NetflixMirrorProvider : MainAPI() {
         }
         return episodes
     }
-    
 
-        override suspend fun loadLinks(
+    override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -233,7 +220,7 @@ class NetflixMirrorProvider : MainAPI() {
 
             Log.d("NetflixMirror", "▶️ loadLinks started for ID: $contentId, Title: $title")
 
-            // 1. Ensure bypass cookie is ready (Tumhara custom bypass logic)
+            // Ensure bypass cookie is ready
             cookie_value = if (cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
             val currentCookies = mapOf(
                 "t_hash_t" to cookie_value,
@@ -245,7 +232,7 @@ class NetflixMirrorProvider : MainAPI() {
             // STEP 1: FETCH TOKEN/HASH VIA POST
             // ==========================================
             val postHeaders = mapOf(
-                "X-Requested-With" to "XMLHttpRequest", // XML header to bypass WAF
+                "X-Requested-With" to "XMLHttpRequest",
                 "Origin" to mainUrl,
                 "Referer" to "$mainUrl/home",
                 "Accept" to "application/json, text/javascript, */*; q=0.01"
@@ -253,10 +240,8 @@ class NetflixMirrorProvider : MainAPI() {
             val postData = mapOf("id" to contentId)
 
             Log.d("NetflixMirror", "⏳ Fetching hash from play.php...")
-            
-            // Site mobile API ya main API use karti hai, isliye hum fallback rakhenge
             val postUrl = if (mainUrl.contains("net77")) "$mainUrl/play.php" else "$mainUrl/mobile/play.php"
-            
+
             val postResponse = app.post(
                 postUrl,
                 headers = postHeaders,
@@ -269,8 +254,11 @@ class NetflixMirrorProvider : MainAPI() {
                 return false
             }
 
-            // Raw JSON se directly 'h' key nikalna (No data-class needed)
-            val rawHash = tryParseJson<Map<String, String>>(postResponse.text)?.get("h") ?: ""
+            // Using Jackson Tree to safely parse dynamic JSON
+            val mapper = jacksonObjectMapper()
+            val postJson = mapper.readTree(postResponse.text)
+            val rawHash = postJson.get("h")?.asText() ?: ""
+            
             if (rawHash.isEmpty()) {
                 Log.d("NetflixMirror", "❌ Hash not found in response: ${postResponse.text}")
                 return false
@@ -285,7 +273,7 @@ class NetflixMirrorProvider : MainAPI() {
             // ==========================================
             val playlistUrl = "https://net52.cc/playlist.php?id=$contentId&t=$title&tm=$tmValue&h=$cleanHash"
             val playlistHeaders = mapOf(
-                "X-Requested-With" to "XMLHttpRequest", // XML Header
+                "X-Requested-With" to "XMLHttpRequest",
                 "Referer" to "https://net52.cc/play.php?id=$contentId&in=$cleanHash"
             )
 
@@ -302,9 +290,6 @@ class NetflixMirrorProvider : MainAPI() {
             }
 
             Log.d("NetflixMirror", "✅ Playlist JSON received. Parsing...")
-
-            // Dynamic Parsing (Tree) taaki external models ki tension na rahe
-            val mapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
             val playlistArray = mapper.readTree(playlistResponse.text)
 
             if (playlistArray.isEmpty) {
@@ -319,15 +304,13 @@ class NetflixMirrorProvider : MainAPI() {
             // ==========================================
             val sources = firstItem.get("sources")
             var linksFound = 0
-            
+
             if (sources != null && sources.isArray) {
                 sources.forEach { source ->
                     val rawUrl = source.get("file")?.asText() ?: return@forEach
                     val label = source.get("label")?.asText() ?: "Auto"
 
-                    // Fix relative paths
                     val finalUrl = if (rawUrl.startsWith("/")) "https://net52.cc$rawUrl" else rawUrl
-                    // Replace dummy token with real token
                     val actualUrl = finalUrl.replace("in=unknown::ni", "in=$cleanHash")
 
                     Log.d("NetflixMirror", "🔗 Found Source: $label -> $actualUrl")
@@ -337,10 +320,10 @@ class NetflixMirrorProvider : MainAPI() {
                             source = this.name,
                             name = "${this.name} $label",
                             url = actualUrl,
-                            type = com.lagradost.cloudstream3.utils.INFER_TYPE
+                            type = INFER_TYPE
                         ) {
                             this.referer = "https://net52.cc/"
-                            this.quality = com.lagradost.cloudstream3.utils.Qualities.Unknown.value
+                            this.quality = Qualities.Unknown.value
                         }
                     )
                     linksFound++
@@ -360,7 +343,6 @@ class NetflixMirrorProvider : MainAPI() {
                         val subUrlRaw = track.get("file")?.asText() ?: return@forEach
                         val subLang = track.get("label")?.asText() ?: "Unknown"
 
-                        // Fix protocol-relative URLs (//subscdn.top/...)
                         val subUrl = when {
                             subUrlRaw.startsWith("//") -> "https:$subUrlRaw"
                             subUrlRaw.startsWith("/") -> "https://net52.cc$subUrlRaw"
@@ -368,8 +350,9 @@ class NetflixMirrorProvider : MainAPI() {
                         }
 
                         Log.d("NetflixMirror", "📝 Found Subtitle: $subLang")
+                        // FIXED: Deprecated SubtitleFile constructor error
                         subtitleCallback.invoke(
-                            SubtitleFile(subLang, subUrl)
+                            newSubtitleFile(subLang, subUrl)
                         )
                     }
                 }
@@ -384,3 +367,24 @@ class NetflixMirrorProvider : MainAPI() {
             return false
         }
     }
+
+    @Suppress("ObjectLiteralToLambda")
+    override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
+        return object : Interceptor {
+            override fun intercept(chain: Interceptor.Chain): Response {
+                val request = chain.request()
+                if (request.url.toString().contains(".m3u8")) {
+                    val newRequest = request.newBuilder()
+                        .header("Cookie", "hd=on")
+                        .build()
+                    return chain.proceed(newRequest)
+                }
+                return chain.proceed(request)
+            }
+        }
+    }
+
+    // FIXED: Required Data Classes added back to the file
+    data class Id(val id: String)
+    data class LoadData(val title: String, val id: String)
+}
