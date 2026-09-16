@@ -207,7 +207,7 @@ class NetflixMirrorProvider : MainAPI() {
         return episodes
     }
 
-    override suspend fun loadLinks(
+        override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -254,7 +254,6 @@ class NetflixMirrorProvider : MainAPI() {
                 return false
             }
 
-            // Using Jackson Tree to safely parse dynamic JSON
             val mapper = jacksonObjectMapper()
             val postJson = mapper.readTree(postResponse.text)
             val rawHash = postJson.get("h")?.asText() ?: ""
@@ -269,12 +268,15 @@ class NetflixMirrorProvider : MainAPI() {
             Log.d("NetflixMirror", "✅ Extracted Hash: $cleanHash | TM: $tmValue")
 
             // ==========================================
-            // STEP 2: FETCH PLAYLIST FROM PLAYER DOMAIN
+            // STEP 2: HARDCODE ACTIVE PLAYER DOMAIN
             // ==========================================
-            val playlistUrl = "https://net52.cc/playlist.php?id=$contentId&t=$title&tm=$tmValue&h=$cleanHash"
+            // Yahan humne purana resolveApiUrl() hata diya hai jo net50.cc (dead) de raha tha
+            val activePlayerDomain = "https://net52.cc"
+
+            val playlistUrl = "$activePlayerDomain/playlist.php?id=$contentId&t=$title&tm=$tmValue&h=$cleanHash"
             val playlistHeaders = mapOf(
                 "X-Requested-With" to "XMLHttpRequest",
-                "Referer" to "https://net52.cc/play.php?id=$contentId&in=$cleanHash"
+                "Referer" to "$activePlayerDomain/play.php?id=$contentId&in=$cleanHash"
             )
 
             Log.d("NetflixMirror", "⏳ Fetching playlist: $playlistUrl")
@@ -310,7 +312,7 @@ class NetflixMirrorProvider : MainAPI() {
                     val rawUrl = source.get("file")?.asText() ?: return@forEach
                     val label = source.get("label")?.asText() ?: "Auto"
 
-                    val finalUrl = if (rawUrl.startsWith("/")) "https://net52.cc$rawUrl" else rawUrl
+                    val finalUrl = if (rawUrl.startsWith("/")) "$activePlayerDomain$rawUrl" else rawUrl
                     val actualUrl = finalUrl.replace("in=unknown::ni", "in=$cleanHash")
 
                     Log.d("NetflixMirror", "🔗 Found Source: $label -> $actualUrl")
@@ -322,7 +324,7 @@ class NetflixMirrorProvider : MainAPI() {
                             url = actualUrl,
                             type = INFER_TYPE
                         ) {
-                            this.referer = "https://net52.cc/"
+                            this.referer = "$activePlayerDomain/"
                             this.quality = Qualities.Unknown.value
                         }
                     )
@@ -345,12 +347,11 @@ class NetflixMirrorProvider : MainAPI() {
 
                         val subUrl = when {
                             subUrlRaw.startsWith("//") -> "https:$subUrlRaw"
-                            subUrlRaw.startsWith("/") -> "https://net52.cc$subUrlRaw"
+                            subUrlRaw.startsWith("/") -> "$activePlayerDomain$subUrlRaw"
                             else -> subUrlRaw
                         }
 
                         Log.d("NetflixMirror", "📝 Found Subtitle: $subLang")
-                        // FIXED: Deprecated SubtitleFile constructor error
                         subtitleCallback.invoke(
                             newSubtitleFile(subLang, subUrl)
                         )
@@ -367,24 +368,3 @@ class NetflixMirrorProvider : MainAPI() {
             return false
         }
     }
-
-    @Suppress("ObjectLiteralToLambda")
-    override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
-        return object : Interceptor {
-            override fun intercept(chain: Interceptor.Chain): Response {
-                val request = chain.request()
-                if (request.url.toString().contains(".m3u8")) {
-                    val newRequest = request.newBuilder()
-                        .header("Cookie", "hd=on")
-                        .build()
-                    return chain.proceed(newRequest)
-                }
-                return chain.proceed(request)
-            }
-        }
-    }
-
-    // FIXED: Required Data Classes added back to the file
-    data class Id(val id: String)
-    data class LoadData(val title: String, val id: String)
-}
