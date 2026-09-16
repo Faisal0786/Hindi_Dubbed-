@@ -317,8 +317,7 @@ class NetflixMirrorProvider : MainAPI() {
                     
                     val label = source.optString("label", "Auto")
                     val finalUrl = if (rawUrl.startsWith("/")) "$playerDomain$rawUrl" else rawUrl
-                    val actualUrl = finalUrl.replace("in=unknown::ni", "in=$cleanHash")
-
+                    val actualUrl = finalUrl.substringBefore("?") + "?in=$cleanHash"
                     Log.d("NetflixMirror", "🎬 Found Stream: $label -> $actualUrl")
                     
                     callback.invoke(
@@ -367,17 +366,26 @@ class NetflixMirrorProvider : MainAPI() {
     }
 
         
-        @Suppress("ObjectLiteralToLambda")
+         @Suppress("ObjectLiteralToLambda")
     override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
         return object : Interceptor {
             override fun intercept(chain: Interceptor.Chain): Response {
                 val request = chain.request()
+                // Agar URL m3u8 ya .ts (video chunks) ka hai
                 if (request.url.toString().contains(".m3u8") || request.url.toString().contains(".ts")) {
+                    
+                    // Naye aur ekdum original player wale Headers
                     val newRequest = request.newBuilder()
+                        .header("Accept", "*/*")
                         .header("Origin", "https://net52.cc")
                         .header("Referer", "https://net52.cc/")
-                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
-                        .header("Cookie", "hd=on")
+                        .header("Sec-Fetch-Dest", "empty")
+                        .header("Sec-Fetch-Mode", "cors")
+                        .header("Sec-Fetch-Site", "cross-site")
+                        // wahi user agent jo token fetch karte waqt tha
+                        .header("User-Agent", "Mozilla/5.0 (Linux; Android 13; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36")
+                        // Original Cookie string
+                        .header("Cookie", "t_hash_t=$cookie_value; hd=on; ott=nf")
                         .build()
                     return chain.proceed(newRequest)
                 }
@@ -385,6 +393,7 @@ class NetflixMirrorProvider : MainAPI() {
             }
         }
     }
+
 
 
     data class Id(
