@@ -367,13 +367,16 @@ class NetflixMirrorProvider : MainAPI() {
     }
 
         
-    @Suppress("ObjectLiteralToLambda")
+        @Suppress("ObjectLiteralToLambda")
     override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
         return object : Interceptor {
             override fun intercept(chain: Interceptor.Chain): Response {
                 val request = chain.request()
-                if (request.url.toString().contains(".m3u8")) {
+                if (request.url.toString().contains(".m3u8") || request.url.toString().contains(".ts")) {
                     val newRequest = request.newBuilder()
+                        .header("Origin", "https://net52.cc")
+                        .header("Referer", "https://net52.cc/")
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
                         .header("Cookie", "hd=on")
                         .build()
                     return chain.proceed(newRequest)
@@ -382,6 +385,7 @@ class NetflixMirrorProvider : MainAPI() {
             }
         }
     }
+
 
     data class Id(
         val id: String
