@@ -213,7 +213,7 @@ class NetflixMirrorProvider : MainAPI() {
         return episodes
     }
 
-    override suspend fun loadLinks(
+        override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -235,16 +235,21 @@ class NetflixMirrorProvider : MainAPI() {
             )
 
             // STEP 1: FETCH TOKEN/HASH VIA POST
+            // Explicitly set x-www-form-urlencoded to mimic exact browser behavior
             val postHeaders = mapOf(
                 "X-Requested-With" to "XMLHttpRequest",
                 "Origin" to mainUrl,
                 "Referer" to "$mainUrl/home",
+                "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
                 "Accept" to "application/json, text/javascript, */*; q=0.01"
             )
+            // Using Form-urlencoded map for OkHttp
             val postData = mapOf("id" to contentId)
 
-            // Site API fallback
-            val postUrl = if (mainUrl.contains("net77")) "$mainUrl/play.php" else "$mainUrl/mobile/play.php"
+            // Force play.php without /mobile/ path
+            val postUrl = "$mainUrl/play.php"
+            
+            Log.d("NetflixMirror", "⏳ Hitting POST API: $postUrl")
             
             val postResponse = app.post(
                 postUrl,
@@ -253,35 +258,51 @@ class NetflixMirrorProvider : MainAPI() {
                 cookies = currentCookies
             )
 
-            if (!postResponse.isSuccessful) return false
+            Log.d("NetflixMirror", "🟢 POST Status: ${postResponse.code}")
+            
+            if (!postResponse.isSuccessful) {
+                Log.d("NetflixMirror", "❌ POST Failed: ${postResponse.text}")
+                return false
+            }
 
             val postJson = JSONObject(postResponse.text)
             val rawHash = postJson.optString("h", "")
             
-            if (rawHash.isEmpty()) return false
+            if (rawHash.isEmpty()) {
+                Log.d("NetflixMirror", "❌ Hash Empty in response: ${postResponse.text}")
+                return false
+            }
 
             val cleanHash = rawHash.replace("in=", "")
             val tmValue = cleanHash.split("::").getOrNull(2) ?: ""
-            Log.d("NetflixMirror", "✅ Hash Extracted")
+            Log.d("NetflixMirror", "✅ Hash Extracted: $cleanHash | TM: $tmValue")
 
-            // STEP 2: FETCH PLAYLIST FROM LIVE DOMAIN
-            val activePlayerDomain = "https://net52.cc"
-            val playlistUrl = "$activePlayerDomain/playlist.php?id=$contentId&t=$title&tm=$tmValue&h=$cleanHash"
+            // STEP 2: FETCH PLAYLIST
+            val playlistUrl = "$mainUrl/playlist.php?id=$contentId&t=$title&tm=$tmValue&h=$cleanHash"
             val playlistHeaders = mapOf(
                 "X-Requested-With" to "XMLHttpRequest",
-                "Referer" to "$activePlayerDomain/play.php?id=$contentId&in=$cleanHash"
+                "Referer" to "$mainUrl/play.php?id=$contentId&in=$cleanHash",
+                "Accept" to "*/*"
             )
 
+            Log.d("NetflixMirror", "⏳ Hitting Playlist API: $playlistUrl")
+            
             val playlistResponse = app.get(
                 playlistUrl,
                 headers = playlistHeaders,
                 cookies = currentCookies
             )
 
-            if (!playlistResponse.isSuccessful) return false
+            if (!playlistResponse.isSuccessful) {
+                Log.d("NetflixMirror", "❌ Playlist fetch failed: ${playlistResponse.code}")
+                return false
+            }
 
             val playlistArray = JSONArray(playlistResponse.text)
-            if (playlistArray.length() == 0) return false
+            if (playlistArray.length() == 0) {
+                 Log.d("NetflixMirror", "❌ Playlist Array Empty")
+                 return false
+            }
             val firstItem = playlistArray.getJSONObject(0)
 
             // STEP 3: EXTRACT VIDEO SOURCES
@@ -294,9 +315,13 @@ class NetflixMirrorProvider : MainAPI() {
                     if (rawUrl.isEmpty()) continue
                     
                     val label = source.optString("label", "Auto")
-                    val finalUrl = if (rawUrl.startsWith("/")) "$activePlayerDomain$rawUrl" else rawUrl
+                    val finalUrl = if (rawUrl.startsWith("/")) "$mainUrl$rawUrl" else rawUrl
+                    
+                    // The magic trick to inject the hash into the CDN url
                     val actualUrl = finalUrl.replace("in=unknown::ni", "in=$cleanHash")
 
+                    Log.d("NetflixMirror", "🎬 Found Stream: $label -> $actualUrl")
+                    
                     callback.invoke(
                         newExtractorLink(
                             this.name,
@@ -304,7 +329,7 @@ class NetflixMirrorProvider : MainAPI() {
                             actualUrl,
                             type = INFER_TYPE
                         ) {
-                            this.referer = "$activePlayerDomain/"
+                            this.referer = "$mainUrl/"
                         }
                     )
                     linksFound++
@@ -324,11 +349,10 @@ class NetflixMirrorProvider : MainAPI() {
                         val subLang = track.optString("label", "Unknown")
                         val subUrl = when {
                             subUrlRaw.startsWith("//") -> "https:$subUrlRaw"
-                            subUrlRaw.startsWith("/") -> "$activePlayerDomain$subUrlRaw"
+                            subUrlRaw.startsWith("/") -> "$mainUrl$subUrlRaw"
                             else -> subUrlRaw
                         }
 
-                        // Deprecated warning handle ho jayega issey, code fully compile hoga
                         @Suppress("DEPRECATION")
                         subtitleCallback.invoke(
                             SubtitleFile(subLang, subUrl)
@@ -340,33 +364,8 @@ class NetflixMirrorProvider : MainAPI() {
             return linksFound > 0
 
         } catch (e: Exception) {
+            Log.d("NetflixMirror", "❌ Exception in loadLinks: ${e.message}")
             e.printStackTrace()
             return false
         }
     }
-
-    @Suppress("ObjectLiteralToLambda")
-    override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
-        return object : Interceptor {
-            override fun intercept(chain: Interceptor.Chain): Response {
-                val request = chain.request()
-                if (request.url.toString().contains(".m3u8")) {
-                    val newRequest = request.newBuilder()
-                        .header("Cookie", "hd=on")
-                        .build()
-                    return chain.proceed(newRequest)
-                }
-                return chain.proceed(request)
-            }
-        }
-    }
-
-    data class Id(
-        val id: String
-    )
-
-    data class LoadData(
-        val title: String, 
-        val id: String
-    )
-}
