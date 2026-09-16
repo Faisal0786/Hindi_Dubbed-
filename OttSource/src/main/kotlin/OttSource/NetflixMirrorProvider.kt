@@ -237,40 +237,41 @@ class NetflixMirrorProvider : MainAPI() {
             // STEP 1: FETCH TOKEN/HASH VIA POST
             // Explicitly set x-www-form-urlencoded to mimic exact browser behavior
                         // STEP 1: FETCH TOKEN/HASH VIA POST
+                        // STEP 1: FETCH TOKEN/HASH VIA POST
             val postHeaders = mapOf(
                 "Accept" to "application/json, text/javascript, */*; q=0.01",
-                "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
                 "Origin" to mainUrl,
                 "Referer" to "$mainUrl/home",
-                "Sec-Fetch-Dest" to "empty",
-                "Sec-Fetch-Mode" to "cors",
-                "Sec-Fetch-Site" to "same-origin",
                 "User-Agent" to "Mozilla/5.0 (Linux; Android 13; Pixel 5 Build/TQ3A.230901.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/144.0.7559.132 Safari/537.36 /OS.Gatu v3.0",
                 "X-Requested-With" to "XMLHttpRequest"
             )
-            val postData = mapOf("id" to contentId)
+            
+            // 🔥 The Magic Fix: Force strict Form-UrlEncoded Data instead of JSON Map
+            val formBody = okhttp3.FormBody.Builder()
+                .add("id", contentId)
+                .build()
 
             val postUrl = "$mainUrl/play.php"
             Log.d("NetflixMirror", "⏳ Hitting POST API: $postUrl")
 
+            // 'data' ki jagah 'requestBody' parameter use karenge
             val postResponse = app.post(
                 postUrl,
                 headers = postHeaders,
-                data = postData,
+                requestBody = formBody, 
                 cookies = currentCookies
             )
 
             Log.d("NetflixMirror", "🟢 POST Status: ${postResponse.code}")
             
-            // Yahan hum pehle check karenge ki JSON aaya bhi hai ya HTML
             if (!postResponse.isSuccessful || !postResponse.text.contains("{")) {
                 Log.d("NetflixMirror", "❌ POST Failed or Blocked (HTML returned): ${postResponse.text}")
                 return false
             }
 
             val postJson = JSONObject(postResponse.text)
-
             val rawHash = postJson.optString("h", "")
+
             
             if (rawHash.isEmpty()) {
                 Log.d("NetflixMirror", "❌ Hash Empty in response: ${postResponse.text}")
