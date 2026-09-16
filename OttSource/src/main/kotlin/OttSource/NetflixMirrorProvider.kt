@@ -226,17 +226,32 @@ class NetflixMirrorProvider : MainAPI() {
 
             Log.d("NetflixMirror", "▶️ loadLinks ID: $contentId, Title: $title")
 
-            // DOMAIN SEPARATION (Crucial Fix)
-            val apiDomain = "https://net77.cc"     // Main site (Hash Generator)
-            val playerDomain = "https://net52.cc"  // CDN/Player (Video/Playlist)
+                        val apiDomain = "https://net77.cc"     // Main site
+            val playerDomain = "https://net52.cc"  // Player
 
-            // Ensure bypass cookie is ready
-            cookie_value = if (cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
-            val currentCookies = mapOf(
-                "t_hash_t" to cookie_value,
+            // 🔥 STEP 0: FETCH FRESH COOKIES (USER_TOKEN) 🔥
+            Log.d("NetflixMirror", "⏳ Fetching fresh cookies from Home...")
+            val initResponse = app.get("$apiDomain/home")
+            
+            // Extract cookies from response
+            val userToken = initResponse.cookies["user_token"] ?: ""
+            val tHash = initResponse.cookies["t_hash"] ?: ""
+            val clearance = initResponse.cookies["cf_clearance"] ?: ""
+            
+            Log.d("NetflixMirror", "✅ Cookies grabbed! Token: $userToken")
+
+            // Prepare Master Cookie Map
+            val currentCookies = mutableMapOf(
                 "hd" to "on",
                 "ott" to "nf"
             )
+            if (userToken.isNotEmpty()) currentCookies["user_token"] = userToken
+            if (tHash.isNotEmpty()) currentCookies["t_hash"] = tHash
+            if (clearance.isNotEmpty()) currentCookies["cf_clearance"] = clearance
+
+            // Ab apna bypass wala cookie bhi add kar lo agar zaroorat ho
+            cookie_value = if (cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
+            if (cookie_value.isNotEmpty()) currentCookies["t_hash_t"] = cookie_value
 
             // STEP 1: FETCH TOKEN/HASH VIA POST
             val postHeaders = mapOf(
@@ -247,13 +262,15 @@ class NetflixMirrorProvider : MainAPI() {
                 "X-Requested-With" to "XMLHttpRequest"
             )
             
-            // Force strict Form-UrlEncoded Data
             val formBody = okhttp3.FormBody.Builder()
                 .add("id", contentId)
                 .build()
 
             val postUrl = "$apiDomain/play.php"
             Log.d("NetflixMirror", "⏳ Hitting POST API: $postUrl")
+
+            // BAKI KA CODE SAME RAHEGA (postResponse, playlistResponse etc.)
+
 
             val postResponse = app.post(
                 postUrl,
@@ -306,7 +323,7 @@ class NetflixMirrorProvider : MainAPI() {
             if (playlistArray.length() == 0) return false
             val firstItem = playlistArray.getJSONObject(0)
 
-            // STEP 3: EXTRACT VIDEO SOURCES
+                        // STEP 3: EXTRACT VIDEO SOURCES
             var linksFound = 0
             if (firstItem.has("sources")) {
                 val sources = firstItem.getJSONArray("sources")
@@ -320,6 +337,7 @@ class NetflixMirrorProvider : MainAPI() {
                     val actualUrl = finalUrl.substringBefore("?") + "?in=$cleanHash"
                     Log.d("NetflixMirror", "🎬 Found Stream: $label -> $actualUrl")
                     
+                    // Extractor Link pass karte waqt yeh headers dena bohot zaroori hai
                     callback.invoke(
                         newExtractorLink(
                             this.name,
@@ -328,11 +346,18 @@ class NetflixMirrorProvider : MainAPI() {
                             type = INFER_TYPE
                         ) {
                             this.referer = "$playerDomain/"
+                            // 🔥 YAHAN PLAYER KE LIYE HEADERS DAALO 🔥
+                            // Saari cookies (user_token + bypass) ek hi jagah!
+                            this.headers = mapOf(
+                                "Origin" to playerDomain,
+                                "User-Agent" to "Mozilla/5.0 (Linux; Android 13; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36",
+                                "Cookie" to "user_token=$userToken; hd=on; ott=nf; t_hash_t=$cookie_value" 
+                            )
                         }
                     )
-                    linksFound++
-                }
-            }
+                    linksFound++ // ✅ BUG FIX: Counter add kiya
+                } // ✅ BUG FIX: For loop yahan close hoga
+            } // ✅ BUG FIX: If block yahan close hoga
 
             // STEP 4: EXTRACT SUBTITLES
             if (firstItem.has("tracks")) {
@@ -365,8 +390,7 @@ class NetflixMirrorProvider : MainAPI() {
         }
     }
 
-        
-         @Suppress("ObjectLiteralToLambda")
+    @Suppress("ObjectLiteralToLambda")
     override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
         return object : Interceptor {
             override fun intercept(chain: Interceptor.Chain): Response {
@@ -382,10 +406,9 @@ class NetflixMirrorProvider : MainAPI() {
                         .header("Sec-Fetch-Dest", "empty")
                         .header("Sec-Fetch-Mode", "cors")
                         .header("Sec-Fetch-Site", "cross-site")
-                        // wahi user agent jo token fetch karte waqt tha
                         .header("User-Agent", "Mozilla/5.0 (Linux; Android 13; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36")
-                        // Original Cookie string
-                        .header("Cookie", "t_hash_t=$cookie_value; hd=on; ott=nf")
+                        // 🔥 BUG FIX: Yahan se ".header("Cookie")" line HATA di gayi hai! 
+                        // Taaki interceptor upar wali ExtractoLink ki "user_token" wali cookie ko overwrite na kare.
                         .build()
                     return chain.proceed(newRequest)
                 }
@@ -393,8 +416,6 @@ class NetflixMirrorProvider : MainAPI() {
             }
         }
     }
-
-
 
     data class Id(
         val id: String
