@@ -612,6 +612,17 @@ class NetflixMirrorProvider : MainAPI() {
             )
             return false
         }
+val playlistBody = playlistResponse.text
+
+Log.d(
+    "NetflixMirror",
+    "📌 PLAYLIST URL = $playlistUrl"
+)
+
+Log.d(
+    "NetflixMirror",
+    "📌 PLAYLIST RESPONSE = $playlistBody"
+)
 
         Log.d(
             "NetflixMirror",
