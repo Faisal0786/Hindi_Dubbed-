@@ -1,4 +1,4 @@
-Package OttSource
+package OttSource
 
 import android.content.Context
 import OttSource.entities.EpisodesData
