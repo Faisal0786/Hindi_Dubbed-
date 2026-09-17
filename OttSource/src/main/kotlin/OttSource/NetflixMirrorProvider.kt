@@ -1,11 +1,22 @@
 package OttSource
 
 import android.app.AlertDialog
+import android.app.Dialog
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Color
+import android.graphics.Typeface
+import android.view.Window
+import android.view.WindowManager
 import android.webkit.CookieManager
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
 import OttSource.entities.EpisodesData
 import OttSource.entities.PostData
 import OttSource.entities.SearchData
@@ -28,13 +39,13 @@ import kotlin.coroutines.resume
 class NetflixMirrorProvider : MainAPI() {
     companion object {
         var context: Context? = null
-        
+
         // 24 Hour Cache System Constants
         private const val PREFS_NAME = "NetflixMirrorCookies"
         private const val KEY_COOKIES = "saved_cf_cookies"
         private const val KEY_TIMESTAMP = "cookie_timestamp"
         private const val CACHE_DURATION_MS = 24 * 60 * 60 * 1000L // 24 Hours
-        
+
         // Hardcoded user_token from screenshot
         private const val HARDCODED_USER_TOKEN = "user_token=6fa477cec6457daeffe82723de4c5466"
     }
@@ -52,7 +63,7 @@ class NetflixMirrorProvider : MainAPI() {
 
     override val hasMainPage = true
     private var cookie_value = ""
-    
+
     private val headers = mapOf(
         "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
         "Accept-Language" to "en-IN,en-US;q=0.9,en;q=0.8",
@@ -75,7 +86,8 @@ class NetflixMirrorProvider : MainAPI() {
     // ==========================================
 
     private val prefs: SharedPreferences? by lazy {
-        context?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) ?: AcraApplication.context?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        // 🔥 Changed AcraApplication to CloudStreamApp 🔥
+        context?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) ?: CloudStreamApp.context?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
     private suspend fun getValidCookies(targetUrl: String): String {
@@ -91,7 +103,7 @@ class NetflixMirrorProvider : MainAPI() {
         }
 
         Log.d("NetflixMirror", "⏳ Cookies expired or missing. Opening Physical WebView Popup...")
-        
+
         // Trigger Popup and suspend code until solved
         val newCookies = openPhysicalWebView(targetUrl)
 
@@ -112,43 +124,121 @@ class NetflixMirrorProvider : MainAPI() {
     private suspend fun openPhysicalWebView(url: String): String {
         return withContext(Dispatchers.Main) {
             suspendCancellableCoroutine { continuation ->
-                val ctx = context ?: AcraApplication.context
+                // 🔥 Changed AcraApplication to CloudStreamApp 🔥
+                val ctx = context ?: CloudStreamApp.context
                 if (ctx == null) {
                     if (continuation.isActive) continuation.resume("")
                     return@suspendCancellableCoroutine
                 }
 
+                // 🌐 Build a Foreground UI Container
+                val rootLayout = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setBackgroundColor(Color.WHITE)
+                }
+
+                // 🌐 Title Bar
+                val titleBar = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    setPadding(40, 30, 40, 30)
+                    setBackgroundColor(Color.parseColor("#1E293B")) // Dark Header
+
+                    addView(TextView(ctx).apply {
+                        text = "⏳ Cloudflare Verification..."
+                        setTextColor(Color.WHITE)
+                        textSize = 16f
+                        setTypeface(null, Typeface.BOLD)
+                        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    })
+                }
+
+                val closeButton = TextView(ctx).apply {
+                    text = "✕ Cancel"
+                    setTextColor(Color.parseColor("#EF4444")) // Red Cancel Button
+                    textSize = 15f
+                    setPadding(20, 0, 0, 0)
+                }
+                titleBar.addView(closeButton)
+
+                // 🌐 Loading Progress Bar
+                val progressBar = ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal).apply {
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 10)
+                    max = 100
+                }
+
+                // 🌐 The Actual WebView
                 val webView = WebView(ctx).apply {
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.userAgentString = headers["User-Agent"]
+                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onProgressChanged(view: WebView, newProgress: Int) {
+                            progressBar.progress = newProgress
+                            progressBar.visibility = if (newProgress < 100) android.view.View.VISIBLE else android.view.View.GONE
+                        }
+                    }
                 }
 
-                val dialog = AlertDialog.Builder(ctx, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-                    .setView(webView)
-                    .setOnCancelListener {
-                        if (continuation.isActive) continuation.resume("")
-                    }
-                    .show()
+                rootLayout.addView(titleBar)
+                rootLayout.addView(progressBar)
+                rootLayout.addView(webView)
+
+                // 🌐 Show as a Fullscreen Overlay Dialog
+                val dialog = Dialog(ctx, android.R.style.Theme_DeviceDefault_Light_NoActionBar_Fullscreen)
+
+                closeButton.setOnClickListener {
+                    if (continuation.isActive) continuation.resume("")
+                    dialog.dismiss()
+                }
 
                 webView.webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, currentUrl: String?) {
                         super.onPageFinished(view, currentUrl)
                         val cookies = CookieManager.getInstance().getCookie(url) ?: ""
-                        
+
+                        // Auto-Resume and Close when Cookie is detected
                         if (cookies.contains("cf_clearance")) {
+                            Toast.makeText(ctx, "Verification Successful!", Toast.LENGTH_SHORT).show()
                             if (continuation.isActive) {
                                 continuation.resume(cookies)
                             }
                             dialog.dismiss()
                         }
                     }
+                    
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                        return false
+                    }
                 }
+
+                dialog.apply {
+                    requestWindowFeature(Window.FEATURE_NO_TITLE)
+                    setContentView(rootLayout)
+                    setCancelable(true)
+                    
+                    setOnDismissListener {
+                        webView.stopLoading()
+                        webView.destroy()
+                        if (continuation.isActive) continuation.resume("")
+                    }
+                    setOnCancelListener {
+                        if (continuation.isActive) continuation.resume("")
+                    }
+
+                    // Force the window to be on top and accept touches/keyboard
+                    window?.apply {
+                        setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
+                        clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+                        setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+                    }
+                    show()
+                }
+
                 webView.loadUrl(url)
-                
-                continuation.invokeOnCancellation {
-                    dialog.dismiss()
-                }
+                webView.requestFocus()
             }
         }
     }
@@ -325,7 +415,7 @@ class NetflixMirrorProvider : MainAPI() {
     ): Boolean {
         // [loadLinks implementation remains the same, but uses the global cookie_value seamlessly]
         // Ensure you replace fetchRealCookies() call inside here with getValidCookies("$apiDomain/home")
-        
+
         fun mask(value: String?, visible: Int = 6): String {
             if (value.isNullOrEmpty()) return "<EMPTY>"
             if (value.length <= visible * 2) return "***"
@@ -373,7 +463,7 @@ class NetflixMirrorProvider : MainAPI() {
 
             val formBody = okhttp3.FormBody.Builder().add("id", contentId).build()
             val postUrl = "$apiDomain/play.php"
-            
+
             val postResponse = try {
                 app.post(postUrl, headers = postHeaders, requestBody = formBody)
             } catch (e: Exception) {
