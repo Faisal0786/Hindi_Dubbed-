@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.Typeface
+import android.os.Handler
+import android.os.Looper
 import android.view.Window
 import android.view.WindowManager
 import android.webkit.CookieManager
@@ -81,30 +83,36 @@ class NetflixMirrorProvider : MainAPI() {
         "X-Requested-With" to "XMLHttpRequest"
     )
 
-    // ==========================================
-    // 🔥 THE REAL COOKIE HARVESTER SYSTEM 🔥
-    // ==========================================
-
     private val prefs: SharedPreferences? by lazy {
-        // 🔥 Changed AcraApplication to CloudStreamApp 🔥
         context?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) ?: CloudStreamApp.context?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
+    // ==========================================
+    // 🔥 COOKIE HELPERS 🔥
+    // ==========================================
+
+    // 1. Silent Cookie Fetcher (NO POPUP - For Home, Search, Load)
+    private fun getCachedCookies(): String {
+        val savedCookiesString = prefs?.getString(KEY_COOKIES, "") ?: ""
+        return if (savedCookiesString.isNotBlank()) {
+            "$savedCookiesString; $HARDCODED_USER_TOKEN; ott=nf; hd=on; t_hash=669...;"
+        } else {
+            "$HARDCODED_USER_TOKEN; ott=nf; hd=on;"
+        }
+    }
+
+    // 2. Strict Cookie Fetcher WITH POPUP (Only for loadLinks)
     private suspend fun getValidCookies(targetUrl: String): String {
         val currentTime = System.currentTimeMillis()
         val savedTime = prefs?.getLong(KEY_TIMESTAMP, 0L) ?: 0L
         val savedCookiesString = prefs?.getString(KEY_COOKIES, "") ?: ""
 
-        // Check if cookies exist and are within 24 hours
         if (savedCookiesString.contains("cf_clearance") && (currentTime - savedTime) < CACHE_DURATION_MS) {
-            Log.d("NetflixMirror", "✅ Using 24h Cached Cookies")
-            // Combine with hardcoded token
+            Log.d("NetflixMirror", "✅ Using 24h Cached Cookies in loadLinks")
             return "$savedCookiesString; $HARDCODED_USER_TOKEN; ott=nf; hd=on; t_hash=669...;"
         }
 
-        Log.d("NetflixMirror", "⏳ Cookies expired or missing. Opening Physical WebView Popup...")
-
-        // Trigger Popup and suspend code until solved
+        Log.d("NetflixMirror", "⏳ Missing cf_clearance in loadLinks. Opening WebView Popup...")
         val newCookies = openPhysicalWebView(targetUrl)
 
         if (newCookies.contains("cf_clearance")) {
@@ -121,27 +129,25 @@ class NetflixMirrorProvider : MainAPI() {
         }
     }
 
+    // 3. The Physical WebView UI & Auto-Close Logic
     private suspend fun openPhysicalWebView(url: String): String {
         return withContext(Dispatchers.Main) {
             suspendCancellableCoroutine { continuation ->
-                // 🔥 Changed AcraApplication to CloudStreamApp 🔥
                 val ctx = context ?: CloudStreamApp.context
                 if (ctx == null) {
                     if (continuation.isActive) continuation.resume("")
                     return@suspendCancellableCoroutine
                 }
 
-                // 🌐 Build a Foreground UI Container
                 val rootLayout = LinearLayout(ctx).apply {
                     orientation = LinearLayout.VERTICAL
                     setBackgroundColor(Color.WHITE)
                 }
 
-                // 🌐 Title Bar
                 val titleBar = LinearLayout(ctx).apply {
                     orientation = LinearLayout.HORIZONTAL
                     setPadding(40, 30, 40, 30)
-                    setBackgroundColor(Color.parseColor("#1E293B")) // Dark Header
+                    setBackgroundColor(Color.parseColor("#1E293B"))
 
                     addView(TextView(ctx).apply {
                         text = "⏳ Cloudflare Verification..."
@@ -154,19 +160,17 @@ class NetflixMirrorProvider : MainAPI() {
 
                 val closeButton = TextView(ctx).apply {
                     text = "✕ Cancel"
-                    setTextColor(Color.parseColor("#EF4444")) // Red Cancel Button
+                    setTextColor(Color.parseColor("#EF4444"))
                     textSize = 15f
                     setPadding(20, 0, 0, 0)
                 }
                 titleBar.addView(closeButton)
 
-                // 🌐 Loading Progress Bar
                 val progressBar = ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal).apply {
                     layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 10)
                     max = 100
                 }
 
-                // 🌐 The Actual WebView
                 val webView = WebView(ctx).apply {
                     layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
                     settings.javaScriptEnabled = true
@@ -180,13 +184,15 @@ class NetflixMirrorProvider : MainAPI() {
                             progressBar.visibility = if (newProgress < 100) android.view.View.VISIBLE else android.view.View.GONE
                         }
                     }
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = false
+                    }
                 }
 
                 rootLayout.addView(titleBar)
                 rootLayout.addView(progressBar)
                 rootLayout.addView(webView)
 
-                // 🌐 Show as a Fullscreen Overlay Dialog
                 val dialog = Dialog(ctx, android.R.style.Theme_DeviceDefault_Light_NoActionBar_Fullscreen)
 
                 closeButton.setOnClickListener {
@@ -194,31 +200,11 @@ class NetflixMirrorProvider : MainAPI() {
                     dialog.dismiss()
                 }
 
-                webView.webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView?, currentUrl: String?) {
-                        super.onPageFinished(view, currentUrl)
-                        val cookies = CookieManager.getInstance().getCookie(url) ?: ""
-
-                        // Auto-Resume and Close when Cookie is detected
-                        if (cookies.contains("cf_clearance")) {
-                            Toast.makeText(ctx, "Verification Successful!", Toast.LENGTH_SHORT).show()
-                            if (continuation.isActive) {
-                                continuation.resume(cookies)
-                            }
-                            dialog.dismiss()
-                        }
-                    }
-                    
-                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                        return false
-                    }
-                }
-
                 dialog.apply {
                     requestWindowFeature(Window.FEATURE_NO_TITLE)
                     setContentView(rootLayout)
                     setCancelable(true)
-                    
+
                     setOnDismissListener {
                         webView.stopLoading()
                         webView.destroy()
@@ -228,7 +214,6 @@ class NetflixMirrorProvider : MainAPI() {
                         if (continuation.isActive) continuation.resume("")
                     }
 
-                    // Force the window to be on top and accept touches/keyboard
                     window?.apply {
                         setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
                         clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
@@ -238,20 +223,43 @@ class NetflixMirrorProvider : MainAPI() {
                 }
 
                 webView.loadUrl(url)
-                webView.requestFocus()
+
+                // 🔥 AUTO-CLOSE POLLING LOGIC 🔥
+                // This checks cookies every 500ms and immediately closes the popup once cf_clearance is caught.
+                val handler = Handler(Looper.getMainLooper())
+                var isDone = false
+
+                val cookieChecker = object : Runnable {
+                    override fun run() {
+                        if (isDone) return
+                        val currentCookies = CookieManager.getInstance().getCookie(url) ?: ""
+                        if (currentCookies.contains("cf_clearance")) {
+                            isDone = true
+                            Toast.makeText(ctx, "Verification Successful!", Toast.LENGTH_SHORT).show()
+                            if (continuation.isActive) continuation.resume(currentCookies)
+                            dialog.dismiss()
+                            return
+                        }
+                        handler.postDelayed(this, 500)
+                    }
+                }
+                handler.post(cookieChecker)
+
+                continuation.invokeOnCancellation {
+                    isDone = true
+                    dialog.dismiss()
+                }
             }
         }
     }
 
     // ==========================================
+    // 🔥 NO POPUPS IN THESE FUNCTIONS (Home, Search, Load) 🔥
+    // ==========================================
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
-        cookie_value = getValidCookies(mainUrl)
-        val cookies = mapOf(
-            "t_hash_t" to cookie_value,
-            "ott" to "nf",
-            "hd" to "on"
-        )
+        cookie_value = getCachedCookies()
+        val cookies = mapOf("Cookie" to cookie_value)
         val document = app.get(
             "$mainUrl/mobile/home?app=1",
             cookies = cookies,
@@ -281,12 +289,8 @@ class NetflixMirrorProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        cookie_value = getValidCookies(mainUrl)
-        val cookies = mapOf(
-            "t_hash_t" to cookie_value,
-            "hd" to "on",
-            "ott" to "nf"
-        )
+        cookie_value = getCachedCookies()
+        val cookies = mapOf("Cookie" to cookie_value)
         val url = "$mainUrl/mobile/search.php?s=$query&t=${APIHolder.unixTime}"
         val data = app.get(url, referer = "$mainUrl/home", cookies = cookies).parsed<SearchData>()
 
@@ -299,13 +303,9 @@ class NetflixMirrorProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        cookie_value = getValidCookies(mainUrl)
+        cookie_value = getCachedCookies()
         val id = parseJson<Id>(url).id
-        val cookies = mapOf(
-            "t_hash_t" to cookie_value,
-            "hd" to "on",
-            "ott" to "nf"
-        )
+        val cookies = mapOf("Cookie" to cookie_value)
         val data = app.get(
             "$mainUrl/mobile/post.php?id=$id&t=${APIHolder.unixTime}",
             headers,
@@ -317,13 +317,8 @@ class NetflixMirrorProvider : MainAPI() {
 
         val title = data.title
         val castList = data.cast?.split(",")?.map { it.trim() } ?: emptyList()
-        val cast = castList.map {
-            ActorData(Actor(it))
-        }
-        val genre = data.genre?.split(",")
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
-
+        val cast = castList.map { ActorData(Actor(it)) }
+        val genre = data.genre?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
         val rating = data.match?.replace("IMDb ", "")
         val runTime = convertRuntimeToMinutes(data.runtime.toString())
 
@@ -335,9 +330,7 @@ class NetflixMirrorProvider : MainAPI() {
         }
 
         if (data.episodes.first() == null) {
-            episodes.add(newEpisode(LoadData(title, id)) {
-                name = data.title
-            })
+            episodes.add(newEpisode(LoadData(title, id)) { name = data.title })
         } else {
             data.episodes.filterNotNull().mapTo(episodes) {
                 newEpisode(LoadData(title, it.id)) {
@@ -348,14 +341,8 @@ class NetflixMirrorProvider : MainAPI() {
                     this.runTime = it.time.replace("m", "").toIntOrNull()
                 }
             }
-
-            if (data.nextPageShow == 1) {
-                episodes.addAll(getEpisodes(title, url, data.nextPageSeason!!, 2))
-            }
-
-            data.season?.dropLast(1)?.amap {
-                episodes.addAll(getEpisodes(title, url, it.id, 1))
-            }
+            if (data.nextPageShow == 1) episodes.addAll(getEpisodes(title, url, data.nextPageSeason!!, 2))
+            data.season?.dropLast(1)?.amap { episodes.addAll(getEpisodes(title, url, it.id, 1)) }
         }
 
         val type = if (data.episodes.first() == null) TvType.Movie else TvType.TvSeries
@@ -375,23 +362,12 @@ class NetflixMirrorProvider : MainAPI() {
         }
     }
 
-    private suspend fun getEpisodes(
-        title: String, eid: String, sid: String, page: Int
-    ): List<Episode> {
+    private suspend fun getEpisodes(title: String, eid: String, sid: String, page: Int): List<Episode> {
         val episodes = arrayListOf<Episode>()
-        val cookies = mapOf(
-            "t_hash_t" to cookie_value,
-            "hd" to "on",
-            "ott" to "nf"
-        )
+        val cookies = mapOf("Cookie" to cookie_value)
         var pg = page
         while (true) {
-            val data = app.get(
-                "$mainUrl/mobile/episodes.php?s=$sid&series=$eid&t=${APIHolder.unixTime}&page=$pg",
-                headers,
-                referer = "$mainUrl/home",
-                cookies = cookies
-            ).parsed<EpisodesData>()
+            val data = app.get("$mainUrl/mobile/episodes.php?s=$sid&series=$eid&t=${APIHolder.unixTime}&page=$pg", headers, referer = "$mainUrl/home", cookies = cookies).parsed<EpisodesData>()
             data.episodes?.mapTo(episodes) {
                 newEpisode(LoadData(title, it.id)) {
                     name = it.t
@@ -407,37 +383,28 @@ class NetflixMirrorProvider : MainAPI() {
         return episodes
     }
 
+    // ==========================================
+    // 🔥 POPUP ONLY TRIGGERS IN loadLinks 🔥
+    // ==========================================
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // [loadLinks implementation remains the same, but uses the global cookie_value seamlessly]
-        // Ensure you replace fetchRealCookies() call inside here with getValidCookies("$apiDomain/home")
-
         fun mask(value: String?, visible: Int = 6): String {
             if (value.isNullOrEmpty()) return "<EMPTY>"
             if (value.length <= visible * 2) return "***"
             return value.take(visible) + "..." + value.takeLast(visible)
         }
-
         fun cookieNames(cookie: String?): String {
             if (cookie.isNullOrBlank()) return "<EMPTY>"
             return cookie.split(";").mapNotNull { it.trim().substringBefore("=").takeIf { name -> name.isNotBlank() } }.joinToString(", ")
         }
-
         fun hasCookie(cookie: String?, name: String): Boolean {
             if (cookie.isNullOrBlank()) return false
             return cookie.split(";").any { it.trim().startsWith("$name=") }
-        }
-
-        fun safeUrl(url: String): String {
-            return try {
-                url.replace(Regex("""([?&](?:in|tm|h|token|user_token|cf_clearance)=)[^&]*"""), "$1***")
-            } catch (_: Exception) {
-                "<URL_MASK_ERROR>"
-            }
         }
 
         try {
@@ -447,9 +414,12 @@ class NetflixMirrorProvider : MainAPI() {
             val apiDomain = "https://net77.cc"
             val playerDomain = "https://net52.cc"
 
-            // Force refresh if critical cookies missing
-            if (cookie_value.isEmpty() || !hasCookie(cookie_value, "cf_clearance")) {
-                cookie_value = getValidCookies("$apiDomain/home")
+            // 🔥 This will safely check cache, and ONLY if expired/missing, it will OPEN THE POPUP 🔥
+            cookie_value = getValidCookies("$apiDomain/home")
+
+            if (!hasCookie(cookie_value, "cf_clearance")) {
+                Log.d("NetflixMirror", "❌ loadLinks Aborted: cf_clearance still missing.")
+                return false
             }
 
             val postHeaders = mapOf(
@@ -466,9 +436,7 @@ class NetflixMirrorProvider : MainAPI() {
 
             val postResponse = try {
                 app.post(postUrl, headers = postHeaders, requestBody = formBody)
-            } catch (e: Exception) {
-                return false
-            }
+            } catch (e: Exception) { return false }
 
             if (!postResponse.isSuccessful || !postResponse.text.contains("{")) return false
 
@@ -488,12 +456,7 @@ class NetflixMirrorProvider : MainAPI() {
                 "Cookie" to cookie_value
             )
 
-            val playlistResponse = try {
-                app.get(playlistUrl, headers = playlistHeaders)
-            } catch (e: Exception) {
-                return false
-            }
-
+            val playlistResponse = try { app.get(playlistUrl, headers = playlistHeaders) } catch (e: Exception) { return false }
             if (!playlistResponse.isSuccessful) return false
 
             val playlistArray = JSONArray(playlistResponse.text)
@@ -553,10 +516,6 @@ class NetflixMirrorProvider : MainAPI() {
         }
     }
 
-    private var debugM3u8Count = 0
-    private var debugSegmentCount = 0
-
-    @Suppress("ObjectLiteralToLambda")
     override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
         return object : Interceptor {
             override fun intercept(chain: Interceptor.Chain): Response {
