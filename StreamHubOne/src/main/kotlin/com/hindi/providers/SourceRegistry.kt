@@ -50,27 +50,31 @@ object SourceRegistry {
             executeAnime = { res, subCb, cb -> invokeShowbox(res.imdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
 SourceProviderDef(
-    key = "p_netmirror_test", 
-    displayName = "NetMirror Runtime Test",
+    key = "p_netmirror", 
+    displayName = "NetMirror (Net27)",
+    category = ProviderCategory.HINDI,
     executeStandard = { res, subCb, cb -> 
-        invokeNetMirrorTest(
-            title = res.title, 
-            season = res.season, 
+        invokeNetmirror(
+            tmdbId = res.tmdbId,
+            title = res.title,
+            season = res.season,
             episode = res.episode,
-            subtitleCallback = subCb,
-            callback = cb
+            subtitleCallback = { sub -> subCb(sub) },
+            callback = { link -> cb(link) }
         ) 
     },
     executeAnime = { res, subCb, cb -> 
-        invokeNetMirrorTest(
-            title = res.imdbTitle, 
-            season = res.imdbSeason, 
-            episode = res.imdbEpisode,
-            subtitleCallback = subCb,
-            callback = cb
+        invokeNetmirror(
+            tmdbId = res.tmdbId,
+            title = res.imdbTitle ?: res.title,
+            season = res.imdbSeason ?: res.season,
+            episode = res.imdbEpisode ?: res.episode,
+            subtitleCallback = { sub -> subCb(sub) },
+            callback = { link -> cb(link) }
         ) 
     }
 ),
+
 
 
 
