@@ -728,36 +728,12 @@ class NetflixMirrorProvider : MainAPI() {
                             "Final source URL = ${safeUrl(finalUrl)}"
                         )
 
-                        val baseCleanHash =
-                            cleanHash.substringBefore("::ni")
+                        val actualUrl = finalUrl
 
-                        Log.d(
-                            "NetflixMirror",
-                            "Base clean hash = ${mask(baseCleanHash, 8)}"
-                        )
-
-                        val api = "https://tv.imgcdn.kim/newtv/hls/nf"
-
-val actualUrl =
-    "$api/${finalUrl.substringAfterLast("/").substringBefore("?")}" +
-    "?in=${baseCleanHash}::ni::t"
-
-                        Log.d(
-                            "NetflixMirror",
-                            "⚠️ MODIFIED URL = ${safeUrl(actualUrl)}"
-                        )
-
-                        Log.d(
-                            "NetflixMirror",
-                            "URL base before '?' = ${
-                                safeUrl(finalUrl.substringBefore("?"))
-                            }"
-                        )
-
-                        Log.d(
-                            "NetflixMirror",
-                            "URL had original query = ${finalUrl.contains("?")}"
-                        )
+Log.d(
+    "NetflixMirror",
+    "✅ SERVER URL USED AS-IS = ${safeUrl(actualUrl)}"
+)
 
                         callback.invoke(
                             newExtractorLink(
@@ -939,10 +915,17 @@ override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
 
             val isM3u8 = url.contains(".m3u8", ignoreCase = true)
             val isSegment =
-                url.contains(".ts", ignoreCase = true) ||
-                url.contains(".m4s", ignoreCase = true) ||
-                url.contains(".mp4", ignoreCase = true)
-
+    url.contains(".ts", ignoreCase = true) ||
+    url.contains(".m4s", ignoreCase = true) ||
+    url.contains(".mp4", ignoreCase = true) ||
+    (
+        url.contains("/files/", ignoreCase = true) &&
+        !isM3u8 &&
+        (
+            url.contains("freecdn", ignoreCase = true) ||
+            url.contains("nm-cdn", ignoreCase = true)
+        )
+    )
             if (isM3u8 || isSegment) {
 
                 if (isM3u8) {
