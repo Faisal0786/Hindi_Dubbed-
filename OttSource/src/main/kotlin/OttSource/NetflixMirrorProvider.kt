@@ -736,9 +736,11 @@ class NetflixMirrorProvider : MainAPI() {
                             "Base clean hash = ${mask(baseCleanHash, 8)}"
                         )
 
-                        val actualUrl =
-                            finalUrl.substringBefore("?") +
-                            "?in=${baseCleanHash}::ni::p"
+                        val api = "https://tv.imgcdn.kim/newtv/hls/nf"
+
+val actualUrl =
+    "$api/${finalUrl.substringAfterLast("/").substringBefore("?")}" +
+    "?in=${baseCleanHash}::ni::t"
 
                         Log.d(
                             "NetflixMirror",
