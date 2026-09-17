@@ -986,7 +986,7 @@ class NetflixMirrorProvider : MainAPI() {
             // -----------------------------------------------------
 
             val postSetCookies =
-                postResponse.headers("Set-Cookie")
+    postResponse.headers.values("Set-Cookie")
 
             Log.d(
                 "NetflixMirror",
