@@ -1,4 +1,4 @@
-package com.lagradost.cloudstream3.moviebox
+package com.moviebox
 
 import android.util.Base64
 import com.lagradost.cloudstream3.*
