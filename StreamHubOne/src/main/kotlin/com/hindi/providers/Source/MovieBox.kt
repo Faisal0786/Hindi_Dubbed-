@@ -212,7 +212,7 @@ suspend fun SourceProviders.invokeMoviebox(
                 try {
                     val decoded = String(Base64.decode(policyB64, Base64.DEFAULT))
                     val policyJson = AppUtils.tryParseJson<Map<String, Any>>(decoded)
-                    val stmt = (policyJson["Statement"] as? List<Map<String, Any>>)?.firstOrNull()
+                    val stmt = (policyJson?.get("Statement") as? List<Map<String, Any>>)?.firstOrNull()
                     val resource = stmt?.get("Resource")?.toString()?.trimEnd('*', '/')
                     if (resource != null && resource.startsWith("http")) {
                         manifestUrl = "$resource/index.mpd"
