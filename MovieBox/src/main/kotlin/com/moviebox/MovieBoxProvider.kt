@@ -152,6 +152,8 @@ class MovieBoxProvider : MainAPI() {
             return sessionToken!!
         }
 
+        val bodyString = "{}" // Using exact string for accurate signature
+
         for (i in HOST_POOL.indices) {
             val idx = (activeHostIdx + i) % HOST_POOL.size
             val url = "${HOST_POOL[idx]}/wefeed-mobile-bff/user-api/visitor-login"
@@ -164,22 +166,27 @@ class MovieBoxProvider : MainAPI() {
                 "Connection" to "keep-alive",
                 "x-client-status" to "0",
                 "x-client-token" to generateXClientToken(ts),
-                "x-tr-signature" to generateXTrSignature("POST", url, "{}", ts),
+                "x-tr-signature" to generateXTrSignature("POST", url, bodyString, ts),
                 "x-client-info" to clientInfoAndUa.second,
                 "x-forwarded-for" to spoofedIp
             )
 
             try {
+                // Fixed: Sending raw exact string to avoid serialization differences
                 val resp = app.post(
                     url,
                     headers = headers,
-                    json = emptyMap<String, String>()
+                    data = bodyString
                 )
 
                 if (resp.code != 200) continue
 
                 val loginResp = AppUtils.parseJson<LoginResponse>(resp.text)
-                sessionToken = loginResp.data?.token
+                
+                // Fixed: Added null check to avoid NPE crash if Cloudflare HTML page is returned
+                if (loginResp.data?.token == null) continue
+                
+                sessionToken = loginResp.data.token
 
                 try {
                     val payload = String(
@@ -209,8 +216,7 @@ class MovieBoxProvider : MainAPI() {
     private suspend fun apiRequest(
         method: String,
         path: String,
-        payload: Any? = null,
-        bodyStrForSig: String? = null
+        bodyStrForSig: String? = null // Removed Map payload, strictly enforcing raw strings
     ): String {
         var token = ensureSession()
         var backoffMs = 50L
@@ -243,7 +249,7 @@ class MovieBoxProvider : MainAPI() {
                     app.post(
                         url,
                         headers = headers,
-                        json = payload
+                        data = bodyStrForSig // Strictly send the raw string
                     )
                 } else {
                     app.get(
@@ -299,7 +305,7 @@ class MovieBoxProvider : MainAPI() {
             "/wefeed-mobile-bff/tab-operating?page=$page&tabId=$tabId&version="
         )
 
-        val tabData = AppUtils.parseJson<TabOperatingResponse>(respText).data
+        val tabData = try { AppUtils.parseJson<TabOperatingResponse>(respText).data } catch (e: Exception) { null }
         val items = tabData?.items ?: tabData?.list ?: emptyList()
 
         val homePageLists = mutableListOf<HomePageList>()
@@ -338,24 +344,16 @@ class MovieBoxProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val payload = mapOf(
-            "keyword" to query,
-            "page" to 1,
-            "perPage" to 15,
-            "subjectType" to 0
-        )
+        val bodyStr = "{\"keyword\":\"$query\",\"page\":1,\"perPage\":15,\"subjectType\":0}"
 
-        val bodyStr =
-            "{\"keyword\":\"$query\",\"page\":1,\"perPage\":15,\"subjectType\":0}"
-
+        // Fixed: Passing only the exact string body to API Request
         val respText = apiRequest(
             "POST",
             "/wefeed-mobile-bff/subject-api/search/v2",
-            payload,
             bodyStr
         )
 
-        val json = AppUtils.parseJson<SearchApiResult>(respText)
+        val json = try { AppUtils.parseJson<SearchApiResult>(respText) } catch (e: Exception) { return emptyList() }
         val items =
             json.data?.results?.firstOrNull()?.subjects
                 ?: json.data?.list
@@ -374,9 +372,8 @@ class MovieBoxProvider : MainAPI() {
             "/wefeed-mobile-bff/subject-api/get?subjectId=${internalData.id}"
         )
 
-        val details =
-            AppUtils.parseJson<DetailsResult>(respText).data?.subject
-                ?: return null
+        val details = try { AppUtils.parseJson<DetailsResult>(respText).data?.subject } catch (e: Exception) { null }
+            ?: return null
 
         val title = cleanTitle(
             details.title ?: details.name ?: ""
@@ -414,8 +411,7 @@ class MovieBoxProvider : MainAPI() {
                 "/wefeed-mobile-bff/subject-api/season-info?subjectId=${internalData.id}"
             )
 
-            val seasonData =
-                AppUtils.parseJson<SeasonResult>(seasonRespText).data
+            val seasonData = try { AppUtils.parseJson<SeasonResult>(seasonRespText).data } catch (e: Exception) { null }
 
             val episodes = mutableListOf<Episode>()
 
@@ -467,8 +463,7 @@ class MovieBoxProvider : MainAPI() {
             playPath
         )
 
-        val playInfo =
-            AppUtils.parseJson<PlayInfoResult>(playRespText).data
+        val playInfo = try { AppUtils.parseJson<PlayInfoResult>(playRespText).data } catch(e: Exception) { null }
 
         playInfo?.streams?.forEach { stream ->
             val signCookie = stream.signCookie ?: ""
