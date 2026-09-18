@@ -47,11 +47,6 @@ class MovieBoxProvider : MainAPI() {
         private var sessionToken: String? = null
         private var sessionExpiry: Long = 0
 
-        private fun generateSpoofedIp(): String {
-            val prefixes = listOf("103.241", "49.36", "117.195", "106.198", "122.162", "157.32", "182.70", "103.58", "27.60", "59.90")
-            return "${prefixes.random()}.${Random.nextInt(1, 254)}.${Random.nextInt(1, 254)}"
-        }
-
         private fun generateClientInfoAndUa(): Pair<String, String> {
             val androids = listOf("9" to "PQ3A.190605.03081104", "10" to "QP1A.191005.007.A3", "13" to "TQ2A.230405.003")
             val devices = listOf("23078RKD5C" to "Redmi", "M2012K11AG" to "Redmi")
@@ -67,7 +62,6 @@ class MovieBoxProvider : MainAPI() {
             return Pair(ua, info)
         }
 
-        private val spoofedIp = generateSpoofedIp()
         private val clientInfoAndUa = generateClientInfoAndUa()
     }
 
@@ -102,7 +96,7 @@ class MovieBoxProvider : MainAPI() {
     }
 
     // ==========================================
-    // MODULE 1: RAW OKHTTP NETWORK CALLS (With Debug Logs)
+    // MODULE 1: RAW OKHTTP NETWORK CALLS
     // ==========================================
 
     private suspend fun ensureSession(): String {
@@ -117,6 +111,7 @@ class MovieBoxProvider : MainAPI() {
             val urlStr = "${HOST_POOL[idx]}/wefeed-mobile-bff/user-api/visitor-login"
             val ts = System.currentTimeMillis()
 
+            // Removed x-forwarded-for to prevent 407 HTTP_PROXY_AUTH crash
             val headers = mapOf(
                 "User-Agent" to clientInfoAndUa.first,
                 "Accept" to "application/json",
@@ -125,8 +120,7 @@ class MovieBoxProvider : MainAPI() {
                 "x-client-status" to "0",
                 "x-client-token" to generateXClientToken(ts),
                 "x-tr-signature" to generateXTrSignature("POST", urlStr, bodyString, ts),
-                "x-client-info" to clientInfoAndUa.second,
-                "x-forwarded-for" to spoofedIp
+                "x-client-info" to clientInfoAndUa.second
             )
 
             try {
@@ -164,7 +158,6 @@ class MovieBoxProvider : MainAPI() {
             }
         }
         
-        // YE LINE SCREEN PAR ASLI ERROR DIKHAYEGI
         throw Exception("Error Log: $debugLog")
     }
 
@@ -178,6 +171,7 @@ class MovieBoxProvider : MainAPI() {
             val urlStr = "${HOST_POOL[idx]}$path"
             val ts = System.currentTimeMillis()
 
+            // Removed x-forwarded-for to prevent 407 HTTP_PROXY_AUTH crash
             val headers = mapOf(
                 "User-Agent" to clientInfoAndUa.first,
                 "Accept" to "application/json",
@@ -187,7 +181,6 @@ class MovieBoxProvider : MainAPI() {
                 "x-client-token" to generateXClientToken(ts),
                 "x-tr-signature" to generateXTrSignature(method, urlStr, bodyStrForSig, ts),
                 "x-client-info" to clientInfoAndUa.second,
-                "x-forwarded-for" to spoofedIp,
                 "Authorization" to "Bearer $token"
             )
 
@@ -243,7 +236,6 @@ class MovieBoxProvider : MainAPI() {
             }
         }
         
-        // YE LINE API REQUEST KA ERROR DIKHAYEGI
         throw Exception("API Error Log: $debugLog")
     }
 
