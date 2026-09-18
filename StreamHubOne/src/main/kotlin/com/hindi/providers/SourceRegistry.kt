@@ -116,10 +116,30 @@ SourceProviderDef(
         
        
         SourceProviderDef(
-            key = "p_moviebox", displayName = "Moviebox", category = ProviderCategory.HINDI,
-            executeStandard = { res, subCb, cb -> invokeMoviebox(res.title, res.season, res.episode, subCb, cb) },
-            executeAnime = { res, subCb, cb -> invokeMoviebox(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
-        ),
+    key = "p_moviebox", 
+    displayName = "Moviebox Native", 
+    category = ProviderCategory.HINDI,
+    executeStandard = { res, subCb, cb -> 
+        invokeMoviebox(
+            title = res.title,
+            season = res.season,
+            episode = res.episode,
+            subtitleCallback = { sub -> subCb(sub) },
+            callback = { link -> cb(link) }
+        ) 
+    },
+    executeAnime = { res, subCb, cb -> 
+        invokeMoviebox(
+            title = res.imdbTitle ?: res.title,
+            season = res.imdbSeason ?: res.season,
+            episode = res.imdbEpisode ?: res.episode,
+            subtitleCallback = { sub -> subCb(sub) },
+            callback = { link -> cb(link) }
+        ) 
+    }
+),
+
+
         SourceProviderDef(
             key = "p_cinemacity", displayName = "Cinemacity",
             executeStandard = { res, subCb, cb -> invokeCinemacity(res.title, res.season, res.episode, subCb, cb) },
