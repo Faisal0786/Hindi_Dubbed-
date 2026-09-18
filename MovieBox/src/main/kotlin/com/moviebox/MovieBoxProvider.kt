@@ -110,7 +110,6 @@ class MovieBoxProvider : MainAPI() {
         return sessionToken!!
     }
 
-    // Fully rewritten to directly return String (safely avoids nice.http reference errors)
     private suspend fun apiRequest(method: String, path: String, payload: Any? = null, bodyStrForSig: String? = null): String {
         var token = ensureSession()
         var backoffMs = 50L
@@ -169,7 +168,9 @@ class MovieBoxProvider : MainAPI() {
                 homePageLists.add(HomePageList(groupName, searchResponses))
             }
         }
-        return HomePageResponse(homePageLists)
+        
+        // Fixed Deprecated Error
+        return newHomePageResponse(homePageLists)
     }
 
     // ==========================================
@@ -214,11 +215,14 @@ class MovieBoxProvider : MainAPI() {
                 val sNum = s.se ?: 1
                 val maxEp = s.maxEp ?: 1
                 for (eNum in 1..maxEp) {
-                    val epData = AppUtils.mapper.writeValueAsString(InternalData(internalData.id, false, sNum, eNum))
-                    episodes.add(newEpisode(epData) {
-                        this.season = sNum
-                        this.episode = eNum
-                    })
+                    // Manual JSON string fixed Unresolved Reference 'mapper' Error
+                    val epDataString = "{\"id\":\"${internalData.id}\",\"isMovie\":false,\"season\":$sNum,\"episode\":$eNum}"
+                    
+                    // Fixed Episode constructor block error
+                    val ep = newEpisode(epDataString)
+                    ep.season = sNum
+                    ep.episode = eNum
+                    episodes.add(ep)
                 }
             }
             return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
@@ -276,8 +280,9 @@ class MovieBoxProvider : MainAPI() {
             val headers = mutableMapOf("Referer" to "https://sportslive.wine", "User-Agent" to clientInfoAndUa.first)
             if (signCookie.isNotEmpty()) headers["Cookie"] = signCookie.trimEnd(';')
 
+            // Fixed Deprecated ExtractorLink Error
             callback(
-                ExtractorLink(
+                newExtractorLink(
                     this.name,
                     if (isDash) "Multi-Res ${stream.codecName}" else "${qualities}p ${stream.codecName}",
                     manifestUrl,
@@ -302,15 +307,16 @@ class MovieBoxProvider : MainAPI() {
         val poster = this.cover?.url ?: this.coverUrl ?: this.poster
         val yearValue = (this.releaseDate ?: this.year)?.take(4)?.toIntOrNull()
         
-        val internalData = AppUtils.mapper.writeValueAsString(InternalData(id, isMovie))
+        // Manual JSON String to avoid missing mapper issues
+        val internalDataString = "{\"id\":\"$id\",\"isMovie\":$isMovie,\"season\":0,\"episode\":0}"
 
         return if (isMovie) {
-            newMovieSearchResponse(title, internalData, TvType.Movie) { 
+            newMovieSearchResponse(title, internalDataString, TvType.Movie) { 
                 this.posterUrl = poster
                 this.year = yearValue 
             }
         } else {
-            newTvSeriesSearchResponse(title, internalData, TvType.TvSeries) { 
+            newTvSeriesSearchResponse(title, internalDataString, TvType.TvSeries) { 
                 this.posterUrl = poster
                 this.year = yearValue 
             }
