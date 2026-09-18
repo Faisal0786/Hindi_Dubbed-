@@ -152,44 +152,58 @@ class MovieBoxProvider : MainAPI() {
             return sessionToken!!
         }
 
-        val ts = System.currentTimeMillis()
-        val url = "${HOST_POOL[activeHostIdx]}/wefeed-mobile-bff/user-api/visitor-login"
+        for (i in HOST_POOL.indices) {
+            val idx = (activeHostIdx + i) % HOST_POOL.size
+            val url = "${HOST_POOL[idx]}/wefeed-mobile-bff/user-api/visitor-login"
+            val ts = System.currentTimeMillis()
 
-        val headers = mapOf(
-            "User-Agent" to clientInfoAndUa.first,
-            "Accept" to "application/json",
-            "Content-Type" to "application/json",
-            "x-client-token" to generateXClientToken(ts),
-            "x-tr-signature" to generateXTrSignature("POST", url, "{}", ts),
-            "x-client-info" to clientInfoAndUa.second,
-            "x-forwarded-for" to spoofedIp
-        )
-
-        val resp = app.post(
-            url,
-            headers = headers,
-            json = emptyMap<String, String>()
-        )
-
-        val loginResp = AppUtils.parseJson<LoginResponse>(resp.text)
-        sessionToken = loginResp.data?.token
-
-        try {
-            val payload = String(
-                Base64.decode(
-                    sessionToken!!.split(".")[1],
-                    Base64.URL_SAFE
-                )
+            val headers = mapOf(
+                "User-Agent" to clientInfoAndUa.first,
+                "Accept" to "application/json",
+                "Content-Type" to "application/json",
+                "Connection" to "keep-alive",
+                "x-client-status" to "0",
+                "x-client-token" to generateXClientToken(ts),
+                "x-tr-signature" to generateXTrSignature("POST", url, "{}", ts),
+                "x-client-info" to clientInfoAndUa.second,
+                "x-forwarded-for" to spoofedIp
             )
 
-            sessionExpiry =
-                (AppUtils.parseJson<Map<String, Any>>(payload)["exp"] as? Double)?.toLong()
-                    ?: (now + 7 * 24 * 3600)
-        } catch (e: Exception) {
-            sessionExpiry = now + 24 * 3600
-        }
+            try {
+                val resp = app.post(
+                    url,
+                    headers = headers,
+                    json = emptyMap<String, String>()
+                )
 
-        return sessionToken!!
+                if (resp.code != 200) continue
+
+                val loginResp = AppUtils.parseJson<LoginResponse>(resp.text)
+                sessionToken = loginResp.data?.token
+
+                try {
+                    val payload = String(
+                        Base64.decode(
+                            sessionToken!!.split(".")[1],
+                            Base64.URL_SAFE
+                        )
+                    )
+
+                    sessionExpiry =
+                        (AppUtils.parseJson<Map<String, Any>>(payload)["exp"] as? Double)?.toLong()
+                            ?: (now + 7 * 24 * 3600)
+                } catch (e: Exception) {
+                    sessionExpiry = now + 24 * 3600
+                }
+
+                activeHostIdx = idx
+                return sessionToken!!
+            } catch (e: Exception) {
+                // Catches 407 proxy crash and rotates host
+                continue
+            }
+        }
+        throw Exception("Failed to get session token - All hosts exhausted")
     }
 
     private suspend fun apiRequest(
@@ -210,6 +224,8 @@ class MovieBoxProvider : MainAPI() {
                 "User-Agent" to clientInfoAndUa.first,
                 "Accept" to "application/json",
                 "Content-Type" to "application/json",
+                "Connection" to "keep-alive",
+                "x-client-status" to "0",
                 "x-client-token" to generateXClientToken(ts),
                 "x-tr-signature" to generateXTrSignature(
                     method,
@@ -222,44 +238,51 @@ class MovieBoxProvider : MainAPI() {
                 "Authorization" to "Bearer $token"
             )
 
-            val resp = if (method == "POST") {
-                app.post(
-                    url,
-                    headers = headers,
-                    json = payload
-                )
-            } else {
-                app.get(
-                    url,
-                    headers = headers
-                )
-            }
+            try {
+                val resp = if (method == "POST") {
+                    app.post(
+                        url,
+                        headers = headers,
+                        json = payload
+                    )
+                } else {
+                    app.get(
+                        url,
+                        headers = headers
+                    )
+                }
 
-            if (resp.code == 403 || resp.code == 401) {
-                sessionToken = null
-                token = ensureSession()
-                continue
-            }
+                if (resp.code == 403 || resp.code == 401) {
+                    sessionToken = null
+                    token = ensureSession()
+                    continue
+                }
 
-            if (resp.code == 429 || resp.code >= 500) {
+                if (resp.code == 406 || resp.code == 407 || resp.code == 429 || resp.code >= 500) {
+                    kotlinx.coroutines.delay(backoffMs)
+                    backoffMs = 1000L
+                    continue
+                }
+
+                activeHostIdx = idx
+
+                resp.headers["x-user"]?.let { xuser ->
+                    try {
+                        val decoded = URLDecoder.decode(xuser, "UTF-8")
+                        AppUtils.parseJson<Map<String, Any>>(decoded)["token"]
+                            ?.toString()
+                            ?.let { sessionToken = it }
+                    } catch (e: Exception) {
+                    }
+                }
+
+                return resp.text
+            } catch (e: Exception) {
+                // Catches the OkHttp 407 crash
                 kotlinx.coroutines.delay(backoffMs)
                 backoffMs = 1000L
                 continue
             }
-
-            activeHostIdx = idx
-
-            resp.headers["x-user"]?.let { xuser ->
-                try {
-                    val decoded = URLDecoder.decode(xuser, "UTF-8")
-                    AppUtils.parseJson<Map<String, Any>>(decoded)["token"]
-                        ?.toString()
-                        ?.let { sessionToken = it }
-                } catch (e: Exception) {
-                }
-            }
-
-            return resp.text
         }
 
         throw Exception("All MovieBox hosts exhausted")
