@@ -118,9 +118,15 @@ class MovieBoxProvider : MainAPI() {
                 val rawKey = pieces.getOrNull(0).orEmpty()
                 val rawValue = pieces.getOrNull(1).orEmpty()
 
-                // Rust canonicalization sorts the raw query key/value strings.
-                // Keep percent-encoding unchanged; do not URL-decode here.
-                rawKey to rawValue
+                val key = runCatching {
+                    URLDecoder.decode(rawKey, "UTF-8")
+                }.getOrDefault(rawKey)
+
+                val value = runCatching {
+                    URLDecoder.decode(rawValue, "UTF-8")
+                }.getOrDefault(rawValue)
+
+                key to value
             }
         }
 
@@ -375,6 +381,14 @@ class MovieBoxProvider : MainAPI() {
                 value as? JSONObject
             }.getOrNull()
         }
+
+        private fun isValidJsonPayload(raw: String): Boolean {
+            if (raw.isBlank()) return false
+            return runCatching {
+                JSONTokener(raw).nextValue()
+                true
+            }.getOrDefault(false)
+        }
     }
 
     private val clientInfoAndUa: Pair<String, String> by lazy { generateClientInfoAndUa() }
@@ -397,7 +411,7 @@ class MovieBoxProvider : MainAPI() {
         }
     }
 
-    private class HostsExhaustedException : Exception("All MovieBox hosts exhausted")
+    private class HostsExhaustedException(message: String) : Exception(message)
 
     private data class RawResponse(
         val code: Int,
@@ -531,7 +545,7 @@ class MovieBoxProvider : MainAPI() {
     ): String {
         var backoffMs = 50L
         val startIdx = activeHostIdx.get().coerceIn(0, HOST_POOL.lastIndex)
-        var lastDebug = ""
+        val debug = mutableListOf<String>()
 
         for (i in HOST_POOL.indices) {
             if (i > 0) {
@@ -574,7 +588,7 @@ class MovieBoxProvider : MainAPI() {
                 runCatching { absorbXUser(xUser) }
 
                 if (RETRY_STATUS_CODES.contains(code)) {
-                    lastDebug = "HTTP $code on host #$idx"
+                    debug += "host#$idx HTTP $code"
                     if (code == 429) {
                         backoffMs = retryAfter
                             ?.trim()
@@ -588,28 +602,26 @@ class MovieBoxProvider : MainAPI() {
                 activeHostIdx.set(idx)
 
                 if (code !in 200..299) {
-                    lastDebug = "HTTP $code: ${responseText.take(180).replace("\n", " ")}"
+                    debug += "host#$idx HTTP $code: ${responseText.take(180).replace("\n", " ")}"
                     continue
                 }
 
-                // Rust parses JSON and tries another host if parsing fails.
-                if (parseAnyJsonObject(responseText) == null) {
-                    lastDebug = "Invalid JSON from host #$idx"
+                // The Rust client works with serde_json::Value, so both JSON objects
+                // and JSON arrays are valid responses. Do not reject a valid array.
+                if (!isValidJsonPayload(responseText)) {
+                    debug += "host#$idx invalid-json"
                     continue
                 }
 
                 return responseText
             } catch (e: Throwable) {
-                lastDebug = "${e::class.java.simpleName}: ${e.message.orEmpty()}"
+                debug += "host#$idx ${e::class.java.simpleName}: ${e.message.orEmpty()}"
                 continue
             }
         }
 
-        throw HostsExhaustedException().also {
-            if (lastDebug.isNotBlank()) {
-                // Intentionally no raw URL/token logging.
-            }
-        }
+        val detail = debug.joinToString(" | ").ifBlank { "no response details" }
+        throw HostsExhaustedException("All MovieBox hosts exhausted: $detail")
     }
 
     private fun subjectType(subject: Subject): Int {
@@ -617,7 +629,10 @@ class MovieBoxProvider : MainAPI() {
     }
 
     private fun subjectId(subject: Subject): String? {
-        return firstNonBlank(subject.subjectId, subject.id)
+        return firstNonBlank(
+            jsonValueAsString(subject.subjectId),
+            jsonValueAsString(subject.id)
+        )
     }
 
     private fun titleOf(subject: Subject): String {
@@ -773,13 +788,24 @@ class MovieBoxProvider : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val tabId = request.data
-        val respText = request("GET", "/wefeed-mobile-bff/tab-operating?page=$page&tabId=$tabId&version=")
+        val respText = request(
+            "GET",
+            "/wefeed-mobile-bff/tab-operating?page=$page&tabId=$tabId&version="
+        )
 
-        val tabData = runCatching {
-            AppUtils.parseJson<TabOperatingResponse>(respText).data
+        // Rust parser accepts either root.items or a root JSON array. Some responses
+        // may additionally wrap the groups under data.items/data.list.
+        val items = runCatching {
+            val root = AppUtils.parseJson<TabOperatingResponse>(respText)
+            root.items
+                ?: root.list
+                ?: root.data?.items
+                ?: root.data?.list
         }.getOrNull()
+            ?: runCatching {
+                AppUtils.parseJson<List<GroupItem>>(respText)
+            }.getOrDefault(emptyList())
 
-        val items = tabData?.items ?: tabData?.list ?: emptyList()
         val homePageLists = mutableListOf<HomePageList>()
         val seenIds = HashSet<String>()
 
@@ -856,7 +882,10 @@ class MovieBoxProvider : MainAPI() {
             ?.let { extract4DigitYear(it)?.toIntOrNull() }
         val desc = details.description ?: details.intro
         val durationMinutes = details.durationMinutes()
-        val rating = details.imdbRatingValue ?: details.rating
+        val rating = firstNonBlank(
+            jsonValueAsString(details.imdbRatingValue),
+            jsonValueAsString(details.rating)
+        )
         val tags = details.genres ?: details.genre
 
         if (internalData.isMovie) {
@@ -875,17 +904,17 @@ class MovieBoxProvider : MainAPI() {
             "/wefeed-mobile-bff/subject-api/season-info?subjectId=${internalData.id}"
         )
 
-        val seasons = runCatching {
+        val seasonData = runCatching {
             val parsed = AppUtils.parseJson<SeasonResult>(seasonRespText)
-            (parsed.data?.seasons ?: parsed.seasons).orEmpty()
-        }.getOrDefault(emptyList())
+            parsed.data ?: parsed
+        }.getOrNull()
 
         val episodes = mutableListOf<Episode>()
-        seasons.forEach { season ->
+        seasonData?.seasons?.forEach { season ->
             val seasonNumber = season.se ?: 1
 
             val explicitEpisodes = season.episodeNumbers.orEmpty()
-                .mapNotNull { valueAsInt(it) }
+                .mapNotNull { it.asIntOrNull() }
 
             if (explicitEpisodes.isNotEmpty()) {
                 explicitEpisodes.forEach { epNumber ->
@@ -1011,8 +1040,7 @@ class MovieBoxProvider : MainAPI() {
                     userAgent = clientInfoAndUa.first
                 ) ?: return@forEach
 
-                // For play-info streams, captions use the stream's own resource id.
-                val finalResourceId = release.streamId
+                val finalResourceId = uploadResourceId ?: release.resourceId
                 val finalHeaders = release.headers.toMutableMap()
 
                 release.signCookie?.takeIf { it.isNotBlank() }?.let { cookie ->
@@ -1439,7 +1467,9 @@ class MovieBoxProvider : MainAPI() {
     )
 
     private data class TabOperatingResponse(
-        val data: TabData? = null
+        val data: TabData? = null,
+        val items: List<GroupItem>? = null,
+        val list: List<GroupItem>? = null
     )
 
     private data class TabData(
@@ -1509,8 +1539,7 @@ class MovieBoxProvider : MainAPI() {
     private data class PlayInfoRoot(
         val data: PlayData? = null,
         val streams: List<Stream>? = null,
-        val title: String? = null,
-        val displayResolutions: String? = null
+        val title: String? = null
     )
 
     private data class PlayData(
@@ -1579,8 +1608,8 @@ class MovieBoxProvider : MainAPI() {
     )
 
     private data class Subject(
-        val id: String? = null,
-        val subjectId: String? = null,
+        val id: Any? = null,
+        val subjectId: Any? = null,
         val title: String? = null,
         val name: String? = null,
         val subjectType: Int? = null,
@@ -1593,8 +1622,8 @@ class MovieBoxProvider : MainAPI() {
         val poster: String? = null,
         val description: String? = null,
         val intro: String? = null,
-        val imdbRatingValue: String? = null,
-        val rating: String? = null,
+        val imdbRatingValue: Any? = null,
+        val rating: Any? = null,
         val genres: List<String>? = null,
         val genre: List<String>? = null,
         val duration: Any? = null,
@@ -1603,8 +1632,8 @@ class MovieBoxProvider : MainAPI() {
     )
 
     private data class DetailsSubject(
-        val id: String? = null,
-        val subjectId: String? = null,
+        val id: Any? = null,
+        val subjectId: Any? = null,
         val title: String? = null,
         val name: String? = null,
         val subjectType: Int? = null,
@@ -1615,8 +1644,8 @@ class MovieBoxProvider : MainAPI() {
         val description: String? = null,
         val intro: String? = null,
         val tagline: String? = null,
-        val imdbRatingValue: String? = null,
-        val rating: String? = null,
+        val imdbRatingValue: Any? = null,
+        val rating: Any? = null,
         val director: String? = null,
         val stars: String? = null,
         val prints: String? = null,
@@ -1636,8 +1665,8 @@ class MovieBoxProvider : MainAPI() {
     )
 
     private data class Dub(
-        val subjectId: String? = null,
-        val id: String? = null,
+        val subjectId: Any? = null,
+        val id: Any? = null,
         val lanName: String? = null,
         val language: String? = null,
         val lang: String? = null,
