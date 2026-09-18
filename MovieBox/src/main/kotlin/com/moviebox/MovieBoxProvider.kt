@@ -3,6 +3,8 @@ package com.moviebox
 import android.util.Base64
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.security.MessageDigest
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -152,7 +154,7 @@ class MovieBoxProvider : MainAPI() {
             return sessionToken!!
         }
 
-        val bodyString = "{}" // Using exact string for accurate signature
+        val bodyString = "{}" 
 
         for (i in HOST_POOL.indices) {
             val idx = (activeHostIdx + i) % HOST_POOL.size
@@ -172,18 +174,18 @@ class MovieBoxProvider : MainAPI() {
             )
 
             try {
-                // Fixed: Sending raw exact string to avoid serialization differences
+                // FIXED: Used RequestBody to send exact raw JSON string
+                val reqBody = bodyString.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
                 val resp = app.post(
                     url,
                     headers = headers,
-                    data = bodyString
+                    requestBody = reqBody
                 )
 
                 if (resp.code != 200) continue
 
                 val loginResp = AppUtils.parseJson<LoginResponse>(resp.text)
                 
-                // Fixed: Added null check to avoid NPE crash if Cloudflare HTML page is returned
                 if (loginResp.data?.token == null) continue
                 
                 sessionToken = loginResp.data.token
@@ -216,7 +218,7 @@ class MovieBoxProvider : MainAPI() {
     private suspend fun apiRequest(
         method: String,
         path: String,
-        bodyStrForSig: String? = null // Removed Map payload, strictly enforcing raw strings
+        bodyStrForSig: String? = null
     ): String {
         var token = ensureSession()
         var backoffMs = 50L
@@ -246,10 +248,12 @@ class MovieBoxProvider : MainAPI() {
 
             try {
                 val resp = if (method == "POST") {
+                    // FIXED: Used RequestBody to send exact raw JSON string
+                    val reqBody = bodyStrForSig?.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
                     app.post(
                         url,
                         headers = headers,
-                        data = bodyStrForSig // Strictly send the raw string
+                        requestBody = reqBody
                     )
                 } else {
                     app.get(
@@ -346,7 +350,6 @@ class MovieBoxProvider : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> {
         val bodyStr = "{\"keyword\":\"$query\",\"page\":1,\"perPage\":15,\"subjectType\":0}"
 
-        // Fixed: Passing only the exact string body to API Request
         val respText = apiRequest(
             "POST",
             "/wefeed-mobile-bff/subject-api/search/v2",
