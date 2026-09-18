@@ -1,4 +1,4 @@
-@file:Suppress("DEPRECATION", "DEPRECATION_ERROR")
+@file:Suppress("DEPRECATION", "DEPRECATION_ERROR", "UNCHECKED_CAST")
 package com.hindi.providers.Source
 
 import android.util.Base64
