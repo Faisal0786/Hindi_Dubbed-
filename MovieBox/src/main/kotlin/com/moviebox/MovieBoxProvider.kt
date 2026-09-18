@@ -83,8 +83,6 @@ class MovieBoxProvider : MainAPI() {
         private const val SESSION_EXP_KEY = "expires_at"
         private const val SESSION_CREATED_KEY = "created_at"
 
-        // Kept available to reproduce the Rust header behavior, but disabled by default
-        // because the user's previous build hit HTTP 407 when x-forwarded-for was sent.
         private const val SEND_SPOOFED_IP = false
 
         private val activeHostIdx = AtomicInteger(0)
@@ -373,8 +371,6 @@ class MovieBoxProvider : MainAPI() {
             removeKey(SESSION_FOLDER, SESSION_CREATED_KEY)
         }
 
-        private fun escapeJsonString(value: String): String = JSONObject.quote(value)
-
         private fun parseAnyJsonObject(raw: String): JSONObject? {
             return runCatching {
                 val value = JSONTokener(raw).nextValue()
@@ -606,8 +602,6 @@ class MovieBoxProvider : MainAPI() {
                     continue
                 }
 
-                // The Rust client works with serde_json::Value, so both JSON objects
-                // and JSON arrays are valid responses. Do not reject a valid array.
                 if (!isValidJsonPayload(responseText)) {
                     debug += "host#$idx invalid-json"
                     continue
@@ -740,52 +734,6 @@ class MovieBoxProvider : MainAPI() {
         return cleaned.ifEmpty { rawTitle.trim() }
     }
 
-    private fun languageToCode(name: String): String? {
-        return when (name.trim().lowercase()) {
-            "english", "en", "eng" -> "en"
-            "spanish", "es", "spa", "español", "castellano" -> "es"
-            "hindi", "hi", "hin" -> "hi"
-            "french", "fr", "fre", "fra", "français" -> "fr"
-            "german", "de", "ger", "deu", "deutsch" -> "de"
-            "italian", "it", "ita", "italiano" -> "it"
-            "japanese", "ja", "jpn", "日本語" -> "ja"
-            "korean", "ko", "kor", "한국어" -> "ko"
-            "chinese", "zh", "zho", "chi", "中文", "mandarin", "cantonese" -> "zh"
-            "portuguese", "pt", "por", "português" -> "pt"
-            "russian", "ru", "rus", "русский" -> "ru"
-            "arabic", "ar", "ara", "العربية" -> "ar"
-            "turkish", "tr", "tur", "türkçe" -> "tr"
-            "bengali", "bn", "ben", "বাংলা" -> "bn"
-            "tamil", "ta", "tam", "தமிழ்" -> "ta"
-            "telugu", "te", "tel", "తెలుగు" -> "te"
-            "malayalam", "ml", "mal", "മലയാളം" -> "ml"
-            "kannada", "kn", "kan", "ಕನ್ನಡ" -> "kn"
-            "marathi", "mr", "mar", "मराठी" -> "mr"
-            "punjabi", "pa", "pan", "ਪੰਜਾਬੀ" -> "pa"
-            "gujarati", "gu", "guj", "ગુજરાતી" -> "gu"
-            "urdu", "ur", "urd", "اردو" -> "ur"
-            "indonesian", "id", "ind", "bahasa" -> "id"
-            "thai", "th", "tha", "ไทย" -> "th"
-            "vietnamese", "vi", "vie", "tiếng việt" -> "vi"
-            "dutch", "nl", "dut", "nld", "nederlands" -> "nl"
-            "polish", "pl", "pol", "polski" -> "pl"
-            "swedish", "sv", "swe", "svenska" -> "sv"
-            "danish", "da", "dan", "dansk" -> "da"
-            "norwegian", "no", "nor", "norsk" -> "no"
-            "finnish", "fi", "fin", "suomi" -> "fi"
-            "greek", "el", "ell", "gre", "ελληνικά" -> "el"
-            "hebrew", "he", "heb", "עברית" -> "he"
-            "czech", "cs", "cze", "ces", "čeština" -> "cs"
-            "hungarian", "hu", "hun", "magyar" -> "hu"
-            "romanian", "ro", "rum", "ron", "română" -> "ro"
-            "ukrainian", "uk", "ukr", "українська" -> "uk"
-            "persian", "fa", "fas", "per", "فارسی" -> "fa"
-            "tagalog", "tl", "fil", "filipino" -> "tl"
-            "malay", "ms", "msa", "may", "melayu" -> "ms"
-            else -> null
-        }
-    }
-
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val tabId = request.data
         val respText = request(
@@ -793,8 +741,6 @@ class MovieBoxProvider : MainAPI() {
             "/wefeed-mobile-bff/tab-operating?page=$page&tabId=$tabId&version="
         )
 
-        // Rust parser accepts either root.items or a root JSON array. Some responses
-        // may additionally wrap the groups under data.items/data.list.
         val items = runCatching {
             val root = AppUtils.parseJson<TabOperatingResponse>(respText)
             root.items
@@ -1075,8 +1021,6 @@ class MovieBoxProvider : MainAPI() {
             }
         }
 
-        // Rust behavior: if play-info produced usable releases, return them.
-        // Otherwise use the resource endpoint as a legacy fallback.
         if (emittedLinks == 0) {
             val legacyItems = extractResourceItems(resourceRaw)
             legacyItems.forEach { item ->
@@ -1106,7 +1050,6 @@ class MovieBoxProvider : MainAPI() {
                 release.resourceId?.let(emittedResourceIds::add)
             }
         } else {
-            // Resource endpoint is still useful for captions/resource_id discovery.
             extractResourceItems(resourceRaw)
                 .firstOrNull { item ->
                     val rid = item.resourceIdString()
@@ -1116,7 +1059,6 @@ class MovieBoxProvider : MainAPI() {
                 ?.let(emittedResourceIds::add)
         }
 
-        // Fetch captions once per useful resource id, matching the Rust adapter's flow.
         for (resourceId in emittedResourceIds) {
             val captionsRaw = runCatching {
                 request(
@@ -1539,7 +1481,8 @@ class MovieBoxProvider : MainAPI() {
     private data class PlayInfoRoot(
         val data: PlayData? = null,
         val streams: List<Stream>? = null,
-        val title: String? = null
+        val title: String? = null,
+        val displayResolutions: String? = null
     )
 
     private data class PlayData(
