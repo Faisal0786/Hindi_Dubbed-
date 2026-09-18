@@ -118,15 +118,9 @@ class MovieBoxProvider : MainAPI() {
                 val rawKey = pieces.getOrNull(0).orEmpty()
                 val rawValue = pieces.getOrNull(1).orEmpty()
 
-                val key = runCatching {
-                    URLDecoder.decode(rawKey, "UTF-8")
-                }.getOrDefault(rawKey)
-
-                val value = runCatching {
-                    URLDecoder.decode(rawValue, "UTF-8")
-                }.getOrDefault(rawValue)
-
-                key to value
+                // Rust canonicalization sorts the raw query key/value strings.
+                // Keep percent-encoding unchanged; do not URL-decode here.
+                rawKey to rawValue
             }
         }
 
@@ -881,17 +875,17 @@ class MovieBoxProvider : MainAPI() {
             "/wefeed-mobile-bff/subject-api/season-info?subjectId=${internalData.id}"
         )
 
-        val seasonData = runCatching {
+        val seasons = runCatching {
             val parsed = AppUtils.parseJson<SeasonResult>(seasonRespText)
-            parsed.data ?: parsed
-        }.getOrNull()
+            (parsed.data?.seasons ?: parsed.seasons).orEmpty()
+        }.getOrDefault(emptyList())
 
         val episodes = mutableListOf<Episode>()
-        seasonData?.seasons?.forEach { season ->
+        seasons.forEach { season ->
             val seasonNumber = season.se ?: 1
 
             val explicitEpisodes = season.episodeNumbers.orEmpty()
-                .mapNotNull { it.asIntOrNull() }
+                .mapNotNull { valueAsInt(it) }
 
             if (explicitEpisodes.isNotEmpty()) {
                 explicitEpisodes.forEach { epNumber ->
@@ -1017,7 +1011,8 @@ class MovieBoxProvider : MainAPI() {
                     userAgent = clientInfoAndUa.first
                 ) ?: return@forEach
 
-                val finalResourceId = uploadResourceId ?: release.resourceId
+                // For play-info streams, captions use the stream's own resource id.
+                val finalResourceId = release.streamId
                 val finalHeaders = release.headers.toMutableMap()
 
                 release.signCookie?.takeIf { it.isNotBlank() }?.let { cookie ->
@@ -1514,7 +1509,8 @@ class MovieBoxProvider : MainAPI() {
     private data class PlayInfoRoot(
         val data: PlayData? = null,
         val streams: List<Stream>? = null,
-        val title: String? = null
+        val title: String? = null,
+        val displayResolutions: String? = null
     )
 
     private data class PlayData(
