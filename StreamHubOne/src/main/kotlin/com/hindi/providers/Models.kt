@@ -1,3 +1,6 @@
+@file:Suppress("DEPRECATION", "DEPRECATION_ERROR")
+
+
 package com.hindi.providers
 
 import com.lagradost.cloudstream3.*
@@ -610,6 +613,65 @@ data class PrimeSrcServer(
     @param:JsonProperty("file_size") val fileSize: String?,
     @param:JsonProperty("file_name") val fileName: String?
 )
+
+//MovieBox
+
+
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class MbLoginResp(
+    val data: MbLoginData?
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class MbLoginData(
+    val token: String?,
+    val uid: String?
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class MbSubject(
+    val id: String?,
+    val subjectId: String?,
+    val title: String?,
+    val name: String?
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class MbSearchRes(
+    val data: MbSearchData?
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class MbSearchData(
+    val results: List<MbSearchResult>?,
+    val list: List<MbSubject>?
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class MbSearchResult(
+    val subjects: List<MbSubject>?
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class MbPlayInfoRes(
+    val data: MbPlayData?
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class MbPlayData(
+    val streams: List<MbStream>?
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class MbStream(
+    val url: String?,
+    val signCookie: String?,
+    val format: String?,
+    val codecName: String?,
+    val resolutions: String?
+)
+
 
 //Onetouchtv
 
