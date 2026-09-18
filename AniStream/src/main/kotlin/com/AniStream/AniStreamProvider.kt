@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION", "DEPRECATION_ERROR", "UnstableApiUsage", "UNCHECKED_CAST")
 package com.anistream
 
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -42,47 +43,47 @@ class AniStreamProvider : MainAPI() {
     data class GqlQuery(val query: String, val variables: Map<String, Any?> = emptyMap())
 
     // AniList Home Models
-    data class AniSearchResponse(@JsonProperty("data") val data: AniSearchData?)
-    data class AniSearchData(@JsonProperty("Page") val page: AniPage?)
-    data class AniPage(@JsonProperty("media") val media: List<AniMedia>?)
+    data class AniSearchResponse(@param:JsonProperty("data") val data: AniSearchData?)
+    data class AniSearchData(@param:JsonProperty("Page") val page: AniPage?)
+    data class AniPage(@param:JsonProperty("media") val media: List<AniMedia>?)
     data class AniMedia(
-        @JsonProperty("id") val id: Int?,
-        @JsonProperty("title") val title: AniTitle?,
-        @JsonProperty("coverImage") val coverImage: AniCoverImage?
+        @param:JsonProperty("id") val id: Int?,
+        @param:JsonProperty("title") val title: AniTitle?,
+        @param:JsonProperty("coverImage") val coverImage: AniCoverImage?
     )
     data class AniTitle(
-        @JsonProperty("english") val english: String?,
-        @JsonProperty("romaji") val romaji: String?,
-        @JsonProperty("userPreferred") val userPreferred: String?
+        @param:JsonProperty("english") val english: String?,
+        @param:JsonProperty("romaji") val romaji: String?,
+        @param:JsonProperty("userPreferred") val userPreferred: String?
     )
     data class AniCoverImage(
-        @JsonProperty("extraLarge") val extraLarge: String?,
-        @JsonProperty("large") val large: String?
+        @param:JsonProperty("extraLarge") val extraLarge: String?,
+        @param:JsonProperty("large") val large: String?
     )
 
     data class ServerList(
-        @JsonProperty("subProviders") val subProviders: List<ProviderItem>?,
-        @JsonProperty("dubProviders") val dubProviders: List<ProviderItem>?
+        @param:JsonProperty("subProviders") val subProviders: List<ProviderItem>?,
+        @param:JsonProperty("dubProviders") val dubProviders: List<ProviderItem>?
     )
-    data class ProviderItem(@JsonProperty("id") val id: String)
+    data class ProviderItem(@param:JsonProperty("id") val id: String)
 
     data class SourceResponse(
-        @JsonProperty("sources") val sources: List<MediaSource>?,
-        @JsonProperty("tracks") val tracks: List<TrackSource>?,
-        @JsonProperty("headers") val headers: Map<String, String>?
+        @param:JsonProperty("sources") val sources: List<MediaSource>?,
+        @param:JsonProperty("tracks") val tracks: List<TrackSource>?,
+        @param:JsonProperty("headers") val headers: Map<String, String>?
     )
-    data class MediaSource(@JsonProperty("url") val url: String?, @JsonProperty("quality") val quality: String?)
+    data class MediaSource(@param:JsonProperty("url") val url: String?, @param:JsonProperty("quality") val quality: String?)
     data class TrackSource(
-        @JsonProperty("url") val url: String?,
-        @JsonProperty("file") val file: String?,
-        @JsonProperty("src") val src: String?,
-        @JsonProperty("label") val label: String?,
-        @JsonProperty("kind") val kind: String?
+        @param:JsonProperty("url") val url: String?,
+        @param:JsonProperty("file") val file: String?,
+        @param:JsonProperty("src") val src: String?,
+        @param:JsonProperty("label") val label: String?,
+        @param:JsonProperty("kind") val kind: String?
     )
 
     data class PassEpData(
-        @JsonProperty("animeId") val animeId: String,
-        @JsonProperty("epNum") val epNum: Int
+        @param:JsonProperty("animeId") val animeId: String,
+        @param:JsonProperty("epNum") val epNum: Int
     )
 
     // ================= 1. MAIN PAGE =================
@@ -113,7 +114,7 @@ class AniStreamProvider : MainAPI() {
         val items = response?.data?.page?.media?.mapNotNull { media ->
             val title = media.title?.english ?: media.title?.romaji ?: media.title?.userPreferred ?: return@mapNotNull null
             val poster = media.coverImage?.extraLarge ?: media.coverImage?.large
-            
+
             newAnimeSearchResponse(title, "$mainUrl/anime/${media.id}", TvType.Anime) {
                 this.posterUrl = poster
             }
@@ -145,7 +146,7 @@ class AniStreamProvider : MainAPI() {
         return response?.data?.page?.media?.mapNotNull { media ->
             val title = media.title?.english ?: media.title?.romaji ?: media.title?.userPreferred ?: return@mapNotNull null
             val poster = media.coverImage?.extraLarge ?: media.coverImage?.large
-            
+
             newAnimeSearchResponse(title, "$mainUrl/anime/${media.id}", TvType.Anime) {
                 this.posterUrl = poster
             }
