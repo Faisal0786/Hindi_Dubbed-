@@ -1,7 +1,7 @@
 version = 1
 
 cloudstream {
-    language = "en"
+    language = "hi"
     description = "MovieBox Native - Pure API Provider with Crypto Bypass"
     authors = listOf("Faisal")
     status = 1
