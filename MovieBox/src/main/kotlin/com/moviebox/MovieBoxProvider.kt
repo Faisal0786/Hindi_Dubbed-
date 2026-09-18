@@ -102,7 +102,7 @@ class MovieBoxProvider : MainAPI() {
     }
 
     // ==========================================
-    // MODULE 1: RAW OKHTTP NETWORK CALLS (100% Rust Logic)
+    // MODULE 1: RAW OKHTTP NETWORK CALLS (With Debug Logs)
     // ==========================================
 
     private suspend fun ensureSession(): String {
@@ -110,6 +110,7 @@ class MovieBoxProvider : MainAPI() {
         if (sessionToken != null && now < sessionExpiry - 60) return sessionToken!!
 
         val bodyString = "{}" 
+        var debugLog = ""
 
         for (i in HOST_POOL.indices) {
             val idx = (activeHostIdx + i) % HOST_POOL.size
@@ -129,7 +130,6 @@ class MovieBoxProvider : MainAPI() {
             )
 
             try {
-                // Bypassing CloudStream wrapper to send bare-metal Request exactly like Rust
                 val reqBody = bodyString.toRequestBody("application/json".toMediaTypeOrNull())
                 val requestBuilder = Request.Builder().url(urlStr).post(reqBody)
                 headers.forEach { (k, v) -> requestBuilder.addHeader(k, v) }
@@ -139,10 +139,16 @@ class MovieBoxProvider : MainAPI() {
                     Triple(response.code, response.header("x-user"), response.body?.string() ?: "")
                 }
 
-                if (code != 200) continue
+                if (code != 200) {
+                    debugLog = "HTTP $code - ${respText.take(150).replace("\n", " ")}"
+                    continue
+                }
                 
                 val loginResp = AppUtils.parseJson<LoginResponse>(respText)
-                if (loginResp.data?.token == null) continue
+                if (loginResp.data?.token == null) {
+                    debugLog = "No token in 200 response: ${respText.take(150).replace("\n", " ")}"
+                    continue
+                }
                 
                 sessionToken = loginResp.data.token
                 try {
@@ -152,14 +158,20 @@ class MovieBoxProvider : MainAPI() {
 
                 activeHostIdx = idx
                 return sessionToken!!
-            } catch (e: Exception) { continue }
+            } catch (e: Exception) {
+                debugLog = "Crash: ${e.message}"
+                continue 
+            }
         }
-        throw Exception("Failed to get session token - All hosts exhausted")
+        
+        // YE LINE SCREEN PAR ASLI ERROR DIKHAYEGI
+        throw Exception("Error Log: $debugLog")
     }
 
     private suspend fun apiRequest(method: String, path: String, bodyStrForSig: String? = null): String {
         var token = ensureSession()
         var backoffMs = 50L
+        var debugLog = ""
 
         for (i in HOST_POOL.indices) {
             val idx = (activeHostIdx + i) % HOST_POOL.size
@@ -180,7 +192,6 @@ class MovieBoxProvider : MainAPI() {
             )
 
             try {
-                // Bypassing CloudStream wrapper to ensure zero payload modification
                 val requestBuilder = Request.Builder().url(urlStr)
                 headers.forEach { (k, v) -> requestBuilder.addHeader(k, v) }
 
@@ -197,14 +208,21 @@ class MovieBoxProvider : MainAPI() {
                 }
 
                 if (code == 403 || code == 401) {
+                    debugLog = "HTTP $code Auth Fail: ${respText.take(150).replace("\n", " ")}"
                     sessionToken = null
                     token = ensureSession()
                     continue
                 }
 
                 if (code == 406 || code == 407 || code == 429 || code >= 500) {
+                    debugLog = "HTTP $code Block/Limit: ${respText.take(150).replace("\n", " ")}"
                     kotlinx.coroutines.delay(backoffMs)
                     backoffMs = 1000L
+                    continue
+                }
+
+                if (code != 200) {
+                    debugLog = "HTTP $code Error: ${respText.take(150).replace("\n", " ")}"
                     continue
                 }
 
@@ -218,12 +236,15 @@ class MovieBoxProvider : MainAPI() {
                 }
                 return respText
             } catch (e: Exception) {
+                debugLog = "Network Crash: ${e.message}"
                 kotlinx.coroutines.delay(backoffMs)
                 backoffMs = 1000L
                 continue
             }
         }
-        throw Exception("All MovieBox hosts exhausted")
+        
+        // YE LINE API REQUEST KA ERROR DIKHAYEGI
+        throw Exception("API Error Log: $debugLog")
     }
 
     // ==========================================
