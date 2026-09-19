@@ -278,6 +278,14 @@ class MovieBoxProvider : MainAPI() {
             }
         }
 
+        private fun valueAsInt(value: Any?): Int? {
+            return when (value) {
+                is Number -> value.toInt()
+                is String -> value.trim().toIntOrNull()
+                else -> value?.toString()?.trim()?.toIntOrNull()
+            }
+        }
+
         private fun firstNonBlank(vararg values: String?): String? {
             return values.firstOrNull { !it.isNullOrBlank() }
         }
@@ -851,16 +859,17 @@ class MovieBoxProvider : MainAPI() {
         )
 
         val seasonData = runCatching {
-            val parsed = AppUtils.parseJson<SeasonResult>(seasonRespText)
-            parsed.data ?: parsed
+            AppUtils.parseJson<SeasonResult>(seasonRespText)
         }.getOrNull()
 
+        val seasonList = seasonData?.resolvedSeasons() ?: emptyList()
+
         val episodes = mutableListOf<Episode>()
-        seasonData?.seasons?.forEach { season ->
-            val seasonNumber = season.se ?: 1
+        seasonList.forEach { season ->
+            val seasonNumber = season.seasonNum
 
             val explicitEpisodes = season.episodeNumbers.orEmpty()
-                .mapNotNull { it.asIntOrNull() }
+                .mapNotNull { valueAsInt(it) }
 
             if (explicitEpisodes.isNotEmpty()) {
                 explicitEpisodes.forEach { epNumber ->
@@ -871,7 +880,7 @@ class MovieBoxProvider : MainAPI() {
                     )
                 }
             } else {
-                val maxEpisode = season.maxEp ?: 0
+                val maxEpisode = season.maxEpisode
                 for (epNumber in 1..maxEpisode) {
                     episodes += makeEpisode(
                         id = internalData.id,
@@ -1075,8 +1084,6 @@ class MovieBoxProvider : MainAPI() {
         return emittedLinks > 0
     }
 
-    private fun String.asIntOrNull(): Int? = trim().toIntOrNull()
-
     private fun buildResourcePagePath(
         subjectId: String,
         season: Int,
@@ -1224,7 +1231,8 @@ class MovieBoxProvider : MainAPI() {
         val isDash: Boolean,
         val isMultiResolution: Boolean,
         val signCookie: String?,
-        val headers: Map<String, String>
+        val headers: Map<String, String>,
+        val resourceId: String?
     )
 
     private fun Stream.toRelease(
@@ -1258,11 +1266,6 @@ class MovieBoxProvider : MainAPI() {
 
         val codecDisplay = codecName ?: codec ?: formatType
         val resolutionLabel = if (isMultiRes) "Multi-Res" else "${maxResolution}p"
-        val filename = if (season > 0 && episode > 0) {
-            "$titlePrefix S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')} $resolutionLabel $codecDisplay"
-        } else {
-            "$titlePrefix $resolutionLabel $codecDisplay"
-        }
 
         val headers = linkedMapOf(
             "Referer" to STREAM_REFERER,
@@ -1284,7 +1287,8 @@ class MovieBoxProvider : MainAPI() {
             isDash = isDash,
             isMultiResolution = isMultiRes,
             signCookie = rawCookie,
-            headers = headers
+            headers = headers,
+            resourceId = jsonValueAsString(id)
         )
     }
 
@@ -1333,14 +1337,6 @@ class MovieBoxProvider : MainAPI() {
     private fun ResourceItem.resourceIdString(): String? {
         return jsonValueAsString(resourceId ?: id)
             ?.takeIf { it.isNotBlank() }
-    }
-
-    private fun valueAsInt(value: Any?): Int? {
-        return when (value) {
-            is Number -> value.toInt()
-            is String -> value.trim().toIntOrNull()
-            else -> value?.toString()?.trim()?.toIntOrNull()
-        }
     }
 
     private fun DetailsSubject.durationMinutes(): Int? {
@@ -1466,17 +1462,26 @@ class MovieBoxProvider : MainAPI() {
     private data class SeasonResult(
         val data: SeasonData? = null,
         val seasons: List<SeasonInfo>? = null
-    )
+    ) {
+        fun resolvedSeasons(): List<SeasonInfo> {
+            return data?.seasons ?: seasons ?: emptyList()
+        }
+    }
 
     private data class SeasonData(
         val seasons: List<SeasonInfo>? = null
     )
 
     private data class SeasonInfo(
-        val se: Int? = null,
-        val maxEp: Int? = null,
-        val episodeNumbers: List<Any>? = null
-    )
+        @JsonProperty("se") val se: Any? = null,
+        @JsonProperty("maxEp") val maxEp: Any? = null,
+        @JsonProperty("episodeNumbers") val episodeNumbers: List<Any>? = null
+    ) {
+        val seasonNum: Int
+            get() = valueAsInt(se) ?: 1
+        val maxEpisode: Int
+            get() = valueAsInt(maxEp) ?: 0
+    }
 
     private data class PlayInfoRoot(
         val data: PlayData? = null,
