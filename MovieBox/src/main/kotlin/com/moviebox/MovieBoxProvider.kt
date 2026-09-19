@@ -710,47 +710,127 @@ class MovieBoxProvider : MainAPI() {
         return cleaned.ifEmpty { rawTitle.trim() }
     }
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val tabId = request.data
         val respText = request(
             "GET",
             "/wefeed-mobile-bff/tab-operating?page=$page&tabId=$tabId&version="
         )
 
-        val items = runCatching {
-            val root = AppUtils.parseJson<TabOperatingResponse>(respText)
-            root.items
-                ?: root.list
-                ?: root.data?.items
-                ?: root.data?.list
-        }.getOrNull()
-            ?: runCatching {
-                AppUtils.parseJson<List<GroupItem>>(respText)
-            }.getOrDefault(emptyList())
-
         val homePageLists = mutableListOf<HomePageList>()
         val seenIds = HashSet<String>()
 
-        items.forEach { group ->
-            val groupName = group.name ?: group.title ?: "Trending"
-            val subjects = mutableListOf<Subject>()
+        try {
+            val rootObj = if (respText.trim().startsWith("{")) JSONObject(respText) else JSONObject()
+            
+            // API ka nested data direct traverse karna
+            val itemsArray = rootObj.optJSONArray("items")
+                ?: rootObj.optJSONArray("list")
+                ?: rootObj.optJSONObject("data")?.optJSONArray("items")
+                ?: rootObj.optJSONObject("data")?.optJSONArray("list")
+                ?: if (respText.trim().startsWith("[")) org.json.JSONArray(respText) else org.json.JSONArray()
 
-            group.banner?.banners?.forEach { it.subject?.let(subjects::add) }
-            group.customData?.items?.forEach { it.subject?.let(subjects::add) }
-            group.subjects?.let(subjects::addAll)
-
-            val searchResponses = subjects.mapNotNull { subject ->
-                val id = subjectId(subject) ?: return@mapNotNull null
-                if (!seenIds.add(id)) return@mapNotNull null
-                subject.toSearchResponse()
+            // DEBUGGING: Agar API ne data nahi bheja ya Block maar diya, toh UI par error dikhega
+            if (itemsArray.length() == 0) {
+                throw Error("API Response Empty or Blocked!\nJSON: ${respText.take(500)}")
             }
 
-            if (searchResponses.isNotEmpty()) {
-                homePageLists += HomePageList(groupName, searchResponses)
+            for (i in 0 until itemsArray.length()) {
+                val group = itemsArray.optJSONObject(i) ?: continue
+                val groupName = group.optString("name").takeIf { it.isNotBlank() }
+                    ?: group.optString("title").takeIf { it.isNotBlank() }
+                    ?: "Trending"
+
+                val searchResponses = mutableListOf<SearchResponse>()
+
+                // 1. Banners nikalna
+                val banners = group.optJSONObject("banner")?.optJSONArray("banners")
+                if (banners != null) {
+                    for (j in 0 until banners.length()) {
+                        val subject = banners.optJSONObject(j)?.optJSONObject("subject")
+                        parseSubjectToSearchResponse(subject, seenIds)?.let { searchResponses.add(it) }
+                    }
+                }
+
+                // 2. CustomData nikalna
+                val customItems = group.optJSONObject("customData")?.optJSONArray("items")
+                if (customItems != null) {
+                    for (j in 0 until customItems.length()) {
+                        val subject = customItems.optJSONObject(j)?.optJSONObject("subject")
+                        parseSubjectToSearchResponse(subject, seenIds)?.let { searchResponses.add(it) }
+                    }
+                }
+
+                // 3. Subjects (Normal List) nikalna
+                val subjects = group.optJSONArray("subjects")
+                if (subjects != null) {
+                    for (j in 0 until subjects.length()) {
+                        val subject = subjects.optJSONObject(j)
+                        parseSubjectToSearchResponse(subject, seenIds)?.let { searchResponses.add(it) }
+                    }
+                }
+
+                if (searchResponses.isNotEmpty()) {
+                    homePageLists.add(HomePageList(groupName, searchResponses))
+                }
             }
+        } catch (e: Exception) {
+            // Yeh CloudStream screen par red error face ke saath RAW output dikhayega
+            throw Error("Parsing Failed: ${e.message}\nAPI JSON:${respText.take(500)}")
+        }
+
+        if (homePageLists.isEmpty()) {
+            throw Error("Lists empty reh gayi!\nAPI JSON: ${respText.take(500)}")
         }
 
         return newHomePageResponse(homePageLists)
+    }
+
+    // Helper Function (Isko `getMainPage` ke theek niche paste karna)
+    private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<String>): SearchResponse? {
+        if (subject == null) return null
+        
+        val id = subject.optString("subjectId").takeIf { it.isNotBlank() }
+            ?: subject.optString("id").takeIf { it.isNotBlank() }
+            ?: return null
+
+        if (!seenIds.add(id)) return null // Remove duplicates
+
+        val titleRaw = subject.optString("title").takeIf { it.isNotBlank() }
+            ?: subject.optString("name").takeIf { it.isNotBlank() }
+            ?: "Unknown"
+        val title = cleanMovieBoxTitle(titleRaw)
+
+        val poster = subject.optJSONObject("cover")?.optString("url")?.takeIf { it.isNotBlank() }
+            ?: subject.optString("coverUrl").takeIf { it.isNotBlank() }
+            ?: subject.optString("poster").takeIf { it.isNotBlank() }
+
+        val yearValue = subject.optString("releaseDate").takeIf { it.isNotBlank() }
+            ?: subject.optString("year").takeIf { it.isNotBlank() }
+            ?: subject.optString("releaseInfo").takeIf { it.isNotBlank() }
+        val yearClean = yearValue?.let { extract4DigitYear(it)?.toIntOrNull() }
+
+        val subjectType = subject.optInt("subjectType", subject.optInt("stype", 1))
+        val isMovie = subjectType != 2
+
+        val internalData = JSONObject().apply {
+            put("id", id)
+            put("isMovie", isMovie)
+            put("season", 0)
+            put("episode", 0)
+        }.toString()
+
+        return if (isMovie) {
+            newMovieSearchResponse(title, internalData, TvType.Movie) {
+                this.posterUrl = poster
+                this.year = yearClean
+            }
+        } else {
+            newTvSeriesSearchResponse(title, internalData, TvType.TvSeries) {
+                this.posterUrl = poster
+                this.year = yearClean
+            }
+        }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
