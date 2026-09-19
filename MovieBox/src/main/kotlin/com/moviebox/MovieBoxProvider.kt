@@ -786,7 +786,6 @@ private fun cleanMovieBoxTitle(rawTitle: String): String {
     return newHomePageResponse(homePageLists)  
 }  
 
-// Helper Function (Isko `getMainPage` ke theek niche paste karna)  
 private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<String>): SearchResponse? {  
     if (subject == null) return null  
       
@@ -832,7 +831,7 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
         }  
     }  
 }  
-    override suspend fun search(query: String): List<SearchResponse> {
+        override suspend fun search(query: String): List<SearchResponse> {
         val body = JSONObject().apply {
             put("keyword", query)
             put("page", 1)
@@ -840,14 +839,14 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
             put("subjectType", 0)
         }.toString()
 
-        val respText = client.request("POST", "/wefeed-mobile-bff/subject-api/search/v2", body)
+        val respText = request("POST", "/wefeed-mobile-bff/subject-api/search/v2", body)
         val searchResponses = mutableListOf<SearchResponse>()
         val seenIds = HashSet<String>()
 
         try {
             val rootObj = if (respText.trim().startsWith("{")) JSONObject(respText) else JSONObject()
             
-            var itemsArray: JSONArray? = null
+            var itemsArray: org.json.JSONArray? = null
             
             val dataObj = rootObj.optJSONObject("data")
             if (dataObj != null) {
@@ -883,7 +882,7 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
     override suspend fun load(url: String): LoadResponse? {
         val internalData = runCatching { AppUtils.parseJson<InternalData>(url) }.getOrNull() ?: return null
         
-        val respText = client.request("GET", "/wefeed-mobile-bff/subject-api/get?subjectId=${internalData.id}")
+        val respText = request("GET", "/wefeed-mobile-bff/subject-api/get?subjectId=${internalData.id}")
 
         val rootObj = runCatching { JSONObject(respText) }.getOrNull() ?: return null
         val subjectObj = rootObj.optJSONObject("data")?.optJSONObject("subject") 
@@ -893,7 +892,7 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
         val titleRaw = subjectObj.optString("title").takeIf { it.isNotBlank() } 
             ?: subjectObj.optString("name").takeIf { it.isNotBlank() } 
             ?: "Unknown"
-        val title = MovieBoxCrypto.cleanMovieBoxTitle(titleRaw)
+        val title = cleanMovieBoxTitle(titleRaw)
         
         val poster = subjectObj.optJSONObject("cover")?.optString("url")?.takeIf { it.isNotBlank() }
             ?: subjectObj.optString("coverUrl").takeIf { it.isNotBlank() }
@@ -902,7 +901,7 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
         val yearValue = subjectObj.optString("releaseDate").takeIf { it.isNotBlank() }
             ?: subjectObj.optString("year").takeIf { it.isNotBlank() }
             ?: subjectObj.optString("releaseInfo").takeIf { it.isNotBlank() }
-        val yearClean = yearValue?.let { MovieBoxCrypto.extract4DigitYear(it)?.toIntOrNull() }
+        val yearClean = yearValue?.let { extract4DigitYear(it)?.toIntOrNull() }
         
         val desc = subjectObj.optString("description").takeIf { it.isNotBlank() } 
             ?: subjectObj.optString("intro").takeIf { it.isNotBlank() }
@@ -924,7 +923,7 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
 
         val ratingRaw = subjectObj.opt("imdbRatingValue")?.takeIf { it.toString().isNotBlank() } 
             ?: subjectObj.opt("rating")
-        val rating = MovieBoxCrypto.jsonValueAsString(ratingRaw)
+        val rating = jsonValueAsString(ratingRaw)
         
         val tags = mutableListOf<String>()
         val genresArr = subjectObj.optJSONArray("genres") ?: subjectObj.optJSONArray("genre")
@@ -945,7 +944,7 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
             }
         }
 
-        val seasonRespText = client.request("GET", "/wefeed-mobile-bff/subject-api/season-info?subjectId=${internalData.id}")
+        val seasonRespText = request("GET", "/wefeed-mobile-bff/subject-api/season-info?subjectId=${internalData.id}")
         val episodes = mutableListOf<Episode>()
         
         runCatching {
@@ -956,17 +955,17 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
             if (seasonsArr != null) {
                 for (i in 0 until seasonsArr.length()) {
                     val seasonObj = seasonsArr.optJSONObject(i) ?: continue
-                    val seasonNum = MovieBoxCrypto.valueAsInt(seasonObj.opt("se")) ?: 1
+                    val seasonNum = valueAsInt(seasonObj.opt("se")) ?: 1
                     
                     val epArr = seasonObj.optJSONArray("episodeNumbers")
                     if (epArr != null && epArr.length() > 0) {
                         for (j in 0 until epArr.length()) {
-                            MovieBoxCrypto.valueAsInt(epArr.opt(j))?.let { epNum ->
+                            valueAsInt(epArr.opt(j))?.let { epNum ->
                                 episodes.add(makeEpisode(internalData.id, seasonNum, epNum))
                             }
                         }
                     } else {
-                        val maxEp = MovieBoxCrypto.valueAsInt(seasonObj.opt("maxEp")) ?: 0
+                        val maxEp = valueAsInt(seasonObj.opt("maxEp")) ?: 0
                         for (epNum in 1..maxEp) {
                             episodes.add(makeEpisode(internalData.id, seasonNum, epNum))
                         }
