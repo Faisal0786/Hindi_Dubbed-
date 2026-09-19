@@ -83,7 +83,8 @@ class MovieBoxProvider : MainAPI() {
         private const val SESSION_EXP_KEY = "expires_at"
         private const val SESSION_CREATED_KEY = "created_at"
 
-        private const val SEND_SPOOFED_IP = false
+        // Force enabled to match Rust exactly and bypass WAF checks
+        private const val SEND_SPOOFED_IP = true
 
         private val activeHostIdx = AtomicInteger(0)
         private val sessionLock = Mutex()
@@ -116,14 +117,8 @@ class MovieBoxProvider : MainAPI() {
                 val rawKey = pieces.getOrNull(0).orEmpty()
                 val rawValue = pieces.getOrNull(1).orEmpty()
 
-                val key = runCatching {
-                    URLDecoder.decode(rawKey, "UTF-8")
-                }.getOrDefault(rawKey)
-
-                val value = runCatching {
-                    URLDecoder.decode(rawValue, "UTF-8")
-                }.getOrDefault(rawValue)
-
+                val key = runCatching { URLDecoder.decode(rawKey, "UTF-8") }.getOrDefault(rawKey)
+                val value = runCatching { URLDecoder.decode(rawValue, "UTF-8") }.getOrDefault(rawValue)
                 key to value
             }
         }
@@ -203,22 +198,9 @@ class MovieBoxProvider : MainAPI() {
                 "M2007J20CG" to "Redmi"
             )
 
-            val versionCodes = intArrayOf(
-                50020117,
-                50020118,
-                50020119,
-                50020120,
-                50020121
-            )
-
+            val versionCodes = intArrayOf(50020117, 50020118, 50020119, 50020120, 50020121)
             val networkTypes = arrayOf("NETWORK_WIFI", "NETWORK_MOBILE")
-            val timezones = arrayOf(
-                "Asia/Kolkata",
-                "Asia/Shanghai",
-                "Asia/Tokyo",
-                "America/New_York",
-                "Europe/London"
-            )
+            val timezones = arrayOf("Asia/Kolkata", "Asia/Shanghai", "Asia/Tokyo", "America/New_York", "Europe/London")
 
             val android = androidVersions.random()
             val device = redmiDevices.random()
@@ -228,28 +210,10 @@ class MovieBoxProvider : MainAPI() {
             val gaid = UUID.randomUUID().toString()
             val deviceId = randomHex(32)
 
-            val userAgent =
-                "com.community.oneroom/$versionCode (Linux; U; Android ${android.first}; en_US; ${device.first}; Build/${android.second}; Cronet/135.0.7012.3)"
+            val userAgent = "com.community.oneroom/$versionCode (Linux; U; Android ${android.first}; en_US; ${device.first}; Build/${android.second}; Cronet/135.0.7012.3)"
 
-            val clientInfo = JSONObject().apply {
-                put("package_name", "com.community.oneroom")
-                put("version_name", "4.0.01.0813.03")
-                put("version_code", versionCode)
-                put("os", "android")
-                put("os_version", android.first)
-                put("install_ch", "ps")
-                put("device_id", deviceId)
-                put("install_store", "ps")
-                put("gaid", gaid)
-                put("brand", device.second)
-                put("model", device.first)
-                put("system_language", "en")
-                put("net", network)
-                put("region", "US")
-                put("timezone", timezone)
-                put("sp_code", "40401")
-                put("X-Play-Mode", "2")
-            }.toString()
+            // STRICT FIX: Using a raw string template exactly like Rust so JSON keys are NOT scrambled
+            val clientInfo = """{"package_name":"com.community.oneroom","version_name":"4.0.01.0813.03","version_code":$versionCode,"os":"android","os_version":"${android.first}","install_ch":"ps","device_id":"$deviceId","install_store":"ps","gaid":"$gaid","brand":"${device.second}","model":"${device.first}","system_language":"en","net":"$network","region":"US","timezone":"$timezone","sp_code":"40401","X-Play-Mode":"2"}"""
 
             return userAgent to clientInfo
         }
@@ -567,7 +531,11 @@ class MovieBoxProvider : MainAPI() {
                 headers.forEach { (key, value) -> builder.addHeader(key, value) }
 
                 val request = if (method.equals("POST", ignoreCase = true)) {
-                    val requestBody = (body ?: "").toRequestBody("application/json".toMediaTypeOrNull())
+                    // STRICT FIX: Convert String to ByteArray first.
+                    // OkHttp automatically adds "; charset=utf-8" if we pass a String.
+                    // This was causing the HMAC signature mismatch with the server!
+                    val bytes = (body ?: "").toByteArray(StandardCharsets.UTF_8)
+                    val requestBody = bytes.toRequestBody("application/json".toMediaTypeOrNull())
                     builder.post(requestBody).build()
                 } else {
                     builder.get().build()
