@@ -999,6 +999,19 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
             this.score = rating?.toDoubleOrNull()?.let { Score.from10(it) }
         }
     }
+    private fun makeEpisode(id: String, season: Int, episode: Int): Episode {
+        val data = JSONObject().apply {
+            put("id", id)
+            put("isMovie", false)
+            put("season", season)
+            put("episode", episode)
+        }.toString()
+        return newEpisode(data).apply {
+            this.season = season
+            this.episode = episode
+        }
+    }
+
 
 
 override suspend fun loadLinks(  
