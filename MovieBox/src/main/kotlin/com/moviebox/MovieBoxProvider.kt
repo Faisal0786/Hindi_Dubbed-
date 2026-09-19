@@ -879,13 +879,20 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
         return searchResponses
     }
 
+        // ==========================================
+    // 3. LOAD / DETAILS (ROBUST ORG.JSON PARSER)
+    // ==========================================
     override suspend fun load(url: String): LoadResponse? {
         val internalData = runCatching { AppUtils.parseJson<InternalData>(url) }.getOrNull() ?: return null
         
         val respText = request("GET", "/wefeed-mobile-bff/subject-api/get?subjectId=${internalData.id}")
 
         val rootObj = runCatching { JSONObject(respText) }.getOrNull() ?: return null
-        val subjectObj = rootObj.optJSONObject("data")?.optJSONObject("subject") 
+        
+        // FIX 1: Agar 'subject' key nahi hai, toh 'data' object KHUD hi subject hai!
+        val dataObj = rootObj.optJSONObject("data")
+        val subjectObj = dataObj?.optJSONObject("subject") 
+            ?: dataObj 
             ?: rootObj.optJSONObject("subject") 
             ?: throw Exception("Subject data not found!\nJSON: ${respText.take(500)}")
 
@@ -906,6 +913,7 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
         val desc = subjectObj.optString("description").takeIf { it.isNotBlank() } 
             ?: subjectObj.optString("intro").takeIf { it.isNotBlank() }
 
+        // Duration Parsing
         var durationMinutes: Int? = null
         val rawDuration = subjectObj.opt("duration")
         if (rawDuration != null) {
@@ -926,10 +934,17 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
         val rating = jsonValueAsString(ratingRaw)
         
         val tags = mutableListOf<String>()
+        // FIX 2: Check for Array first, if not, parse it as a String (jaise screenshot mein hai)
         val genresArr = subjectObj.optJSONArray("genres") ?: subjectObj.optJSONArray("genre")
         if (genresArr != null) {
             for (i in 0 until genresArr.length()) {
                 genresArr.optString(i).takeIf { it.isNotBlank() }?.let { tags.add(it) }
+            }
+        } else {
+            val genreStr = subjectObj.optString("genre").takeIf { it.isNotBlank() } 
+                ?: subjectObj.optString("genres").takeIf { it.isNotBlank() }
+            if (genreStr != null) {
+                tags.addAll(genreStr.split(",").map { it.trim() })
             }
         }
 
@@ -944,6 +959,7 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
             }
         }
 
+        // TV Show Seasons Parsing
         val seasonRespText = request("GET", "/wefeed-mobile-bff/subject-api/season-info?subjectId=${internalData.id}")
         val episodes = mutableListOf<Episode>()
         
@@ -984,18 +1000,6 @@ private fun parseSubjectToSearchResponse(subject: JSONObject?, seenIds: HashSet<
         }
     }
 
-    private fun makeEpisode(id: String, season: Int, episode: Int): Episode {
-        val data = JSONObject().apply {
-            put("id", id)
-            put("isMovie", false)
-            put("season", season)
-            put("episode", episode)
-        }.toString()
-        return newEpisode(data).apply {
-            this.season = season
-            this.episode = episode
-        }
-    }
 
 override suspend fun loadLinks(  
     data: String,  
